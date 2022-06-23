@@ -7,7 +7,7 @@ Predicting trajectories of objects
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
 
 ## References
-<a id="1">[1]</a>
+<a id="1">[1]</a>  
 @misc{bochkovskiy2020yolov4,  
       title={YOLOv4: Optimal Speed and Accuracy of Object Detection},  
       author={Alexey Bochkovskiy and Chien-Yao Wang and Hong-Yuan Mark Liao},  
