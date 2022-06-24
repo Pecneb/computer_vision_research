@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 
+from ctypes import sizeof
 import cv2 as cv
 import argparse
 import hldnapi
@@ -33,6 +34,27 @@ def parseArgs():
     args = parser.parse_args()
     return args.input
 
+def printDetections(detections):
+    """
+    Print labels, confidences and bounding boxes positions of detections
+    """
+    for label, conf, bbox in detections:
+        # bbox: x, y, w, h
+        print("Class: {}, Confidence: {}, Position: {}".format(label, conf, bbox))
+
+def getTargets(detections, targetNames=[]):
+    """
+    Retrieve the positions of targeted objects.
+    detections: output of hldnapi.detections2cvimg
+    targetNames: labels of object to be retrieved
+    """
+    targets = []
+    for label, conf, bbox in detections:
+        # bbox: x, y, w, h
+        if label in targetNames:
+            targets.append((label, conf, bbox))
+    return targets 
+
 def main():
     input = parseArgs()
     try:
@@ -45,7 +67,7 @@ def main():
     if not cap.isOpened():
         print("Source cannot be opened.")
         exit(0)
-    
+
     while(1):
         ret, frame = cap.read()
         if frame is None:
@@ -63,6 +85,10 @@ def main():
     
         print("FPS: {}".format(fps))
 
+        targets = getTargets(detections, targetNames=("person", "car"))
+
+        printDetections(targets)
+        
         if cv.waitKey(1) == ord('q'):
             break
     cap.release()
