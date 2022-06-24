@@ -3,9 +3,9 @@ import cv2 as cv
 import darknet
 import argparse
 
-CONFIG = "./darknet_config_files/yolov4-p6.cfg"
+CONFIG = "./darknet_config_files/yolov4.cfg"
 DATA = "./darknet_config_files/coco.data"
-WEIGHTS = "./darknet_config_files/yolov4-p6.weights"
+WEIGHTS = "./darknet_config_files/yolov4.weights"
 
 network, class_names, colors = darknet.load_network(CONFIG, DATA, WEIGHTS)
 darknet_width = darknet.network_width(network)

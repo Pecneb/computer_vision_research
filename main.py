@@ -19,10 +19,12 @@
 """
 
 from ctypes import sizeof
+from turtle import update
 import cv2 as cv
 import argparse
 import hldnapi
 import time
+import numpy as np
 
 def parseArgs():
     """
@@ -38,9 +40,9 @@ def printDetections(detections):
     """
     Print labels, confidences and bounding boxes positions of detections
     """
-    for label, conf, bbox in detections:
+    for obj in detections:
         # bbox: x, y, w, h
-        print("Class: {}, Confidence: {}, Position: {}".format(label, conf, bbox))
+        print("Class: {}, Confidence: {}, Position: {}".format(obj[0], obj[1], obj[2]))
 
 def getTargets(detections, targetNames=[]):
     """
@@ -55,6 +57,32 @@ def getTargets(detections, targetNames=[]):
             targets.append((label, conf, bbox))
     return targets 
 
+def drawCenters(detections, img):
+    for obj in detections:
+        cv.circle(img, (obj[2][0], obj[2][1]), 2, (0,0,255), 2)
+
+def calcDist(prev, act):
+    xDist = abs(prev[2][0]-act[2][0])
+    yDist = abs(prev[2][1]-act[2][1])
+    return xDist, yDist
+
+def updateHistory(detections, history, thresh=0.05):
+    """
+    updates the history of objects
+    if the old obj center's and new obj center's distance is within the threshold,
+    then add the new one to the old one's history,
+    but if no close centerpoint is found, make new history for the obj
+    """
+    for new in detections:
+        added = False
+        for objHistory in history:
+            xDist, yDist = calcDist(objHistory[-1], new)
+            if xDist < (objHistory[-1][2][0]*thresh) and yDist < (objHistory[-1][2][0]*thresh):
+                objHistory.append(new)
+                added = True
+        if not added:
+            history.append([new])
+
 def main():
     input = parseArgs()
     try:
@@ -66,7 +94,9 @@ def main():
     cap = cv.VideoCapture(input)
     if not cap.isOpened():
         print("Source cannot be opened.")
-        exit(0)
+        exit(0) 
+
+    history = []
 
     while(1):
         ret, frame = cap.read()
@@ -80,15 +110,23 @@ def main():
     
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
-    
-        cv.imshow("FRAME", I)
-    
-        print("FPS: {}".format(fps))
-
+        
         targets = getTargets(detections, targetNames=("person", "car"))
 
-        printDetections(targets)
-        
+        updateHistory(targets, history)
+
+        # printDetections(targets)
+
+        drawCenters(targets, I)
+
+        cv.circle(I, (history[3][-1][2][0],history[3][-1][2][1]), 2, (255,0,0), 2)
+
+        cv.imshow("FRAME", I)
+    
+        # print("FPS: {}".format(fps))
+
+        # print(history[1][-2:-1])
+
         if cv.waitKey(1) == ord('q'):
             break
     cap.release()
