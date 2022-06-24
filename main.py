@@ -19,5 +19,54 @@
 """
 
 import cv2 as cv
-import numpy as np
+import argparse
 import hldnapi
+import time
+
+def parseArgs():
+    """
+    Read command line arguments
+        input: video source
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, help="Path to video.")
+    args = parser.parse_args()
+    return args.input
+
+def main():
+    input = parseArgs()
+    try:
+        # check, if input arg is a webcam
+        input = int(input)
+    except ValueError:
+        print("Input source is a Video.")
+
+    cap = cv.VideoCapture(input)
+    if not cap.isOpened():
+        print("Source cannot be opened.")
+        exit(0)
+    
+    while(1):
+        ret, frame = cap.read()
+        if frame is None:
+            break
+    
+        # time before computation
+        prev_time = time.time()
+    
+        I, detections = hldnapi.detections2cvimg(frame)
+    
+        # calculating fps from time before computation and time now
+        fps = int(1/(time.time() - prev_time))
+    
+        cv.imshow("FRAME", I)
+    
+        print("FPS: {}".format(fps))
+
+        if cv.waitKey(1) == ord('q'):
+            break
+    cap.release()
+    cv.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()

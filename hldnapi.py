@@ -2,7 +2,6 @@ from ctypes import *
 import cv2 as cv
 import darknet
 import argparse
-import os
 
 CONFIG = "./darknet_config_files/yolov4-p6.cfg"
 DATA = "./darknet_config_files/coco.data"
@@ -62,7 +61,7 @@ def detections2cvimg(image):
     image_to_return = darknet.draw_boxes(detections_adjusted, image, colors)
     # Print detections and their confidence percentage
     # darknet.print_detections(detections) # uncomment if you want to print detections
-    return image_to_return, detections
+    return image_to_return, detections_adjusted
 
 def main():
     parser = argparse.ArgumentParser(description="Just a quick test script for YOLO darknet.")

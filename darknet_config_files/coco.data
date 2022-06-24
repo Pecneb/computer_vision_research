@@ -2,7 +2,7 @@ classes= 80
 train  = /home/pecneb/gitclones/computer_vision_research/darknet_config_files/trainvalno5k.txt
 valid  = coco_testdev
 #valid = data/coco_val_5k.list
-names = data/coco.names
+names = darknet_config_files/data/coco.names
 backup = /home/home/pecneb/gitclones/computer_vision_research/darknet_config_files/backup/
 eval=coco
 
