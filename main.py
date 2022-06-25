@@ -18,11 +18,8 @@
     Contact email: ecneb2000@gmail.com
 """
 
-from ctypes import sizeof
-from turtle import update
 import cv2 as cv
 import argparse
-import hldnapi
 import time
 import numpy as np
 
@@ -85,6 +82,9 @@ def updateHistory(detections, history, thresh=0.05):
 
 def main():
     input = parseArgs()
+    if input is not None:
+        import hldnapi
+
     try:
         # check, if input arg is a webcam
         input = int(input)
@@ -123,7 +123,7 @@ def main():
 
         cv.imshow("FRAME", I)
     
-        # print("FPS: {}".format(fps))
+        print("FPS: {}".format(fps))
 
         # print(history[1][-2:-1])
 
