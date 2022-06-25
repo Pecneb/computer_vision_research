@@ -5,6 +5,7 @@ Predicting trajectories of objects
 ## Darknet
 
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
+In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project.
 
 ## References
 <a id="1">[1]</a>  
