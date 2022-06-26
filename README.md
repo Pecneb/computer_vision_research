@@ -2,6 +2,10 @@
 
 Predicting trajectories of objects
 
+TODO: implement dataclasses to store objects and detections
+TODO: implement SQLite DB logging
+TODO: implement linear regression to predict future position of objects
+
 ## Darknet
 
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
