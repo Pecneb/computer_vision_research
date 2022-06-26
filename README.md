@@ -2,9 +2,9 @@
 
 Predicting trajectories of objects
 
-TODO: implement dataclasses to store objects and detections
-TODO: implement SQLite DB logging
-TODO: implement linear regression to predict future position of objects
+**TODO:** implement dataclasses to store objects and detections  
+**TODO:** implement SQLite DB logging  
+**TODO:** implement linear regression to predict future position of objects  
 
 ## Darknet
 
