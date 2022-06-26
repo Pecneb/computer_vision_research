@@ -27,9 +27,11 @@ class TrackedObject():
     
        Fields:
         objID(int): a unique identification number of the detected object
-        history(list of Detections): 
+        history(list of Detections): list of Detection that are propably the same object 
+        futureX(int): the predicrted X position
+        futureY(int): the predicted Y position
     """
     objID: int
     history: list[Detection] = field(default_factory=list, init=False) 
-
-
+    futureX: int
+    futureY: int
