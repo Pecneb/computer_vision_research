@@ -11,6 +11,8 @@ Predicting trajectories of objects
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
 In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project.
 
+**Notice:** Using the yolov4-csp-x-swish.cfg and weights with RTX 3070 TI is doing 26 FPS with 69.9% precision, this is the most stable detection so far, good base for tracking and predicting
+
 ## References
 <a id="1">[1]</a>  
 @misc{bochkovskiy2020yolov4,  
