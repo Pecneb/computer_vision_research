@@ -21,7 +21,6 @@
 import cv2 as cv
 import argparse
 import time
-from cv2 import CAP_PROP_PVAPI_MULTICASTIP
 import numpy as np
 from historyClass import Detection, TrackedObject
 
