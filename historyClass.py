@@ -22,7 +22,7 @@ class Detection:
     frameID: int
     
 @dataclass
-class TrackingData():
+class TrackedObject():
     """Class for storing a detected object's tracking history
     
        Fields:
@@ -31,11 +31,5 @@ class TrackingData():
     """
     objID: int
     history: list[Detection] = field(default_factory=list, init=False) 
-
-@dataclass
-class History():
-    """Class for keeping track of detected objects"""
-    depth: int = field(default=3)
-    history: list[TrackingData] = field(default_factory=list, init=False)
 
 
