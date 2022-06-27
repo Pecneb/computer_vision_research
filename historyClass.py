@@ -32,6 +32,12 @@ class TrackedObject():
         futureY(int): the predicted Y position
     """
     objID: int
-    history: list[Detection] = field(default_factory=list, init=False) 
-    futureX: int
-    futureY: int
+    label: int = field(init=False)
+    futureX: int = field(init=False)
+    futureY: int = field(init=False)
+    history: list[Detection] 
+    
+    def __init__(self, id, first):
+        self.objID = id
+        self.history = [first]
+        self.label = first.label

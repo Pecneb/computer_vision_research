@@ -21,6 +21,7 @@
 import cv2 as cv
 import argparse
 import time
+from cv2 import CAP_PROP_PVAPI_MULTICASTIP
 import numpy as np
 from historyClass import Detection, TrackedObject
 
@@ -45,7 +46,7 @@ def printDetections(detections):
         # bbox: x, y, w, h
         print("Class: {}, Confidence: {}, Position: {}".format(obj[0], obj[1], obj[2]))
 
-def getTargets(detections, targetNames=['car, person']):
+def getTargets(detections, frameNum, targetNames=['car, person']):
     """Function to extract detected objects from the detections, that labels are given in the targetNames argument
 
     Args:
@@ -53,56 +54,58 @@ def getTargets(detections, targetNames=['car, person']):
         targetNames (list, optional): List of labels, that should be tracked. Defaults to ['car', 'person'].
 
     Returns:
-        targets ((str, float, (int, int, int, int))): Returns a list of Detection objects
+        targets (list[Detection]): Returns a list of Detection objects
     """
     targets = []
     for label, conf, bbox in detections:
         # bbox: x, y, w, h
         if label in targetNames:
-            targets.append((label, conf, bbox))
+            targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets 
 
-def updateIMG(detections, IMG):
+def updateIMG(history, IMG):
     """Function to draw a circle in the centre of all detected objects in the arg detections on the arg IMG cv image
 
     Args:
-        detections ((str, float, (int, int, int, int))): _description_
-        IMG (_type_): _description_
+        detections (list[TrackedObject]): history of detected objects
+        IMG (OpenCV image format): image to draw on 
     """
-    for obj in detections:
-        cv.circle(IMG, (obj[2][0], obj[2][1]), 2, (0,0,255), 2)
+    for objHist in history:
+        for det in objHist.history:
+            cv.circle(IMG, (det.X, det.Y), 2, (0,0,255), 2)
 
 def calcDist(prev, act):
     """Function to calculate distance between an object on previous frame and actual frame.
 
     Args:
-        prev (tuple(label, confidence, bbox(x,y,w,h))): Object from previous frame
-        act (tuple(label, confidence, bbox(x,y,w,h))): Object from actual frame
+        prev (Detection): Object from previous frame
+        act (Detection): Object from actual frame
 
     Returns:
         xDist, yDist: distance of x coordiantes and distance of y coordiantes
     """
-    xDist = abs(prev[2][0]-act[2][0])
-    yDist = abs(prev[2][1]-act[2][1])
+    xDist = abs(prev.X-act.X)
+    yDist = abs(prev.Y-act.Y)
     return xDist, yDist
 
-def updateHistory(detections, history, thresh=0.05):
-    """Function to update object history
+def updateHistory(detections, history, tresh=0.05):
+    """Function to update detection history
 
     Args:
-        detections (list of (label, confidence, bbox)): output of darknet
-        history (2D matrix): objects's history, each row is a history of an object
-        thresh (float, optional): The percentage of max distance. Defaults to 0.05.
+        detections (list[Detection]): a list of new detection
+        history (list[TrackedObject]): the tracking history
+        tresh (float, optional): Treshold to be able to tell if next obj is already detected or is a new one. Defaults to 0.05.
     """
-    for new in detections:
+    for next in detections:
         added = False
         for objHistory in history:
-            xDist, yDist = calcDist(objHistory[-1], new)
-            if xDist < (objHistory[-1][2][0]*thresh) and yDist < (objHistory[-1][2][0]*thresh):
-                objHistory.append(new)
+            last = objHistory.history[-1]
+            xDist, yDist = calcDist(last, next)
+            if xDist < (last.X*tresh) and yDist < (last.X*tresh) and objHistory.label == next.label:
+                objHistory.history.append(next)
                 added = True
         if not added:
-            history.append([new])
+            history.append(TrackedObject(len(history)+1, next))
 
 def main():
     input = parseArgs()
@@ -134,23 +137,23 @@ def main():
     
         I, detections = hldnapi.detections2cvimg(frame)
         
-        # calculating fps from time before computation and time now
-        fps = int(1/(time.time() - prev_time))
-        
-        targets = getTargets(detections, targetNames=("person", "car"))
+        targets = getTargets(detections, cap.get(cv.CAP_PROP_POS_FRAMES), targetNames=("person", "car"))
 
         updateHistory(targets, history)
 
         # printDetections(targets)
 
-        updateIMG(targets, I)
+        updateIMG(history, I)
 
         # cv.circle(I, (history[3][-1][2][0],history[3][-1][2][1]), 2, (255,0,0), 2)
 
         # imgToShow = cv.add(imgMask, I)
 
         cv.imshow("FRAME", I)
-    
+        
+        # calculating fps from time before computation and time now
+        fps = int(1/(time.time() - prev_time))
+        
         print("FPS: {}".format(fps))
 
         # print(history[1][-2:-1])
