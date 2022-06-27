@@ -1,6 +1,6 @@
 """
     Predicting trajectories of objects
-    Copyright (C) 2022 Bence Peter
+    Copyright (C) <2022>  Bence Peter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,10 +18,12 @@
     Contact email: ecneb2000@gmail.com
 """
 
+from tkinter import W
 import cv2 as cv
 import argparse
 import time
 import numpy as np
+from historyClass import Detection, TrackedObject
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -35,24 +37,24 @@ def parseArgs():
     return args.input
 
 def printDetections(detections):
-    """Function for printing out detections
+    """Function for printing out detected objects
 
     Args:
-        detections (tuple(label, confidence, bbox(x,y,w,h))): output of darknet detector
+        detections (tuple): _description_
     """
     for obj in detections:
         # bbox: x, y, w, h
         print("Class: {}, Confidence: {}, Position: {}".format(obj[0], obj[1], obj[2]))
 
-def getTargets(detections, targetNames=[]):
-    """Function for extracting targets from detections
+def getTargets(detections, targetNames=['car, person']):
+    """Function to extract detected objects from the detections, that labels are given in the targetNames argument
 
     Args:
-        detections (tuple(label, confidence, bbox(x,y,w,h))): output of darknet detector
-        targetNames (list, optional): list of labels, that should be extracted from detections. Defaults to [].
+        detections ((str, float, (int, int, int, int))): Return value of the darknet neuralnet
+        targetNames (list, optional): List of labels, that should be tracked. Defaults to ['car', 'person'].
 
     Returns:
-        list: list of detections with the labels of targetNames
+        targets ((str, float, (int, int, int, int))): Returns a list of Detection objects
     """
     targets = []
     for label, conf, bbox in detections:
@@ -62,11 +64,11 @@ def getTargets(detections, targetNames=[]):
     return targets 
 
 def updateIMG(detections, IMG):
-    """Functions for drawing a circle in the center of detected objects 
+    """Function to draw a circle in the centre of all detected objects in the arg detections on the arg IMG cv image
 
     Args:
-        detections (tuple(label, confidence, bbox(x,y,w,h))): output of darknet detector or getTargets() function
-        IMG (OpenCV IMG object): input image
+        detections ((str, float, (int, int, int, int))): _description_
+        IMG (_type_): _description_
     """
     for obj in detections:
         cv.circle(IMG, (obj[2][0], obj[2][1]), 2, (0,0,255), 2)
@@ -105,29 +107,24 @@ def updateHistory(detections, history, thresh=0.05):
 
 def main():
     input = parseArgs()
-
-    # only initialize darknet when theres valid input video
     if input is not None:
         import hldnapi
 
     try:
-        # if input source is number, then it is a webcam 
+        # check, if input arg is a webcam
         input = int(input)
     except ValueError:
         print("Input source is a Video.")
 
     cap = cv.VideoCapture(input)
     if not cap.isOpened():
-        print("Video cannot be opened.")
+        print("Source cannot be opened.")
         exit(0) 
 
-    # defining history list for later usage
-    # 2D MTX: rows are the objects and columns are the timeline
-    # obj1 1. position 2. position ...
-    # obj2 1. pos 2. pos ...
     history = []
 
-    # playing video frame by frame until 'q' is pressed or video ends
+    # imgMask = np.zeros_like(I, dtype=np.uint8)
+
     while(1):
         ret, frame = cap.read()
         if frame is None:
@@ -136,39 +133,29 @@ def main():
         # time before computation
         prev_time = time.time()
     
-        # using darknet on next video frame
         I, detections = hldnapi.detections2cvimg(frame)
         
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
-
-        # extracting only the objects with the inputted label
+        
         targets = getTargets(detections, targetNames=("person", "car"))
 
-        # update history for tracking objects
         updateHistory(targets, history)
 
         # printDetections(targets)
 
-        # draw red dots on selected objects center for testing purposes
         updateIMG(targets, I)
 
-        # marking an object with blue dot for testing purposes
-        cv.circle(I, (history[1][-1][2][0],history[1][-1][2][1]), 2, (255,0,0), 2)
+        # cv.circle(I, (history[3][-1][2][0],history[3][-1][2][1]), 2, (255,0,0), 2)
+
+        # imgToShow = cv.add(imgMask, I)
 
         cv.imshow("FRAME", I)
-
-        # printing out fps to stdout
+    
         print("FPS: {}".format(fps))
 
-        # printing out the length of the longest history for testing purposes
-        longestHist = history[0]
-        for objHistory in history:
-            if len(objHistory) > len(longestHist):
-                longestHist = objHistory
-                print(len(longestHist))
+        # print(history[1][-2:-1])
 
-        # press 'q' to quit
         if cv.waitKey(1) == ord('q'):
             break
     cap.release()
