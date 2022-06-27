@@ -2,7 +2,7 @@
 
 Predicting trajectories of objects
 
-**TODO:** implement dataclasses to store objects and detections  
+**TODO:** improve dataclasses to store objects and detections with more features
 **TODO:** implement SQLite DB logging  
 **TODO:** implement linear regression to predict future position of objects  
 
