@@ -1,6 +1,6 @@
 """
     Predicting trajectories of objects
-    Copyright (C) <2022>  Bence Peter
+    Copyright (C) 2022  Bence Peter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
     Contact email: ecneb2000@gmail.com
 """
 
-from tkinter import W
 import cv2 as cv
 import argparse
 import time
