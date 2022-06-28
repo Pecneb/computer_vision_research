@@ -6,6 +6,8 @@ Predicting trajectories of objects
 **TODO:** implement SQLite DB logging  
 **TODO:** implement linear regression to predict future position of objects  
 
+**Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth
+
 ## Darknet
 
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
