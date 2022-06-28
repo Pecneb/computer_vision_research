@@ -18,11 +18,14 @@
     Contact email: ecneb2000@gmail.com
 """
 
+from ipaddress import collapse_addresses
+from unicodedata import name
 import cv2 as cv
 import argparse
 import time
 import numpy as np
 from historyClass import Detection, TrackedObject
+from darknet import bbox2points, class_colors
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -62,17 +65,6 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
             targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets 
 
-def updateIMG(history, IMG):
-    """Function to draw a circle in the centre of all detected objects in the arg detections on the arg IMG cv image
-
-    Args:
-        detections (list[TrackedObject]): history of detected objects
-        IMG (OpenCV image format): image to draw on 
-    """
-    for objHist in history:
-        for det in objHist.history:
-            cv.circle(IMG, (det.X, det.Y), 2, (0,0,255), 2)
-
 def calcDist(prev, act):
     """Function to calculate distance between an object on previous frame and actual frame.
 
@@ -106,6 +98,18 @@ def updateHistory(detections, history, tresh=0.05):
         if not added:
             history.append(TrackedObject(len(history)+1, next))
 
+def draw_boxes(history, image, colors, frameNumber):
+    for detections in history:
+        detection = detections.history[-1]
+        if detection.frameID == frameNumber:
+            bbox = (detection.X, detection.Y, detection.Width, detection.Height)
+            left, top, right, bottom = bbox2points(bbox)
+            cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
+            cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
+                        (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
+                        colors[detection.label], 2)
+    return image
+
 def main():
     input = parseArgs()
     if input is not None:
@@ -123,6 +127,7 @@ def main():
         exit(0) 
 
     history = []
+    colors = class_colors(hldnapi.class_names)
 
     # imgMask = np.zeros_like(I, dtype=np.uint8)
 
@@ -130,32 +135,27 @@ def main():
         ret, frame = cap.read()
         if frame is None:
             break
-    
+
+        frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES) 
+
         # time before computation
         prev_time = time.time()
+
+        # use darknet neural net to detects objects 
+        detections = hldnapi.cvimg2detections(frame)
     
-        I, detections = hldnapi.detections2cvimg(frame)
-        
-        targets = getTargets(detections, cap.get(cv.CAP_PROP_POS_FRAMES), targetNames=("person", "car"))
+        targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
 
         updateHistory(targets, history)
 
-        # printDetections(targets)
+        draw_boxes(history, frame, colors, frameNumber)
 
-        updateIMG(history, I)
-
-        # cv.circle(I, (history[3][-1][2][0],history[3][-1][2][1]), 2, (255,0,0), 2)
-
-        # imgToShow = cv.add(imgMask, I)
-
-        cv.imshow("FRAME", I)
+        cv.imshow("FRAME", frame)
         
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         
         print("FPS: {}".format(fps))
-
-        # print(history[1][-2:-1])
 
         if cv.waitKey(1) == ord('q'):
             break
