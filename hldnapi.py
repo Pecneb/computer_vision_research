@@ -1,5 +1,5 @@
 """
-    Predicting trajectories of objects
+    Darknet API to make it easy to use it with Opencv.
     Copyright (C) 2022 Bence Peter
 
     This program is free software: you can redistribute it and/or modify
@@ -24,9 +24,9 @@ import darknet
 import argparse
 
 """Configuration files for darknet"""
-CONFIG = "./darknet_config_files/yolov4-csp-x-swish.cfg"
+CONFIG = "./darknet_config_files/yolov4.cfg"
 DATA = "./darknet_config_files/coco.data"
-WEIGHTS = "./darknet_config_files/yolov4-csp-x-swish.weights"
+WEIGHTS = "./darknet_config_files/yolov4.weights"
 
 """Loading configuration files into darknet"""
 network, class_names, colors = darknet.load_network(CONFIG, DATA, WEIGHTS)
@@ -57,14 +57,13 @@ def convert2original(image, bbox):
 
     return bbox_converted
 
-def detections2cvimg(image):
-    """Function to make it easy to use darknet with opencv image class 
+def cvimg2detections(image):
+    """Fcuntion to make it easy to use darknet with opencv
 
     Args:
         image (Opencv image): input image to run darknet on
 
     Returns:
-        opencv image: output image of darknet converted to opencv image
         detections(tuple): detected objects on input image (label, confidence, bbox(x,y,w,h))
     """
     # Convert frame color from BGR to RGB
@@ -83,38 +82,4 @@ def detections2cvimg(image):
     for label, confidence, bbox in detections:
         bbox_adjusted = convert2original(image, bbox)
         detections_adjusted.append((str(label), confidence, bbox_adjusted))        
-    # Draw bboxes on frame
-    image_to_return = darknet.draw_boxes(detections_adjusted, image, colors)
-    # Print detections and their confidence percentage
-    # darknet.print_detections(detections) # uncomment if you want to print detections
-    return image_to_return, detections_adjusted
-
-def main():
-    parser = argparse.ArgumentParser(description="Just a quick test script for YOLO darknet.")
-    parser.add_argument('--input', help='path to video to test with')
-    args = parser.parse_args()
-
-    try:
-        videopath = int(args.input)
-    except ValueError:
-        videopath = args.input
-
-    video = cv.VideoCapture(videopath)
-
-    if not video.isOpened():
-        print("Unable to open video.")
-        exit(0)
-
-    while(True):
-        ret, frame = video.read()
-        if frame is None:
-            break
-        
-        frame2show = detections2cvimg(frame)
-        cv.imshow('Video frame', frame2show)
-
-        if cv.waitKey(1) == ord('q'):
-            break
-
-if __name__ == '__main__':
-    main()
+    return detections_adjusted
