@@ -19,6 +19,7 @@
 """
 
 from dataclasses import dataclass, field
+from numpy import average
 
 @dataclass
 class Detection:
@@ -40,7 +41,7 @@ class Detection:
     Width: int
     Height: int
     frameID: int
-    
+
 @dataclass
 class TrackedObject():
     """Class for storing a detected object's tracking history
@@ -51,14 +52,23 @@ class TrackedObject():
         history(list of Detections): list of Detection that are propably the same object 
         futureX(int): the predicrted X position
         futureY(int): the predicted Y position
+        isMoving(bool): True if object is in motion
+        Methods:
+         avgArea(): returns the average bbox area of all the detections in the history
     """
     objID: int
     label: int = field(init=False)
-    futureX: int = field(init=False)
-    futureY: int = field(init=False)
-    history: list[Detection] 
-    
+    futureX: list[int] = field(init=False)
+    futureY: list[int] = field(init=False)
+    history: list[Detection]
+    isMoving: bool = field(init=False)
+
     def __init__(self, id, first):
         self.objID = id
         self.history = [first]
         self.label = first.label
+        self.isMoving = False
+
+    def avgArea(self):
+        areas = [(det.Width*det.Height) for det in self.history]
+        return average(areas)
