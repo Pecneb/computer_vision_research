@@ -129,9 +129,30 @@ def draw_boxes(history, image, colors, frameNumber):
             cv.circle(image, (detection.X, detection.Y), 1, color=(0,255,0))
 
 def movementIsRight(X_hist, historyDepth):
+    """Returns True if object moving left to right or False if right to left
+
+    Args:
+        X_hist (list(int)): list of X coordinates of length historyDepth
+        historyDepth (int): the length of the x coord list
+
+    Returns:
+        bool: retval 
+    """
     return (X_hist[-1] > X_hist[-historyDepth])
 
 def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, image=None):
+    """Calculating future trajectory of the trackedObject
+
+    Args:
+        trackedObject (TrackedObject): the tracked Object
+        linear_model (sklearn linear_model): Linear model used to calculate the trajectory
+        historyDepth (int, optional): the number of detections that the trajectory should be calculated from. Defaults to 3.
+        futureDepth (int, optional): how far in the future should we predict. Defaults to 30.
+        image (Opencv image, optional): if image is inputted, then trajectories are drawn to the image. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
     y_train = np.array([det.Y for det in trackedObject.history[-historyDepth-1:-1]])
     if len(X_train) >= historyDepth and len(y_train) >= historyDepth:
@@ -191,7 +212,7 @@ def main():
 
         for obj in history:
             if obj.isMoving:
-                predictTraj(obj, linear_model.LinearRegression(), historyDepth=10, futureDepth=100, image=frame)
+                predictTraj(obj, linear_model.LinearRegression(), image=frame)
 
         cv.imshow("FRAME", frame)
         
