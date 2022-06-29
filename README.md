@@ -4,8 +4,8 @@ Predicting trajectories of objects
 
 **TODO:** improve dataclasses to store objects and detections with more features  
 **TODO:** implement SQLite DB logging  
-**TODO:** implement linear regression to predict future position of objects  
 
+**Notice:** linear regression implemented, very primitive, but working
 **Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth
 
 ## Darknet
