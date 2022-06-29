@@ -7,6 +7,7 @@ Predicting trajectories of objects
 
 **Notice:** linear regression implemented, very primitive, but working  
 **Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth
+**Notice:** To tell which direction is the object moving is very tricky, made a quick function to tell its in main.py
 
 ## Darknet
 
