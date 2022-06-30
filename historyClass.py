@@ -68,6 +68,8 @@ class TrackedObject():
         self.history = [first]
         self.label = first.label
         self.isMoving = False
+        self.futureX = []
+        self.futureY = []
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]

@@ -79,7 +79,7 @@ def calcDist(prev, act):
     yDist = abs(prev.Y-act.Y)
     return xDist, yDist
 
-def updateHistory(detections, history, disThresh=0.05):
+def updateHistory(detections, history, historyDepth=3, disThresh=0.05):
     """Function to update detection history
 
     Args:
@@ -93,10 +93,10 @@ def updateHistory(detections, history, disThresh=0.05):
             last = objHistory.history[-1]
             # xDist, yDist = calcDist(last, next)
             euclidean = euclidean_distances([[last.X, last.Y]], [[next.X, next.Y]])
-            if (euclidean < (last.X*disThresh) and euclidean < (last.Y*disThresh)) and objHistory.label == next.label:
+            if (euclidean < (last.X*disThresh) and euclidean < (last.Y*disThresh)) and objHistory.label == next.label and (next.frameID - last.frameID) < historyDepth:
                 objHistory.history.append(next)
                 added = True
-                if euclidean > 1.5: 
+                if euclidean > 2.0: 
                     # print("x coord distance: {}, y coord distance: {}".format(xDist, yDist))
                     print("Euclidean distance: {}".format(euclidean))
                     objHistory.isMoving = True
@@ -150,8 +150,6 @@ def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, ima
         futureDepth (int, optional): how far in the future should we predict. Defaults to 30.
         image (Opencv image, optional): if image is inputted, then trajectories are drawn to the image. Defaults to None.
 
-    Returns:
-        _type_: _description_
     """
     X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
     y_train = np.array([det.Y for det in trackedObject.history[-historyDepth-1:-1]])
@@ -163,12 +161,23 @@ def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, ima
         reg = linear_model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
         y_pred = reg.predict(X_test.reshape(-1,1))
         trackedObject.futureX = X_test
-        trackedObject.futureY = y_pred[0]
+        trackedObject.futureY = y_pred
         if image is not None:
-            for x,y in zip(X_test, y_pred):
-                cv.circle(image, (int(x),int(y[0])), 1, color=(0,0,255))
-    else:
-        return False
+            for x,y in zip(trackedObject.futureX, trackedObject.futureY):
+                cv.circle(image, (int(x),int(y)), 1, color=(0,0,255))
+
+def draw_predictions(history, image, frameNumber):
+    """Draw prediction information to image
+
+    Args:
+        history (list[TrackedObject]): detection history
+        image (Opencv Image): image to draw on
+        frameNumber (int): current number of the video frame
+    """
+    for trackedObject in history:
+        if trackedObject.history[-1].frameID >= frameNumber-5 and trackedObject.isMoving:
+            for x, y in zip(trackedObject.futureX, trackedObject.futureY):
+                cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
 
 def main():
     input = parseArgs()
@@ -206,13 +215,15 @@ def main():
     
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
 
-        updateHistory(targets, history)
+        updateHistory(targets, history, historyDepth=15)
 
         draw_boxes(history, frame, colors, frameNumber)
 
         for obj in history:
             if obj.isMoving:
-                predictTraj(obj, linear_model.LinearRegression(), image=frame)
+                predictTraj(obj, linear_model.LinearRegression(), historyDepth=30)
+        
+        draw_predictions(history, frame, frameNumber)
 
         cv.imshow("FRAME", frame)
         
