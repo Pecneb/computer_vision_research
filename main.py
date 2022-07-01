@@ -79,12 +79,14 @@ def calcDist(prev, act):
     yDist = abs(prev.Y-act.Y)
     return xDist, yDist
 
-def updateHistory(detections, history, historyDepth=3, disThresh=0.05):
+def updateHistory(detections, history, frameNumber, historyDepth=3, disThresh=0.05):
     """Function to update detection history
 
     Args:
         detections (list[Detection]): a list of new detection
         history (list[TrackedObject]): the tracking history
+        frameNumber (int): number of the current video frame
+        historyDepth (int): length of the history to be stored
         thresh (float, optional): Threshold to be able to tell if next obj is already detected or is a new one. Defaults to 0.05.
     """
     for next in detections:
@@ -102,6 +104,12 @@ def updateHistory(detections, history, historyDepth=3, disThresh=0.05):
                     objHistory.isMoving = True
                 else:
                     objHistory.isMoving = False
+            # remove objects that are older than frameNumber-historyDepth
+            if objHistory.history[-1].frameID < (frameNumber-historyDepth):
+                try:
+                    history.remove(objHistory)
+                except:
+                    continue
         if not added:
             history.append(TrackedObject(len(history)+1, next))
 
@@ -166,18 +174,19 @@ def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, ima
             for x,y in zip(trackedObject.futureX, trackedObject.futureY):
                 cv.circle(image, (int(x),int(y)), 1, color=(0,0,255))
 
-def draw_predictions(history, image, frameNumber):
+def draw_predictions(trackedObject, image, frameNumber):
     """Draw prediction information to image
 
     Args:
-        history (list[TrackedObject]): detection history
+        trackedObject (TrackedObject): tracked object
         image (Opencv Image): image to draw on
         frameNumber (int): current number of the video frame
     """
-    for trackedObject in history:
-        if trackedObject.history[-1].frameID >= frameNumber-5 and trackedObject.isMoving:
-            for x, y in zip(trackedObject.futureX, trackedObject.futureY):
-                cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
+    if trackedObject.history[-1].frameID >= frameNumber-5:
+        for x, y in zip(trackedObject.futureX, trackedObject.futureY):
+            cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
+
+HISTORY_DEPTH =3 
 
 def main():
     input = parseArgs()
@@ -215,15 +224,14 @@ def main():
     
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
 
-        updateHistory(targets, history, historyDepth=15)
+        updateHistory(targets, history, frameNumber, historyDepth=HISTORY_DEPTH)
 
         draw_boxes(history, frame, colors, frameNumber)
 
         for obj in history:
             if obj.isMoving:
-                predictTraj(obj, linear_model.LinearRegression(), historyDepth=30)
-        
-        draw_predictions(history, frame, frameNumber)
+                predictTraj(obj, linear_model.LinearRegression(), historyDepth=HISTORY_DEPTH)
+                draw_predictions(obj, frame, frameNumber)
 
         cv.imshow("FRAME", frame)
         

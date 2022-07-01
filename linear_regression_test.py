@@ -16,6 +16,7 @@ def main():
     ax.plot(X,y, color="black")
     ax.plot(X_test, y_pred, color="red")
     plt.show()
+    print()
 
 if __name__ == "__main__":
     main()
