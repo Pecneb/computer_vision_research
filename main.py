@@ -92,7 +92,10 @@ def updateHistory(detections, history, frameNumber, historyDepth=3, disThresh=0.
     for next in detections:
         added = False
         for objHistory in history:
-            last = objHistory.history[-1]
+            try:
+                last = objHistory.history[-2]
+            except:
+                last = objHistory.history[-1]
             # xDist, yDist = calcDist(last, next)
             euclidean = euclidean_distances([[last.X, last.Y]], [[next.X, next.Y]])
             if (euclidean < (last.X*disThresh) and euclidean < (last.Y*disThresh)) and objHistory.label == next.label and (next.frameID - last.frameID) < historyDepth:
@@ -100,7 +103,7 @@ def updateHistory(detections, history, frameNumber, historyDepth=3, disThresh=0.
                 added = True
                 if euclidean > 2.0: 
                     # print("x coord distance: {}, y coord distance: {}".format(xDist, yDist))
-                    print("Euclidean distance: {}".format(euclidean))
+                    print("ObjID: {} Euclidean distance: {}".format(objHistory.objID, euclidean))
                     objHistory.isMoving = True
                 else:
                     objHistory.isMoving = False
@@ -186,7 +189,9 @@ def draw_predictions(trackedObject, image, frameNumber):
         for x, y in zip(trackedObject.futureX, trackedObject.futureY):
             cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
 
-HISTORY_DEPTH =3 
+# global var for adjusting stored history length
+HISTORY_DEPTH = 15 
+FUTUREPRED = 30
 
 def main():
     input = parseArgs()
@@ -230,7 +235,7 @@ def main():
 
         for obj in history:
             if obj.isMoving:
-                predictTraj(obj, linear_model.LinearRegression(), historyDepth=HISTORY_DEPTH)
+                predictTraj(obj, linear_model.Ridge(alpha=0.5), historyDepth=HISTORY_DEPTH)
                 draw_predictions(obj, frame, frameNumber)
 
         cv.imshow("FRAME", frame)
