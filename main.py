@@ -190,61 +190,58 @@ def draw_predictions(trackedObject, image, frameNumber):
             cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 15 
-FUTUREPRED = 30
+HISTORY_DEPTH = 3 
+FUTUREPRED = 15 
 
 def main():
     input = parseArgs()
     if input is not None:
         import hldnapi
-
+    # check input source
     try:
-        # check, if input arg is a webcam
         input = int(input)
     except ValueError:
         print("Input source is a Video.")
-
+    # get video capture object
     cap = cv.VideoCapture(input)
+    # exit if video cant be opened
     if not cap.isOpened():
         print("Source cannot be opened.")
         exit(0) 
-
     # forward declaration of history(list[TrackedObject])
     history = []
     # generating colors for bounding boxes based on the class names of the neural net
     colors = class_colors(hldnapi.class_names)
-
+    # start main loop
     while(1):
+        # get current frame from video
         ret, frame = cap.read()
         if frame is None:
             break
-
+        # get current frame number
         frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES) 
-
         # time before computation
         prev_time = time.time()
-
         # use darknet neural net to detects objects 
         detections = hldnapi.cvimg2detections(frame)
-    
+        # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
-
+        # update track history
         updateHistory(targets, history, frameNumber, historyDepth=HISTORY_DEPTH)
-
+        # draw bounding boxes of filtered detections
         draw_boxes(history, frame, colors, frameNumber)
-
+        # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
                 predictTraj(obj, linear_model.Ridge(alpha=0.5), historyDepth=HISTORY_DEPTH)
                 draw_predictions(obj, frame, frameNumber)
-
+        # show video frame
         cv.imshow("FRAME", frame)
-        
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
-        
+        # print FPS to stdout
         print("FPS: {}".format(fps))
-
+        # press 'q' to stop playing video
         if cv.waitKey(1) == ord('q'):
             break
     cap.release()
