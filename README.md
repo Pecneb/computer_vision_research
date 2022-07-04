@@ -8,7 +8,7 @@ Predicting trajectories of objects
 **Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth  
 **Notice:** To tell which direction is the object moving is very tricky, made a quick function to tell its in main.py  
 
-### Tracking of detected objects
+## Tracking of detected objects
 
 **Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
 
@@ -26,7 +26,7 @@ This can save read, write time and memory.
 
 **HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.
 
-### Predicting trajectories of moving objects
+## Predicting trajectories of moving objects
 
 #### Linear Regression 
 
