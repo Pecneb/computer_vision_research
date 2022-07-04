@@ -25,7 +25,7 @@ import numpy as np
 from sklearn import linear_model
 from historyClass import Detection, TrackedObject
 from darknet import bbox2points, class_colors
-from sklearn.metrics import euclidean_distances 
+from sklearn.metrics import euclidean_distances
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -63,7 +63,7 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
         # bbox: x, y, w, h
         if label in targetNames:
             targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
-    return targets 
+    return targets
 
 def calcDist(prev, act):
     """Function to calculate distance between an object on previous frame and actual frame.
@@ -79,7 +79,7 @@ def calcDist(prev, act):
     yDist = abs(prev.Y-act.Y)
     return xDist, yDist
 
-def updateHistory(detections, history, frameNumber, historyDepth=3, disThresh=0.05):
+def updateHistory(detections, history, frameNumber, frameWidth, frameHeight, historyDepth=3, disThresh=0.05):
     """Function to update detection history
 
     Args:
@@ -87,25 +87,28 @@ def updateHistory(detections, history, frameNumber, historyDepth=3, disThresh=0.
         history (list[TrackedObject]): the tracking history
         frameNumber (int): number of the current video frame
         historyDepth (int): length of the history to be stored
-        thresh (float, optional): Threshold to be able to tell if next obj is already detected or is a new one. Defaults to 0.05.
+        thresh (float, optional): Threshold to be able to tell if next obj is already detected or is a new one. Defaults to 0.1.
     """
     for next in detections:
         added = False
         for objHistory in history:
             try:
-                last = objHistory.history[-2]
+                prev = objHistory.history[-historyDepth]
             except:
-                last = objHistory.history[-1]
-            # xDist, yDist = calcDist(last, next)
-            euclidean = euclidean_distances([[last.X, last.Y]], [[next.X, next.Y]])
-            if (euclidean < (last.X*disThresh) and euclidean < (last.Y*disThresh)) and objHistory.label == next.label and (next.frameID - last.frameID) < historyDepth:
+                prev = objHistory.history[-1]
+            xDist, yDist = calcDist(prev, next)
+            if  (xDist < (prev.X * disThresh)) and (yDist < (prev.Y * disThresh)) and objHistory.label == next.label:
                 objHistory.history.append(next)
                 added = True
-                if euclidean > 2.0: 
-                    # print("x coord distance: {}, y coord distance: {}".format(xDist, yDist))
-                    print("ObjID: {} Euclidean distance: {}".format(objHistory.objID, euclidean))
+                print(f"X threshold: {disThresh*prev.X}, Ythreshold: {disThresh*prev.Y}")
+                print(f"Thresh to movement, coord X: {(disThresh*0.1*prev.X)}, Y: {(disThresh*0.1*prev.Y)}")
+                # the threshold for the non moving objects is still harcoded
+                # TODO: find a good way to tell what objects are still or in motion
+                if (xDist > (disThresh * prev.X * 0.25)) or (yDist > (disThresh * prev.Y * 0.25)):
+                    # print("ObjID: {} with xDist: {} and yDist: {} is moving".format(objHistory.objID, xDist, yDist))
                     objHistory.isMoving = True
                 else:
+                    # print("ObjID: {} with xDist: {} and yDist: {} is not moving".format(objHistory.objID, xDist, yDist))
                     objHistory.isMoving = False
             # remove objects that are older than frameNumber-historyDepth
             if objHistory.history[-1].frameID < (frameNumber-historyDepth):
@@ -130,14 +133,13 @@ def draw_boxes(history, image, colors, frameNumber):
     """
     for detections in history:
         detection = detections.history[-1]
-        if detection.frameID == frameNumber:
-            bbox = (detection.X, detection.Y, detection.Width, detection.Height)
-            left, top, right, bottom = bbox2points(bbox)
-            cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
-            cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
-                        (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
-                        colors[detection.label], 2)
-            cv.circle(image, (detection.X, detection.Y), 1, color=(0,255,0))
+        #if detection.frameID == frameNumber:
+        bbox = (detection.X, detection.Y, detection.Width, detection.Height)
+        left, top, right, bottom = bbox2points(bbox)
+        cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
+        cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
+                    (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
+                    colors[detection.label], 2)
 
 def movementIsRight(X_hist, historyDepth):
     """Returns True if object moving left to right or False if right to left
@@ -147,9 +149,12 @@ def movementIsRight(X_hist, historyDepth):
         historyDepth (int): the length of the x coord list
 
     Returns:
-        bool: retval 
+        bool: retval
     """
-    return (X_hist[-1] > X_hist[-historyDepth])
+    try:
+        return (X_hist[-1] > X_hist[-historyDepth])
+    except:
+        return (X_hist[-1] > X_hist[0])
 
 def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, image=None):
     """Calculating future trajectory of the trackedObject
@@ -164,7 +169,8 @@ def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, ima
     """
     X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
     y_train = np.array([det.Y for det in trackedObject.history[-historyDepth-1:-1]])
-    if len(X_train) >= historyDepth and len(y_train) >= historyDepth:
+    print(len(X_train), len(y_train))
+    if len(X_train) == historyDepth and len(y_train) == historyDepth:
         if movementIsRight(X_train, historyDepth):
             X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
         else:
@@ -185,13 +191,16 @@ def draw_predictions(trackedObject, image, frameNumber):
         image (Opencv Image): image to draw on
         frameNumber (int): current number of the video frame
     """
-    if trackedObject.history[-1].frameID >= frameNumber-5:
+    if trackedObject.history[-1].frameID == frameNumber:
+        idx = 0
         for x, y in zip(trackedObject.futureX, trackedObject.futureY):
-            cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
+            if (idx % 4) == 0:
+                cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
+            idx += 1
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 3 
-FUTUREPRED = 15 
+HISTORY_DEPTH = 3
+FUTUREPRED = 30
 
 def main():
     input = parseArgs()
@@ -207,11 +216,17 @@ def main():
     # exit if video cant be opened
     if not cap.isOpened():
         print("Source cannot be opened.")
-        exit(0) 
+        exit(0)
     # forward declaration of history(list[TrackedObject])
     history = []
     # generating colors for bounding boxes based on the class names of the neural net
     colors = class_colors(hldnapi.class_names)
+    # get frame width
+    frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
+    # get frame height
+    frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
+    # calculate distance between coord (0,0) and (frameWidth, frameHeight)
+    # diagonalDistance = euclidean_distances([[frameWidth], [frameHeight]])
     # start main loop
     while(1):
         # get current frame from video
@@ -219,21 +234,21 @@ def main():
         if frame is None:
             break
         # get current frame number
-        frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES) 
+        frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
         # time before computation
         prev_time = time.time()
-        # use darknet neural net to detects objects 
+        # use darknet neural net to detects objects
         detections = hldnapi.cvimg2detections(frame)
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history
-        updateHistory(targets, history, frameNumber, historyDepth=HISTORY_DEPTH)
+        updateHistory(targets, history, frameNumber, frameWidth, frameHeight, historyDepth=HISTORY_DEPTH)
         # draw bounding boxes of filtered detections
         draw_boxes(history, frame, colors, frameNumber)
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
-                predictTraj(obj, linear_model.Ridge(alpha=0.5), historyDepth=HISTORY_DEPTH)
+                predictTraj(obj, linear_model.RANSACRegressor(), historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
                 draw_predictions(obj, frame, frameNumber)
         # show video frame
         cv.imshow("FRAME", frame)
