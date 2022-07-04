@@ -2,12 +2,37 @@
 
 Predicting trajectories of objects
 
-**TODO:** improve dataclasses to store objects and detections with more features  
 **TODO:** implement SQLite DB logging  
 
 **Notice:** linear regression implemented, very primitive, but working  
-**Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth
-**Notice:** To tell which direction is the object moving is very tricky, made a quick function to tell its in main.py
+**Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth  
+**Notice:** To tell which direction is the object moving is very tricky, made a quick function to tell its in main.py  
+
+### Tracking of detected objects
+
+**Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
+
+**Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results.  
+
+### Determining wheter an object moving or not
+
+This is a key step, to reduce computation time.  
+
+**Temporary solution**: Difference in the first and the last detection of a tracked object.  
+
+### Throw away old detections or trackings
+
+This can save read, write time and memory.
+
+**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.
+
+### Predicting trajectories of moving objects
+
+#### Linear Regression 
+
+Using **Scikit Learn Linear Models**
+
+#### Linear Regression with coordinate depending weigths
 
 ## Darknet
 
