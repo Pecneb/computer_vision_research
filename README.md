@@ -14,7 +14,7 @@ Predicting trajectories of objects
 
 **Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results. 
 
-**Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information.  
+**Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[2]](#2)  
 
 ### Determining wheter an object moving or not
 
@@ -65,7 +65,7 @@ In order to be able to use the darknet api, build from source with the LIB flag 
 }
 
 ### DeepSORT
-
+<a id="2">[2]</a>  
 @inproceedings{Wojke2017simple,  
   title={Simple Online and Realtime Tracking with a Deep Association Metric},  
   author={Wojke, Nicolai and Bewley, Alex and Paulus, Dietrich},  
