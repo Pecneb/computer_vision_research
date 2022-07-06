@@ -26,6 +26,9 @@ from sklearn import linear_model
 from historyClass import Detection, TrackedObject
 from darknet import bbox2points, class_colors
 from sklearn.metrics import euclidean_distances
+from deep_sort.deep_sort import nn_matching
+from deep_sort.deep_sort.detection import Detection as DeepSortDetection
+from deep_sort.deep_sort.tracker import DeepSortTracker
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -35,8 +38,18 @@ def parseArgs():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Path to video.")
+    parser.add_argument("--max_cosine_distance", type=float, default=10.0,
+                        help="remove detections with confidence below this value")
+    parser.add_argument("--nn_budget", type=float, default=100,
+                        help="remove detections with confidence below this value")
+    parser.add_argument("--min_detection_height", type=float, default=0,
+                        help="remove detections with confidence below this value")
+    parser.add_argument("--min_confidence", type=float, default=0.7,
+                        help="remove detections with confidence below this value")
+    parser.add_argument("--nms_max_overlap", type=float, default=1.0,
+                        help="remove detections with confidence below this value")
     args = parser.parse_args()
-    return args.input
+    return args
 
 def printDetections(detections):
     """Function for printing out detected objects
@@ -100,15 +113,15 @@ def updateHistory(detections, history, frameNumber, frameWidth, frameHeight, his
             if  (xDist < (prev.X * disThresh)) and (yDist < (prev.Y * disThresh)) and objHistory.label == next.label:
                 objHistory.history.append(next)
                 added = True
-                print(f"X threshold: {disThresh*prev.X}, Ythreshold: {disThresh*prev.Y}")
-                print(f"Thresh to movement, coord X: {(disThresh*0.1*prev.X)}, Y: {(disThresh*0.1*prev.Y)}")
+                # print(f"X threshold: {disThresh*prev.X}, Ythreshold: {disThresh*prev.Y}")
+                # print(f"Thresh to movement, coord X: {(disThresh*0.1*prev.X)}, Y: {(disThresh*0.1*prev.Y)}")
                 # the threshold for the non moving objects is still harcoded
                 # TODO: find a good way to tell what objects are still or in motion
                 if (xDist > (disThresh * prev.X * 0.25)) or (yDist > (disThresh * prev.Y * 0.25)):
-                    # print("ObjID: {} with xDist: {} and yDist: {} is moving".format(objHistory.objID, xDist, yDist))
+                    print("ObjID: {} with xDist: {} and yDist: {} is moving".format(objHistory.objID, xDist, yDist))
                     objHistory.isMoving = True
                 else:
-                    # print("ObjID: {} with xDist: {} and yDist: {} is not moving".format(objHistory.objID, xDist, yDist))
+                    print("ObjID: {} with xDist: {} and yDist: {} is not moving".format(objHistory.objID, xDist, yDist))
                     objHistory.isMoving = False
             # remove objects that are older than frameNumber-historyDepth
             if objHistory.history[-1].frameID < (frameNumber-historyDepth):
@@ -198,12 +211,23 @@ def draw_predictions(trackedObject, image, frameNumber):
                 cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
             idx += 1
 
+def initMetric(max_cosine_distance, nn_budget, metric="cosine"):
+    return nn_matching.NearestNeighborDistanceMetric(
+        metric, max_cosine_distance, nn_budget)
+
+def getTracker(metricObj):
+    return DeepSortTracker(metricObj)
+
+def makeDeepSortDetectionObject(x, y, w, h, confidence, label):
+    return DeepSortDetection([(x-w/2), (y-h/2), w, h], float(confidence), [], labe, float(confidence), [], label)
+
 # global var for adjusting stored history length
 HISTORY_DEPTH = 3
 FUTUREPRED = 30
 
 def main():
-    input = parseArgs()
+    args = parseArgs()
+    input = args.input
     if input is not None:
         import hldnapi
     # check input source
@@ -225,8 +249,7 @@ def main():
     frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     # get frame height
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
-    # calculate distance between coord (0,0) and (frameWidth, frameHeight)
-    # diagonalDistance = euclidean_distances([[frameWidth], [frameHeight]])
+    metric =
     # start main loop
     while(1):
         # get current frame from video
