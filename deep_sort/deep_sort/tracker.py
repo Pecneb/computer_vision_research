@@ -34,18 +34,20 @@ class Tracker:
         A Kalman filter to filter target trajectories in image space.
     tracks : List[Track]
         The list of active tracks at the current time step.
-
+    historyDepth : int
+        Max number of darknetDetection objects stored in a track
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, historyDepth=3):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
         self.n_init = n_init
-
+        
         self.kf = kalman_filter.KalmanFilter()
         self.tracks = []
         self._next_id = 1
+        self.historyDepth = historyDepth
 
     def predict(self):
         """Propagate track state distributions one time step forward.
@@ -134,5 +136,5 @@ class Tracker:
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track(
             mean, covariance, self._next_id, self.n_init, self.max_age,
-            detection.feature))
+            detection.feature, detection.darknetDetection, self.historyDepth))
         self._next_id += 1

@@ -28,7 +28,7 @@ from darknet import bbox2points, class_colors
 from sklearn.metrics import euclidean_distances
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection as DeepSortDetection
-from deep_sort.deep_sort.tracker import DeepSortTracker
+from deep_sort.deep_sort.tracker import Tracker as DeepSortTracker
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -78,60 +78,6 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
             targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets
 
-def calcDist(prev, act):
-    """Function to calculate distance between an object on previous frame and actual frame.
-
-    Args:
-        prev (Detection): Object from previous frame
-        act (Detection): Object from actual frame
-
-    Returns:
-        xDist, yDist: distance of x coordiantes and distance of y coordiantes
-    """
-    xDist = abs(prev.X-act.X)
-    yDist = abs(prev.Y-act.Y)
-    return xDist, yDist
-
-def updateHistory(detections, history, frameNumber, frameWidth, frameHeight, historyDepth=3, disThresh=0.05):
-    """Function to update detection history
-
-    Args:
-        detections (list[Detection]): a list of new detection
-        history (list[TrackedObject]): the tracking history
-        frameNumber (int): number of the current video frame
-        historyDepth (int): length of the history to be stored
-        thresh (float, optional): Threshold to be able to tell if next obj is already detected or is a new one. Defaults to 0.1.
-    """
-    for next in detections:
-        added = False
-        for objHistory in history:
-            try:
-                prev = objHistory.history[-historyDepth]
-            except:
-                prev = objHistory.history[-1]
-            xDist, yDist = calcDist(prev, next)
-            if  (xDist < (prev.X * disThresh)) and (yDist < (prev.Y * disThresh)) and objHistory.label == next.label:
-                objHistory.history.append(next)
-                added = True
-                # print(f"X threshold: {disThresh*prev.X}, Ythreshold: {disThresh*prev.Y}")
-                # print(f"Thresh to movement, coord X: {(disThresh*0.1*prev.X)}, Y: {(disThresh*0.1*prev.Y)}")
-                # the threshold for the non moving objects is still harcoded
-                # TODO: find a good way to tell what objects are still or in motion
-                if (xDist > (disThresh * prev.X * 0.25)) or (yDist > (disThresh * prev.Y * 0.25)):
-                    print("ObjID: {} with xDist: {} and yDist: {} is moving".format(objHistory.objID, xDist, yDist))
-                    objHistory.isMoving = True
-                else:
-                    print("ObjID: {} with xDist: {} and yDist: {} is not moving".format(objHistory.objID, xDist, yDist))
-                    objHistory.isMoving = False
-            # remove objects that are older than frameNumber-historyDepth
-            if objHistory.history[-1].frameID < (frameNumber-historyDepth):
-                try:
-                    history.remove(objHistory)
-                except:
-                    continue
-        if not added:
-            history.append(TrackedObject(len(history)+1, next))
-
 def draw_boxes(history, image, colors, frameNumber):
     """Draw detection information to video output
 
@@ -146,13 +92,13 @@ def draw_boxes(history, image, colors, frameNumber):
     """
     for detections in history:
         detection = detections.history[-1]
-        #if detection.frameID == frameNumber:
-        bbox = (detection.X, detection.Y, detection.Width, detection.Height)
-        left, top, right, bottom = bbox2points(bbox)
-        cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
-        cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
-                    (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
-                    colors[detection.label], 2)
+        if detection.frameID == frameNumber:
+            bbox = (detection.X, detection.Y, detection.Width, detection.Height)
+            left, top, right, bottom = bbox2points(bbox)
+            cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
+            cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
+                        (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
+                        colors[detection.label], 2)
 
 def movementIsRight(X_hist, historyDepth):
     """Returns True if object moving left to right or False if right to left
@@ -182,8 +128,7 @@ def predictTraj(trackedObject, linear_model, historyDepth=3, futureDepth=30, ima
     """
     X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
     y_train = np.array([det.Y for det in trackedObject.history[-historyDepth-1:-1]])
-    print(len(X_train), len(y_train))
-    if len(X_train) == historyDepth and len(y_train) == historyDepth:
+    if len(X_train) >= 3 and len(y_train) >= 3:
         if movementIsRight(X_train, historyDepth):
             X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
         else:
@@ -211,18 +156,84 @@ def draw_predictions(trackedObject, image, frameNumber):
                 cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
             idx += 1
 
-def initMetric(max_cosine_distance, nn_budget, metric="cosine"):
+def initDeepSortTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
+    """DeepSort metric factory
+
+    Args:
+        max_cosine_distance (float): Gating threshold for cosine distance metric (object appearance) 
+        nn_budget (int): Maximum size of the appearance descriptor gallery. If None, no budget is enforced. 
+        metric (str, optional): Distance metric type. Defaults to "cosine".
+
+    Returns:
+        metric: NearestNeighborDistanceMetric 
+    """
     return nn_matching.NearestNeighborDistanceMetric(
         metric, max_cosine_distance, nn_budget)
 
-def getTracker(metricObj):
-    return DeepSortTracker(metricObj)
+def getDeepSortTracker(metricObj, historyDepth):
+    """DeepSort Tracker object fractory
 
-def makeDeepSortDetectionObject(x, y, w, h, confidence, label):
-    return DeepSortDetection([(x-w/2), (y-h/2), w, h], float(confidence), [], labe, float(confidence), [], label)
+    Args:
+        metricObj (metric): DistanceMetric object for Tracker object from deep_sort.deep_sort.tracker.Tracker class 
+
+    Returns:
+        tracker: deep_sort Tracker object 
+    """
+    return DeepSortTracker(metricObj, historyDepth)
+
+def makeDeepSortDetectionObject(darknetDetection):
+    """DeepSort Detection object factory
+
+    Args:
+        darknetDetection (Detection): Detection object from historyClass.Detecion class 
+
+    Returns:
+        DeepSortDetection: Detection object from deep_sort.deep_sort.detection.Detecion class 
+    """
+    return DeepSortDetection([(darknetDetection.X-darknetDetection.Width/2), 
+        (darknetDetection.Y-darknetDetection.Height/2), 
+        darknetDetection.Height, darknetDetection.Height], 
+        float(darknetDetection.confidence), [], darknetDetection)
+
+def updateHistory(history, DeepSortTracker, detections, historyDepth=30):
+    """Update TrackedObject history
+
+    Args:
+        history (list[TrackedObject]): the history of tracked objects 
+        DeepSortTracker (Tracker): deep_sort Tracker obj 
+        detections (list[Detection]): list of new detections fresh from darknet 
+        historyDepth (int) : number of detections stored in trackedObject.history 
+    """
+    wrapped_Detections = [makeDeepSortDetectionObject(det) for det in detections] 
+    DeepSortTracker.predict()
+    DeepSortTracker.update(wrapped_Detections)
+    for track in DeepSortTracker.tracks:
+        updated = False
+        prevTO = None
+        for trackedObject in history:
+            if track.track_id == trackedObject.objID:
+                if track.time_since_update == 0:
+                    trackedObject.update(track.darknetDets[-1])
+                    if len(trackedObject.history) > historyDepth:
+                        trackedObject.history.remove(trackedObject.history[0])
+                else:
+                    # if arg in update is None, then time_since_update += 1
+                    trackedObject.update()
+                updated = True 
+                prevTO = trackedObject
+                break
+        if prevTO is not None:
+            if prevTO.max_age == prevTO.time_since_update:
+                try:
+                    history.remove(prevTO)
+                    print(len(history))
+                except:
+                    print("Warning at removal of obj ID {}".format(prevTO.objID))
+        if not updated:
+            history.append(TrackedObject(track.track_id, track.darknetDets[-1], track._max_age))
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 3
+HISTORY_DEPTH = 30 
 FUTUREPRED = 30
 
 def main():
@@ -249,7 +260,8 @@ def main():
     frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     # get frame height
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
-    metric =
+    # create DeepSortTracker with command line arguments
+    tracker = getDeepSortTracker(initDeepSortTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=HISTORY_DEPTH)
     # start main loop
     while(1):
         # get current frame from video
@@ -265,14 +277,13 @@ def main():
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history
-        updateHistory(targets, history, frameNumber, frameWidth, frameHeight, historyDepth=HISTORY_DEPTH)
+        updateHistory(history, tracker, targets)
         # draw bounding boxes of filtered detections
         draw_boxes(history, frame, colors, frameNumber)
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
-            if obj.isMoving:
-                predictTraj(obj, linear_model.RANSACRegressor(), historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
-                draw_predictions(obj, frame, frameNumber)
+            predictTraj(obj, linear_model.RANSACRegressor(), historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+            draw_predictions(obj, frame, frameNumber)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now

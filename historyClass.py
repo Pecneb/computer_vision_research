@@ -62,15 +62,27 @@ class TrackedObject():
     futureY: list[int] = field(init=False)
     history: list[Detection]
     isMoving: bool = field(init=False)
+    time_since_update : int = field(init=False)
+    max_age : int
+    
 
-    def __init__(self, id, first):
+    def __init__(self, id, first, max_age=30):
         self.objID = id
         self.history = [first]
         self.label = first.label
         self.isMoving = False
         self.futureX = []
         self.futureY = []
+        self.max_age = max_age
+        self.time_since_update = 0
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
         return average(areas)
+
+    def update(self, detection=None):
+        if detection is not None:
+            self.history.append(detection)
+            self.time_since_update = 0 
+        else:
+            self.time_since_update += 1

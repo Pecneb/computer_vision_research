@@ -60,11 +60,14 @@ class Track:
     features : List[ndarray]
         A cache of features. On each measurement update, the associated feature
         vector is added to this list.
+    firstDarknetDets : List[DarknetDetection]
+        A cache of darknet Detection objects from historyClass.Detection class
+    
 
     """
 
     def __init__(self, mean, covariance, track_id, n_init, max_age,
-                 feature=None):
+                 feature=None, firstDarknetDet=None, historyDepth=3):
         self.mean = mean
         self.covariance = covariance
         self.track_id = track_id
@@ -76,9 +79,14 @@ class Track:
         self.features = []
         if feature is not None:
             self.features.append(feature)
+        self.darknetDets = []
+
+        if firstDarknetDet is not None:
+            self.darknetDets.append(firstDarknetDet)
 
         self._n_init = n_init
         self._max_age = max_age
+        self.historyDepth = historyDepth
 
     def to_tlwh(self):
         """Get current position in bounding box format `(top left x, top left y,
@@ -138,6 +146,8 @@ class Track:
         self.mean, self.covariance = kf.update(
             self.mean, self.covariance, detection.to_xyah())
         self.features.append(detection.feature)
+        self.darknetDets.append(detection.darknetDetection)
+        
 
         self.hits += 1
         self.time_since_update = 0
