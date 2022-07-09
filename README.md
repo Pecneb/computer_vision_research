@@ -43,6 +43,10 @@ Using **Scikit Learn Linear Models**
 
 #### Linear Regression with coordinate depending weigths
 
+#### Polynom fitting
+
+#### Spline
+
 
 
 ## References
