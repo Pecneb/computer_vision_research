@@ -100,7 +100,7 @@ def draw_boxes(history, image, colors, frameNumber):
 
 # global var for adjusting stored history length
 HISTORY_DEPTH = 30 
-FUTUREPRED = 30
+FUTUREPRED = 200 
 
 def main():
     args = parseArgs()

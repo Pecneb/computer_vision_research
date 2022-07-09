@@ -17,6 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
+from cv2 import trace
 import numpy as np
 import cv2 as cv
 
@@ -46,24 +47,31 @@ def predictLinear(trackedObject, linear_model, historyDepth=3, futureDepth=30, i
         image (Opencv image, optional): if image is inputted, then trajectories are drawn to the image. Defaults to None.
 
     """
-    X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
-    y_train = np.array([det.Y for det in trackedObject.history[-historyDepth-1:-1]])
-    if len(X_train) >= 3 and len(y_train) >= 3:
+    x_history = [det.X for det in trackedObject.history]
+    y_history = [det.Y for det in trackedObject.history]
+    if len(x_history) >= 3 and len(y_history) >= 3:
+        # k (int) : number of training points
+        k = 3
+        # calculating even slices to pick k points to fit linear model on
+        slice = len(trackedObject.history) // k
+        X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
+        y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
+        # check if the movement is right or left, becouse the generated x_test vector
+        # if movement is right vector is ascending, otherwise descending
         if movementIsRight(X_train, historyDepth):
             X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
+        # fit linear model on the x_train vectors points
         reg = linear_model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
         y_pred = reg.predict(X_test.reshape(-1,1))
         trackedObject.futureX = X_test
         trackedObject.futureY = y_pred
-        if image is not None:
-            for x,y in zip(trackedObject.futureX, trackedObject.futureY):
-                cv.circle(image, (int(x),int(y)), 1, color=(0,0,255))
 
-def predictPoly():
+def predictPoly(trackedObject, model, historyDepth=3, futureDepth=30):
     # TODO: implement
-    pass
+    X_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
+    y_train = np.array([det.X for det in trackedObject.history[-historyDepth-1:-1]])
 
 def draw_predictions(trackedObject, image, frameNumber):
     """Draw prediction information to image
