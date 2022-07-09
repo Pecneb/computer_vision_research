@@ -147,7 +147,8 @@ class Track:
             self.mean, self.covariance, detection.to_xyah())
         self.features.append(detection.feature)
         self.darknetDets.append(detection.darknetDetection)
-        
+        if len(self.darknetDets) > 30:
+            self.darknetDets.remove(self.darknetDets[0])
 
         self.hits += 1
         self.time_since_update = 0
