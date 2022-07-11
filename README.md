@@ -10,40 +10,54 @@ Predicting trajectories of objects
 
 ## Darknet
 
-For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
-In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project. (My Makefile to build darknet can be found in the darknet_config_files directory)
+For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)  
+In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project. (My Makefile to build darknet can be found in the darknet_config_files directory)  
 
-**Notice:** Using the yolov4-csp-x-swish.cfg and weights with RTX 3070 TI is doing 26 FPS with 69.9% precision, this is the most stable detection so far, good base for tracking and predicting
+**Notice:** Using the yolov4-csp-x-swish.cfg and weights with RTX 3070 TI is doing 26 FPS with 69.9% precision, this is the most stable detection so far, good base for tracking and predicting  
 
 ## Tracking of detected objects
 
 **Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
 
-**Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results.
+**Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results.  
 
-**Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[2]](#2)  
+**Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. Pretty much based on Kalmanfilter. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[2]](#2)  
 
 ### Determining wheter an object moving or not
 
 This is a key step, to reduce computation time.  
 
-**Temporary solution**: Difference in the first and the last detection of a tracked object.  
+**Temporary solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
 
 ### Throw away old detections or trackings
 
-This can save read, write time and memory.
+This can save read, write time and memory.  
 
-**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.
+**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.  
 
 ## Predicting trajectories of moving objects
 
 #### Linear Regression
 
-Using **Scikit Learn Linear Models**
+Using **Scikit Learn Linear Models**  
+
+```python
+model = linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1)  
+reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))  
+y_pred = reg.predict(X_test.reshape(-1,1))  
+```
+
+Best working linear model RANSAC with base_estimator Ridge.  
 
 #### Linear Regression with coordinate depending weigths
 
+**TODO**: this has to implemented, calculate weights based on detecions position.  
+
 #### Polynom fitting
+
+Using Sklearn PolynomialFeatures function to generate X and Y training points for the estimator.   
+
+The PolynomialFeatures and the estimator have to be inputted to the make_pipeline function.  
 
 #### Spline
 
