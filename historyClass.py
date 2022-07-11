@@ -53,6 +53,9 @@ class TrackedObject():
         futureX(int): the predicrted X position
         futureY(int): the predicted Y position
         isMoving(bool): True if object is in motion
+        time_since_update(int): keeping track of missed detections of the object
+        max_age(int): when time_since_update hits max_age, tracking is deleted
+        features(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
     """
@@ -64,6 +67,7 @@ class TrackedObject():
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
+    features : list[int] = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -79,9 +83,16 @@ class TrackedObject():
         areas = [(det.Width*det.Height) for det in self.history]
         return average(areas)
 
-    def update(self, detection=None):
+    def update(self, detection=None, features=None):
+        """Update tracking
+
+        Args:
+            detection (Detection, optional): historyClass Detecton object. If none, increment time_since_update. Defaults to None.
+            features (list[int], optional): x, y, a, h, vx, vy, va, h --> coordinates, aspect ratio, height and their velocities. Defaults to None.
+        """
         if detection is not None:
             self.history.append(detection)
+            self.features = features
             self.time_since_update = 0 
         else:
             self.time_since_update += 1

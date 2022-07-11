@@ -113,9 +113,9 @@ def predictSpline(trackedObject, degree=3, historyDepth=3, futureDepth=30):
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
         # poly features
-        polyModel = make_pipeline(SplineTransformer(), linear_model.Ridge(alpha=1e-3)) 
-        polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
-        y_pred = polyModel.predict(X_test.reshape(-1, 1))
+        splineModel= make_pipeline(SplineTransformer(degree=degree, knots=4), linear_model.Ridge(alpha=1e-3)) 
+        splineModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
+        y_pred = splineModel.predict(X_test.reshape(-1, 1))
         trackedObject.futureX = X_test
         trackedObject.futureY = y_pred
 
