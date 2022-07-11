@@ -17,13 +17,16 @@
 
     Contact email: ecneb2000@gmail.com
 """
+# disable sklearn warning
+def warn(*arg, **args):
+    pass
+import warnings
+warnings.warn = warn
 
-from email.mime import base
 import cv2 as cv
 import argparse
 import time
 import numpy as np
-from sklearn import linear_model
 from historyClass import Detection
 from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
@@ -165,7 +168,7 @@ def main():
             if cv.waitKey(0) == ord('r'):
                 continue
         # press 'q' to stop playing video
-        if cv.waitKey(1) == ord('q'):
+        if cv.waitKey(27) == ord('q'):
             break
     cap.release()
     cv.destroyAllWindows()

@@ -79,7 +79,7 @@ def updateHistory(history, Tracker, detections, historyDepth=30):
         for trackedObject in history:
             if track.track_id == trackedObject.objID:
                 if track.time_since_update == 0:
-                    trackedObject.update(track.darknetDets[-1])
+                    trackedObject.update(track.darknetDets[-1], track.mean)
                     if len(trackedObject.history) > historyDepth:
                         trackedObject.history.remove(trackedObject.history[0])
                 else:

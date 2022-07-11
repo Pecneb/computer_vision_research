@@ -55,7 +55,7 @@ class TrackedObject():
         isMoving(bool): True if object is in motion
         time_since_update(int): keeping track of missed detections of the object
         max_age(int): when time_since_update hits max_age, tracking is deleted
-        features(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
+        mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
     """
@@ -67,23 +67,32 @@ class TrackedObject():
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
-    features : list[int] = field(init=False)
+    mean: list[int] = field(init=False)
+    X: int
+    Y: int
+    VX: float = field(init=False)
+    YX: float = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
         self.history = [first]
+        self.X = first.X
+        self.Y = first.Y
         self.label = first.label
         self.isMoving = False
         self.futureX = []
         self.futureY = []
         self.max_age = max_age
         self.time_since_update = 0
+    
+    def __repr__(self) -> str:
+        return "ID: {}, Label: {}, Moving: {}, Age: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.objID, self.label, self.isMoving, self.time_since_update, self.X, self.Y, self.VX, self.VY)
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
         return average(areas)
 
-    def update(self, detection=None, features=None):
+    def update(self, detection=None, mean=None):
         """Update tracking
 
         Args:
@@ -92,7 +101,11 @@ class TrackedObject():
         """
         if detection is not None:
             self.history.append(detection)
-            self.features = features
+            self.mean = mean 
+            self.X = mean[0]
+            self.Y = mean[1]
+            self.VX = mean[4]
+            self.VY = mean[5]
             self.time_since_update = 0 
         else:
             self.time_since_update += 1
