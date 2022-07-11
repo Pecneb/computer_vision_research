@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 
+from email.mime import base
 import cv2 as cv
 import argparse
 import time
@@ -26,7 +27,7 @@ from sklearn import linear_model
 from historyClass import Detection
 from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import predictLinear, draw_predictions 
+from predict import draw_history, predictLinear, draw_predictions, predictMixed, predictPoly 
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -100,7 +101,7 @@ def draw_boxes(history, image, colors, frameNumber):
 
 # global var for adjusting stored history length
 HISTORY_DEPTH = 30 
-FUTUREPRED = 200 
+FUTUREPRED = 30
 
 def main():
     args = parseArgs()
@@ -149,14 +150,20 @@ def main():
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
-                predictLinear(obj, linear_model.LinearRegression(), historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                predictMixed(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
                 draw_predictions(obj, frame, frameNumber)
+                draw_history(obj, frame, frameNumber)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
         print("FPS: {}".format(fps))
+        # press 'p' to pause playing the video
+        if cv.waitKey(1) == ord('p'):
+            # press 'r' to resume
+            if cv.waitKey(0) == ord('r'):
+                continue
         # press 'q' to stop playing video
         if cv.waitKey(1) == ord('q'):
             break
