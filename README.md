@@ -29,6 +29,10 @@ This is a key step, to reduce computation time.
 
 **Temporary solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
 
+```python
+self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
+```
+
 ### Throw away old detections or trackings
 
 This can save read, write time and memory.  
@@ -47,7 +51,7 @@ reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
 y_pred = reg.predict(X_test.reshape(-1,1))  
 ```
 
-Best working linear model RANSAC with base_estimator Ridge.  
+Best working linear model RANSACRegressor() with base_estimator LinearRegression().  
 
 #### Linear Regression with coordinate depending weigths
 
@@ -59,9 +63,15 @@ Using Sklearn PolynomialFeatures function to generate X and Y training points fo
 
 The PolynomialFeatures and the estimator have to be inputted to the make_pipeline function.  
 
+```python
+polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.RANSACRegressor(base_estimator=linear_model.Ridge(alpha=0.5), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1))  
+polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))  
+y_pred = polyModel.predict(X_test.reshape(-1, 1))  
+```
+
 #### Spline
 
-
+**TODO**: Implement Spline, not working yet.
 
 ## References
 

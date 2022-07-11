@@ -78,6 +78,8 @@ class TrackedObject():
         self.history = [first]
         self.X = first.X
         self.Y = first.Y
+        self.VX = 0 
+        self.VY = 0
         self.label = first.label
         self.isMoving = False
         self.futureX = []
@@ -109,6 +111,12 @@ class TrackedObject():
             self.time_since_update = 0 
         else:
             self.time_since_update += 1
+        # it seem, that calculating euclidean distance of first and last stored detection, gives more accurate estimation of movement
+        # if mean is not None:
+        #     if (abs(self.VX) < 1.0 and abs(self.VY) < 1.0):
+        #         self.isMoving = False
+        #     else:
+        #         self.isMoving = True
         if self.history:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
