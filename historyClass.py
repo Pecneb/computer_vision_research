@@ -53,6 +53,9 @@ class TrackedObject():
         futureX(int): the predicrted X position
         futureY(int): the predicted Y position
         isMoving(bool): True if object is in motion
+        time_since_update(int): keeping track of missed detections of the object
+        max_age(int): when time_since_update hits max_age, tracking is deleted
+        mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
     """
@@ -62,15 +65,51 @@ class TrackedObject():
     futureY: list[int] = field(init=False)
     history: list[Detection]
     isMoving: bool = field(init=False)
+    time_since_update : int = field(init=False)
+    max_age : int
+    mean: list[int] = field(init=False)
+    X: int
+    Y: int
+    VX: float = field(init=False)
+    YX: float = field(init=False)
 
-    def __init__(self, id, first):
+    def __init__(self, id, first, max_age=30):
         self.objID = id
         self.history = [first]
+        self.X = first.X
+        self.Y = first.Y
         self.label = first.label
         self.isMoving = False
         self.futureX = []
         self.futureY = []
+        self.max_age = max_age
+        self.time_since_update = 0
+    
+    def __repr__(self) -> str:
+        return "ID: {}, Label: {}, Moving: {}, Age: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.objID, self.label, self.isMoving, self.time_since_update, self.X, self.Y, self.VX, self.VY)
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
         return average(areas)
+
+    def update(self, detection=None, mean=None):
+        """Update tracking
+
+        Args:
+            detection (Detection, optional): historyClass Detecton object. If none, increment time_since_update. Defaults to None.
+            features (list[int], optional): x, y, a, h, vx, vy, va, h --> coordinates, aspect ratio, height and their velocities. Defaults to None.
+        """
+        if detection is not None:
+            self.history.append(detection)
+            self.mean = mean 
+            self.X = mean[0]
+            self.Y = mean[1]
+            self.VX = mean[4]
+            self.VY = mean[5]
+            self.time_since_update = 0 
+        else:
+            self.time_since_update += 1
+        if self.history:
+            # calculating euclidean distance of the first stored detection and last stored detection
+            # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
+            self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0 
