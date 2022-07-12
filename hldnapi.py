@@ -23,9 +23,9 @@ import cv2 as cv
 import darknet
 
 """Configuration files for darknet"""
-CONFIG = "./darknet_config_files/yolov4.cfg"
+CONFIG = "./darknet_config_files/yolov4-csp-x-swish.cfg"
 DATA = "./darknet_config_files/coco.data"
-WEIGHTS = "./darknet_config_files/yolov4.weights"
+WEIGHTS = "./darknet_config_files/yolov4-csp-x-swish.weights"
 
 """Loading configuration files into darknet"""
 network, class_names, colors = darknet.load_network(CONFIG, DATA, WEIGHTS)

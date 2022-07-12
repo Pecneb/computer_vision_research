@@ -19,7 +19,7 @@
 """
 
 from dataclasses import dataclass, field
-from numpy import average
+import numpy as np
 
 @dataclass
 class Detection:
@@ -61,13 +61,13 @@ class TrackedObject():
     """
     objID: int
     label: int = field(init=False)
-    futureX: list[int] = field(init=False)
-    futureY: list[int] = field(init=False)
-    history: list[Detection]
+    futureX: list = field(init=False)
+    futureY: list = field(init=False)
+    history: list
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
-    mean: list[int] = field(init=False)
+    mean: list = field(init=False)
     X: int
     Y: int
     VX: float = field(init=False)
@@ -92,7 +92,7 @@ class TrackedObject():
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
-        return average(areas)
+        return np.average(areas)
 
     def update(self, detection=None, mean=None):
         """Update tracking

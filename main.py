@@ -20,6 +20,7 @@
 # disable sklearn warning
 def warn(*arg, **args):
     pass
+from threading import Thread
 import warnings
 warnings.warn = warn
 
@@ -30,7 +31,8 @@ import numpy as np
 from historyClass import Detection
 from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import draw_history, predictLinear, draw_predictions, predictMixed, predictPoly 
+from predict import draw_history, predictLinear, draw_predictions, predictMixed, predictPoly, predictThread 
+from concurrent.futures import ThreadPoolExecutor
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -103,8 +105,8 @@ def draw_boxes(history, image, colors, frameNumber):
                         colors[detection.label], 2)
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 30 
-FUTUREPRED = 30
+HISTORY_DEPTH = 100 
+FUTUREPRED = 100 
 
 def main():
     args = parseArgs()
@@ -161,7 +163,7 @@ def main():
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
-        print("FPS: {}".format(fps))
+        print("FPS: {}".format(fps,))
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume
