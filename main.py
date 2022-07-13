@@ -51,6 +51,7 @@ def parseArgs():
                         help="remove detections with confidence below this value")
     parser.add_argument("--nms_max_overlap", type=float, default=1.0,
                         help="remove detections with confidence below this value")
+    parser.add_argument("-d", "--device", default='0', help="Choose device to run neuralnet. example: cpu, 0,1,2,3...")
     args = parser.parse_args()
     return args
 
@@ -104,8 +105,8 @@ def draw_boxes(history, image, colors, frameNumber):
                         colors[detection.cls], 2)
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 30 
-FUTUREPRED = 30
+HISTORY_DEPTH = 60 
+FUTUREPRED = 120
 
 def main():
     args = parseArgs()
@@ -142,7 +143,7 @@ def main():
         # time before computation
         prev_time = time.time()
         # use darknet neural net to detects objects
-        detections = yolov7api.detect(frame) 
+        detections = yolov7api.detect(frame, device='0') 
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history

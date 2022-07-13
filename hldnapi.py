@@ -82,3 +82,5 @@ def cvimg2detections(image):
         bbox_adjusted = convert2original(image, bbox)
         detections_adjusted.append((str(label), confidence, bbox_adjusted))
     return detections_adjusted
+
+

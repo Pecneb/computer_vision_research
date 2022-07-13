@@ -11,19 +11,18 @@ from numpy import random
 
 from models.experimental import attempt_load
 from utils.datasets import letterbox
-from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
+from utils.general import check_img_size, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh
-from utils.plots import plot_one_box
-from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
+from utils.torch_utils import select_device, load_classifier
 
 CONFIG = "yolov7/cfg/deploy/yolov7.yaml"
 WEIGHTS = "yolov7/yolov7.pt"
 IMGSZ = 640
 STRIDE = 32
-DEVICE = 'cpu' 
+DEVICE = '0' 
 CLASSIFY = False
 AUGMENT = True
-CONF_THRES = 0.25
+CONF_THRES = 0.65
 IOU_THRESH = 0.45
 CLASSES = None
 
@@ -55,6 +54,8 @@ NAMES = MODEL.module.names if hasattr(MODEL, "module") else MODEL.names
 COLORS = [[random.randint(0, 255) for _ in range(3)] for _ in NAMES]
 
 def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE, device=DEVICE, augment=AUGMENT, names=NAMES, colors=COLORS, conf_thres=CONF_THRES, iou_thres=IOU_THRESH, classes=CLASSES, classify=CLASSIFY):    
+    device = select_device(device)
+    cudnn.benchmark = True
     with torch.no_grad():
         # Scale img0 to model imgsz
         img = letterbox(img0, imgsz, stride=stride)[0]
