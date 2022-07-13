@@ -31,6 +31,7 @@ from historyClass import Detection
 from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from predict import draw_history, predictLinear, draw_predictions, predictMixed, predictPoly 
+import yolov7api
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -74,10 +75,10 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
         targets (list[Detection]): Returns a list of Detection objects
     """
     targets = []
-    for label, conf, bbox in detections:
+    for label, cls, conf, bbox in detections:
         # bbox: x, y, w, h
         if label in targetNames:
-            targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
+            targets.append(Detection(label, cls, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets
 
 def draw_boxes(history, image, colors, frameNumber):
@@ -97,10 +98,10 @@ def draw_boxes(history, image, colors, frameNumber):
         if detection.frameID == frameNumber:
             bbox = (detection.X, detection.Y, detection.Width, detection.Height)
             left, top, right, bottom = bbox2points(bbox)
-            cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
+            cv.rectangle(image, (left, top), (right, bottom), colors[detection.cls], 1)
             cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
                         (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
-                        colors[detection.label], 2)
+                        colors[detection.cls], 2)
 
 # global var for adjusting stored history length
 HISTORY_DEPTH = 30 
@@ -109,8 +110,6 @@ FUTUREPRED = 30
 def main():
     args = parseArgs()
     input = args.input
-    if input is not None:
-        import hldnapi
     # check input source
     try:
         input = int(input)
@@ -125,7 +124,7 @@ def main():
     # forward declaration of history(list[TrackedObject])
     history = []
     # generating colors for bounding boxes based on the class names of the neural net
-    colors = class_colors(hldnapi.class_names)
+    colors = yolov7api.COLORS 
     # get frame width
     frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     # get frame height
@@ -143,7 +142,7 @@ def main():
         # time before computation
         prev_time = time.time()
         # use darknet neural net to detects objects
-        detections = hldnapi.cvimg2detections(frame)
+        detections = yolov7api.detect(frame) 
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history

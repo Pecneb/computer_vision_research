@@ -35,6 +35,7 @@ class Detection:
         frameID(int): the number of the frame, the detection is oqqured
     """
     label: str
+    cls: int
     confidence: float
     X: int
     Y: int
