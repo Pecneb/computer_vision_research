@@ -43,6 +43,11 @@ def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
         modelc = load_classifier(name='resnet101', n=2)
         modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
         return model, modelc, HALF
+    
+    cudnn.benchmark = True # set True if img size is constant
+    if device.type != 'cpu':
+            model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
+
     return model, half
 
 if CLASSIFY:
@@ -55,7 +60,6 @@ COLORS = [[random.randint(0, 255) for _ in range(3)] for _ in NAMES]
 
 def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE, device=DEVICE, augment=AUGMENT, names=NAMES, colors=COLORS, conf_thres=CONF_THRES, iou_thres=IOU_THRESH, classes=CLASSES, classify=CLASSIFY):    
     device = select_device(device)
-    cudnn.benchmark = True
     with torch.no_grad():
         # Scale img0 to model imgsz
         img = letterbox(img0, imgsz, stride=stride)[0]
