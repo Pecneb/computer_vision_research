@@ -35,6 +35,7 @@ class Detection:
         frameID(int): the number of the frame, the detection is oqqured
     """
     label: str
+    cls: int
     confidence: float
     X: int
     Y: int
@@ -58,6 +59,7 @@ class TrackedObject():
         mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
+         update(): called when tracking can be updated
     """
     objID: int
     label: int = field(init=False)
@@ -71,7 +73,7 @@ class TrackedObject():
     X: int
     Y: int
     VX: float = field(init=False)
-    YX: float = field(init=False)
+    VY: float = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -86,6 +88,7 @@ class TrackedObject():
         self.futureY = []
         self.max_age = max_age
         self.time_since_update = 0
+        self.mean = [] 
     
     def __repr__(self) -> str:
         return "ID: {}, Label: {}, Moving: {}, Age: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.objID, self.label, self.isMoving, self.time_since_update, self.X, self.Y, self.VX, self.VY)
