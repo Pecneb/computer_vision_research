@@ -59,6 +59,7 @@ class TrackedObject():
         mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
+         update(): called when tracking can be updated
     """
     objID: int
     label: int = field(init=False)
