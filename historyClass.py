@@ -61,13 +61,13 @@ class TrackedObject():
     """
     objID: int
     label: int = field(init=False)
-    futureX: list[int] = field(init=False)
-    futureY: list[int] = field(init=False)
-    history: list[Detection]
+    futureX: list = field(init=False)
+    futureY: list = field(init=False)
+    history: list
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
-    mean: list[int] = field(init=False)
+    mean: list = field(init=False)
     X: int
     Y: int
     VX: float = field(init=False)
