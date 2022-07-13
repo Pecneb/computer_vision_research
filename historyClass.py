@@ -19,7 +19,7 @@
 """
 
 from dataclasses import dataclass, field
-from numpy import average
+import numpy as np
 
 @dataclass
 class Detection:
@@ -95,7 +95,7 @@ class TrackedObject():
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
-        return average(areas)
+        return np.average(areas)
 
     def update(self, detection=None, mean=None):
         """Update tracking

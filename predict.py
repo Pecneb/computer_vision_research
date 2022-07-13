@@ -17,16 +17,12 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from email.mime import base
-from random import random
-from statistics import mode
-from cv2 import trace
 import numpy as np
 import cv2 as cv
-from sklearn import linear_model, kernel_ridge
-from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.preprocessing import KernelCenterer, PolynomialFeatures, SplineTransformer
+from sklearn import linear_model
+from sklearn.preprocessing import PolynomialFeatures, SplineTransformer
 from sklearn.pipeline import make_pipeline
+from time import time
 
 from historyClass import TrackedObject
 
@@ -152,3 +148,10 @@ def draw_history(trackedObject, image, frameNumber):
             if (idx % 1) == 0:
                 cv.circle(image, (int(det.X), int(det.Y)), 1, color=(0,255,0))
             idx += 1
+
+def predictThread(trackedObject : TrackedObject, image : np.ndarray, frameNumber : int, historyDepth=3, futureDepth=30) -> None:
+    if trackedObject.isMoving:
+        draw_history(trackedObject, image, frameNumber)
+        predictMixed(trackedObject, historyDepth, futureDepth)
+        draw_predictions(trackedObject, image, frameNumber)
+    

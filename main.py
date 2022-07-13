@@ -20,6 +20,7 @@
 # disable sklearn warning
 def warn(*arg, **args):
     pass
+from threading import Thread
 import warnings
 warnings.warn = warn
 
@@ -161,7 +162,7 @@ def main():
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
-        print("FPS: {}".format(fps))
+        print("FPS: {}".format(fps,))
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume
