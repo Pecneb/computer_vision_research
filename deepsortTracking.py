@@ -79,7 +79,7 @@ def updateHistory(history, Tracker, detections, historyDepth=30):
         for trackedObject in history:
             if track.track_id == trackedObject.objID:
                 if track.time_since_update == 0:
-                    trackedObject.update(track.darknetDets[-1], track.mean)
+                    trackedObject.update(track.darknetDet, track.mean)
                     if len(trackedObject.history) > historyDepth:
                         trackedObject.history.remove(trackedObject.history[0])
                 else:
@@ -93,7 +93,8 @@ def updateHistory(history, Tracker, detections, historyDepth=30):
                 try:
                     history.remove(prevTO)
                     print(len(history))
-                except:
+                except Exception as e:
                     print("Warning at removal of obj ID {}".format(prevTO.objID))
+                    print(e)
         if not updated:
-            history.append(TrackedObject(track.track_id, track.darknetDets[-1], track._max_age))
+            history.append(TrackedObject(track.track_id, track.darknetDet, track._max_age))

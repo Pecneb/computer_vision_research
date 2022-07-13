@@ -72,7 +72,7 @@ class TrackedObject():
     X: int
     Y: int
     VX: float = field(init=False)
-    YX: float = field(init=False)
+    VY: float = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -87,6 +87,7 @@ class TrackedObject():
         self.futureY = []
         self.max_age = max_age
         self.time_since_update = 0
+        self.mean = [] 
     
     def __repr__(self) -> str:
         return "ID: {}, Label: {}, Moving: {}, Age: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.objID, self.label, self.isMoving, self.time_since_update, self.X, self.Y, self.VX, self.VY)
