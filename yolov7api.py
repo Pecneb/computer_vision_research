@@ -19,7 +19,7 @@ CONFIG = "yolov7/cfg/deploy/yolov7x.yaml"
 WEIGHTS = "yolov7/yolov7x.pt"
 IMGSZ = 640 
 STRIDE = 32
-DEVICE = '0' 
+DEVICE = "cuda" 
 CLASSIFY = False 
 AUGMENT = True
 CONF_THRES = 0.5
@@ -45,7 +45,7 @@ def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
     # optional Second-stage classifier
     if classify:
         modelc = load_classifier(name='resnet101', n=2)
-        modelc.load_state_dict(torch.load('yolov7/weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+        modelc.load_state_dict(torch.load('yolov7/weights/resnet101.nt', map_location=device)['model']).to(device)
         return model, modelc, half, device 
     
     return model, half, device
