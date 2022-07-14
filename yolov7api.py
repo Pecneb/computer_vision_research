@@ -15,19 +15,19 @@ from utils.general import check_img_size, non_max_suppression, apply_classifier,
     scale_coords, xyxy2xywh
 from utils.torch_utils import select_device, load_classifier
 
-CONFIG = "yolov7/cfg/deploy/yolov7.yaml"
-WEIGHTS = "yolov7/yolov7.pt"
-IMGSZ = 640
+CONFIG = "yolov7/cfg/deploy/yolov7x.yaml"
+WEIGHTS = "yolov7/yolov7x.pt"
+IMGSZ = 640 
 STRIDE = 32
 DEVICE = '0' 
-CLASSIFY = False
+CLASSIFY = False 
 AUGMENT = True
-CONF_THRES = 0.65
+CONF_THRES = 0.5
 IOU_THRESH = 0.45
 CLASSES = None
 
 def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
-    device = select_device(device)
+    device = select_device(device, batch_size=1)
     half = device.type != 'cpu'
 
     # Start initializing our yolov7 model
@@ -38,28 +38,29 @@ def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
     if half:
         model.half() # to FP16
 
-    # optional Second-stage classifier
-    if classify:
-        modelc = load_classifier(name='resnet101', n=2)
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
-        return model, modelc, HALF
-    
     cudnn.benchmark = True # set True if img size is constant
     if device.type != 'cpu':
             model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
 
-    return model, half
+    # optional Second-stage classifier
+    if classify:
+        modelc = load_classifier(name='resnet101', n=2)
+        modelc.load_state_dict(torch.load('yolov7/weights/resnet101.pt', map_location=device)['model']).to(device).eval()
+        return model, modelc, half, device 
+    
+    return model, half, device
 
 if CLASSIFY:
-    MODEL, MODELC, HALF = load_model()
+    MODEL, MODELC, HALF, DEVICE = load_model()
 else:
-    MODEL, HALF = load_model()
+    MODEL, HALF, DEVICE = load_model()
 
 NAMES = MODEL.module.names if hasattr(MODEL, "module") else MODEL.names
-COLORS = [[random.randint(0, 255) for _ in range(3)] for _ in NAMES]
+COLORS = {}
+for name in NAMES:
+    COLORS[name] = [random.randint(0, 255) for _ in range(3)]
 
 def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE, device=DEVICE, augment=AUGMENT, names=NAMES, colors=COLORS, conf_thres=CONF_THRES, iou_thres=IOU_THRESH, classes=CLASSES, classify=CLASSIFY):    
-    device = select_device(device)
     with torch.no_grad():
         # Scale img0 to model imgsz
         img = letterbox(img0, imgsz, stride=stride)[0]
@@ -83,7 +84,7 @@ def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE
             for *xyxy, conf, cls in det:
                 bbox = xyxy2xywh(torch.tensor(xyxy).view(1, 4)) # convert to center coords, width, height format
                 label = names[int(cls)]
-                detections_adjusted.append([label, int(cls.item()), conf.item(), bbox[0,:].numpy()])
+                detections_adjusted.append([label, conf.item(), bbox[0,:].numpy()])
             
         
         return detections_adjusted 
