@@ -110,12 +110,12 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 }
 
 <a id="2">[2]</a>
-@article{wang2022yolov7,
-  title={{YOLOv7}: Trainable bag-of-freebies sets new state-of-the-art for real-time object detectors},
-  author={Wang, Chien-Yao and Bochkovskiy, Alexey and Liao, Hong-Yuan Mark},
-  journal={arXiv preprint arXiv:2207.02696},
-  year={2022}
-}
+@article{wang2022yolov7,  
+  title={{YOLOv7}: Trainable bag-of-freebies sets new state-of-the-art for real-time object detectors},  
+  author={Wang, Chien-Yao and Bochkovskiy, Alexey and Liao, Hong-Yuan Mark},  
+  journal={arXiv preprint arXiv:2207.02696},  
+  year={2022}  
+}  
 
 ### DeepSORT
 <a id="3">[3]</a>  
