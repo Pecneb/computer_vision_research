@@ -22,8 +22,8 @@ STRIDE = 32
 DEVICE = "cuda" 
 CLASSIFY = False 
 AUGMENT = True
-CONF_THRES = 0.5
-IOU_THRESH = 0.45
+CONF_THRES = 0.35
+IOU_THRESH = 0.25
 CLASSES = None
 
 def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):

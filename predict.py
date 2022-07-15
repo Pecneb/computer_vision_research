@@ -17,6 +17,8 @@
 
     Contact email: ecneb2000@gmail.com
 """
+from turtle import shape
+from matplotlib.pyplot import hist
 import numpy as np
 import cv2 as cv
 from sklearn import linear_model
@@ -68,7 +70,7 @@ def predictLinear(trackedObject, historyDepth=3, futureDepth=30, image=None):
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
         # fit linear model on the x_train vectors points
-        model = linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1)
+        model = linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(n_jobs=-1), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1)
         reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
         y_pred = reg.predict(X_test.reshape(-1,1))
         trackedObject.futureX = X_test
@@ -92,32 +94,49 @@ def predictPoly(trackedObject, degree=3, historyDepth=3, futureDepth=30):
         # poly features
         polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.RANSACRegressor(base_estimator=linear_model.Ridge(alpha=0.5), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1))
         polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
+        print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
         trackedObject.futureX = X_test
         trackedObject.futureY = y_pred
 
 def predictSpline(trackedObject, degree=3, historyDepth=3, futureDepth=30):
+    # TODO: still not working, got to experiment with it more
     x_history = [det.X for det in trackedObject.history]
     y_history = [det.Y for det in trackedObject.history]
-    if len(x_history) >= 3 and len(y_history) >= 3:
-        # calculating even slices to pick k points to fit linear model on
-        X_train = np.array([x for x in x_history[-historyDepth:-1]])
-        y_train = np.array([y for y in y_history[-historyDepth:-1]])
+    if len(x_history) >= 4 and len(y_history) >= 4:
+        l = len(x_history) // 2 * 2
+        X_train = np.zeros((l)) 
+        y_train = np.zeros((l))
+        for i in range(0, l):
+            X_train[i] = x_history[i]
+            y_train[i] = y_history[i]
         # generating future points
         if movementIsRight(X_train, historyDepth):
-            X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
+            X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth, num=futureDepth)
         else:
-            X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
+            X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth, num=futureDepth)
         # poly features
-        splineModel= make_pipeline(SplineTransformer(degree=degree, knots=4), linear_model.Ridge(alpha=1e-3)) 
-        splineModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
-        y_pred = splineModel.predict(X_test.reshape(-1, 1))
-        trackedObject.futureX = X_test
+        splineModel= make_pipeline(SplineTransformer(degree=degree, n_knots=4), linear_model.Ridge(alpha=0.5)) 
+        splineModel.fit(X_train[:, np.newaxis], y_train)
+        y_pred = np.array(splineModel.predict(X_test[:, np.newaxis]))
+        
+        trackedObject.futureX = X_test.reshape(futureDepth)
         trackedObject.futureY = y_pred
+        
 
 
-def predictMixed(trackedObject, historyDepth=3, futureDepth=30):
-    predictPoly(trackedObject, historyDepth=historyDepth, futureDepth=futureDepth)
+def predictMixedPoly(trackedObject, historyDepth=3, futureDepth=30):
+    predictPoly(trackedObject, degree=2, historyDepth=historyDepth, futureDepth=futureDepth)
+    for idx in range(1, len(trackedObject.futureY)-1):
+        if ((trackedObject.futureY[idx] > trackedObject.futureY[idx-1] and \
+            trackedObject.futureY[idx] > trackedObject.futureY[idx+1]) \
+            or (trackedObject.futureY[idx] < trackedObject.futureY[idx-1] and \
+            trackedObject.futureY[idx] < trackedObject.futureY[idx+1]) or trackedObject.futureY[idx] < 0):
+            predictLinear(trackedObject, futureDepth=futureDepth, historyDepth=historyDepth)
+            break
+
+def predictMixedSpline(trackedObject, historyDepth=3, futureDepth=30):
+    predictSpline(trackedObject, historyDepth=historyDepth, futureDepth=futureDepth)
     for idx in range(1, len(trackedObject.futureY)-1):
         if ((trackedObject.futureY[idx] > trackedObject.futureY[idx-1] and \
             trackedObject.futureY[idx] > trackedObject.futureY[idx+1]) \
@@ -152,6 +171,6 @@ def draw_history(trackedObject, image, frameNumber):
 def predictThread(trackedObject : TrackedObject, image : np.ndarray, frameNumber : int, historyDepth=3, futureDepth=30) -> None:
     if trackedObject.isMoving:
         draw_history(trackedObject, image, frameNumber)
-        predictMixed(trackedObject, historyDepth, futureDepth)
+        predictMixedPoly(trackedObject, historyDepth, futureDepth)
         draw_predictions(trackedObject, image, frameNumber)
     

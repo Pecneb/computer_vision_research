@@ -56,6 +56,10 @@ class TrackedObject():
         time_since_update(int): keeping track of missed detections of the object
         max_age(int): when time_since_update hits max_age, tracking is deleted
         mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
+        X(int): last detected x coord of the object
+        Y(int): last detected y coord of the object
+        VX(float): last calculated velocity of X
+        VY(float): last calculated velocity of Y
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
          update(): called when tracking can be updated
@@ -90,7 +94,7 @@ class TrackedObject():
         self.mean = [] 
     
     def __repr__(self) -> str:
-        return "ID: {}, Label: {}, Moving: {}, Age: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.objID, self.label, self.isMoving, self.time_since_update, self.X, self.Y, self.VX, self.VY)
+        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY)
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]

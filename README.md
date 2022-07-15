@@ -48,7 +48,7 @@ This is a key step, to reduce computation time.
 self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
 ```
 
-### Throw away old detections or trackings
+### Throw away old detections and trackings
 
 This can save read, write time and memory.  
 
@@ -68,8 +68,6 @@ y_pred = reg.predict(X_test.reshape(-1,1))
 
 Best working linear model RANSACRegressor() with base_estimator LinearRegression().  
 
-#### Linear Regression with coordinate depending weigths
-
 **TODO**: this has to implemented, calculate weights based on detecions position.  
 
 #### Polynom fitting
@@ -87,6 +85,69 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 #### Spline
 
 **TODO**: Implement Spline, not working yet.
+
+#### Regression with coordinate depending weigths
+
+Kalman filter calculates velocities 
+
+## Building steps
+
+1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
+```python
+    cap = cv.VideoCapture(input)
+    # exit if video cant be opened
+    if not cap.isOpened():
+        print("Source cannot be opened.")
+        exit(0)
+    .
+    .
+    .
+    while(1):
+      ret, frame = cap.read()
+      if frame is None:
+          break
+    
+    cv.imshow("FRAME", frame)
+    if cv.waitKey(1) == ord('p'):
+        if cv.waitKey(0) == ord('r'):
+            continue
+    if cv.waitKey(10) == ord('q'):
+            break
+```
+
+2. Implement YOLO API - hldnapi.py - that works with the C-API of Darknet. In this function, the image has to be transformed to Darknet be able to run inference on it. `cv.cvtColor(image, cv.COLOR_BGR2RGB)` convert OpenCV color (Blue,Green,Red) to Darknet color (Red, Green, Blue). `cv.resize(image_rgb, (darknet_width, darknet_height), interpolation=cv.INTER_LINEAR)` resize image to Darknet's neural net image size. `darknet.detect_image(network, class_name, img_for_detect)` run detection on preprocessed image. This function returns a tuple (label, confidence, bbox[x,y,w,h]), the bounding box coordinates have to be resized to the original image.
+```python
+    def cvimg2detections(image):
+        """Fcuntion to make it easy to use darknet with opencv
+
+        Args:
+            image (Opencv image): input image to run darknet on
+
+        Returns:
+            detections(tuple): detected objects on input image (label, confidence, bbox(x,y,w,h))
+        """
+        # Convert frame color from BGR to RGB
+        image_rgb = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+        # Resize image for darknet
+        image_resized = cv.resize(image_rgb, (darknet_width, darknet_height), interpolation=cv.INTER_LINEAR)
+        # Create darknet image
+        img_for_detect = darknet.make_image(darknet_width, darknet_height, 3)
+        # Convert cv2 image to darknet image format
+        darknet.copy_image_from_bytes(img_for_detect, image_resized.tobytes())
+        # Load image into nn and get detections
+        detections = darknet.detect_image(network, class_names, img_for_detect)
+        darknet.free_image(img_for_detect)
+        # Resize bounding boxes for original frame
+        detections_adjusted = []
+        for label, confidence, bbox in detections:
+            bbox_adjusted = convert2original(image, bbox)
+            detections_adjusted.append((str(label), confidence, bbox_adjusted))
+        return detections_adjusted
+```
+
+3. Implement classes for storing the detections and object trackings. The classes dont have to be overly complex, they must be easy to read and understand. A `class Detection()` and a `class TrackedObject()` was created. The implementation can be found in the historyClass.py file. Detection class has 7 attributes, label, confidence, X, Y, Width, Height, frameID. TrackedObject class has 11, objID, label, futureX, futureY, history, isMoving, time_since_update, max_age, mean, X, Y, VX, VY.
+
+4. Iplement object tracking algorithm. Base idea was to calculate x and y coordinate distances between detection objects. 
 
 ## References
 

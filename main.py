@@ -31,7 +31,7 @@ import numpy as np
 from historyClass import Detection
 from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import draw_history, predictLinear, draw_predictions, predictMixed, predictPoly 
+from predict import draw_history, draw_predictions, predictMixedPoly, predictMixedSpline, predictSpline 
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -105,8 +105,17 @@ def draw_boxes(history, image, colors, frameNumber):
                         (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
                         colors[detection.label], 2)
 
+def log_to_stdout(*args):
+    print('\n' * 200) 
+    for arg in args:
+        if type(arg) is list:
+            for ar in arg:
+                print(ar)
+        else:
+            print(arg)
+
 # global var for adjusting stored history length
-HISTORY_DEPTH = 60 
+HISTORY_DEPTH = 120 
 FUTUREPRED = 120
 
 def main():
@@ -142,6 +151,8 @@ def main():
     tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=HISTORY_DEPTH)
     # start main loop
     while(1):
+        # things to log to stdout
+        to_log = []
         # get current frame from video
         ret, frame = cap.read()
         if frame is None:
@@ -164,22 +175,24 @@ def main():
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
-                predictMixed(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                predictMixedPoly(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)
+                to_log.append(obj)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
-        print("FPS: {}".format(fps,))
+        # print("FPS: {}".format(fps,))
+        log_to_stdout("FPS: {}".format(fps,), to_log[:])
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume
             if cv.waitKey(0) == ord('r'):
                 continue
         # press 'q' to stop playing video
-        if cv.waitKey(27) == ord('q'):
+        if cv.waitKey(10) == ord('q'):
             break
     cap.release()
     cv.destroyAllWindows()
