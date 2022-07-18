@@ -1,0 +1,14 @@
+numpy
+pytorch
+torchvision
+torchaduio
+cudatoolkit
+cudnn
+opencv
+matplotlib
+scipy
+scikit-learn
+pandas
+pyyaml
+seaborn
+tqdm

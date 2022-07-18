@@ -29,7 +29,6 @@ import argparse
 import time
 import numpy as np
 from historyClass import Detection
-from darknet import bbox2points, class_colors
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from predict import draw_history, draw_predictions, predictMixedPoly, predictMixedSpline, predictSpline 
 
@@ -83,6 +82,18 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
             targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets
 
+def bbox2points(bbox):
+    """
+    From bounding box yolo format
+    to corner points cv2 rectangle
+    """
+    x, y, w, h = bbox
+    xmin = int(round(x - (w / 2)))
+    xmax = int(round(x + (w / 2)))
+    ymin = int(round(y - (h / 2)))
+    ymax = int(round(y + (h / 2)))
+    return xmin, ymin, xmax, ymax
+
 def draw_boxes(history, image, colors, frameNumber):
     """Draw detection information to video output
 
@@ -124,6 +135,7 @@ def main():
         import yolov7api 
     else:
         import hldnapi
+        from darknet import class_colors
     input = args.input
     # check input source
     try:

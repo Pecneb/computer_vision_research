@@ -9,11 +9,11 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
-from models.experimental import attempt_load
-from utils.datasets import letterbox
-from utils.general import check_img_size, non_max_suppression, apply_classifier, \
+from yolov7.models.experimental import attempt_load
+from yolov7.utils.datasets import letterbox
+from yolov7.utils.general import check_img_size, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh
-from utils.torch_utils import select_device, load_classifier
+from yolov7.utils.torch_utils import select_device, load_classifier
 
 CONFIG = "yolov7/cfg/deploy/yolov7x.yaml"
 WEIGHTS = "yolov7/yolov7x.pt"

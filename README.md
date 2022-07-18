@@ -28,6 +28,7 @@ create conda environment
 ```
 conda create -n <insert name here> python=3.9
 conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
+export PYTHONPATH="${PYTHONPATH};${PWD}/yolov7/"
 ```
 
 ## Tracking of detected objects
