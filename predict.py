@@ -93,7 +93,7 @@ def predictPoly(trackedObject, degree=3, historyDepth=3, futureDepth=30):
         # poly features
         polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.RANSACRegressor(base_estimator=linear_model.Ridge(alpha=0.5), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1))
         polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
-        print(X_train.shape, y_train.shape)
+        # print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
         trackedObject.futureX = X_test
         trackedObject.futureY = y_pred
