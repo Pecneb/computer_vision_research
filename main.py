@@ -20,7 +20,6 @@
 # disable sklearn warning
 def warn(*arg, **args):
     pass
-from threading import Thread
 import warnings
 warnings.warn = warn
 
@@ -31,6 +30,8 @@ import numpy as np
 from historyClass import Detection
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from predict import draw_history, draw_predictions, predictMixedPoly, predictMixedSpline, predictSpline 
+import databaseLogger
+import os
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -140,8 +141,15 @@ def main():
     # check input source
     try:
         input = int(input)
+        vidname = time.strftime("%Y%m%d_%H%M%S") # if input is camera source, then db name is the datetime
+        db_name = vidname + ".db"
+        databaseLogger.init_db(vidname, db_name)
     except ValueError:
         print("Input source is a Video.")
+        vidname = input.split('/', )[-1]
+        vidname = vidname.split('.')[0]
+        db_name = vidname + ".db"
+        databaseLogger.init_db(vidname, db_name)
     # get video capture object
     cap = cv.VideoCapture(input)
     # exit if video cant be opened
@@ -161,6 +169,9 @@ def main():
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
     # create DeepSortTracker with command line arguments
     tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=HISTORY_DEPTH)
+    # create database connection
+    # TODO database connection
+    db_connection = databaseLogger.getConnection(os.path.join("research_data", vidname, db_name))
     # start main loop
     while(1):
         # things to log to stdout
@@ -191,6 +202,17 @@ def main():
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)
                 to_log.append(obj)
+                if not databaseLogger.entryExists(db_connection, obj.objID, obj.history[-1].frameID):
+                    databaseLogger.logDetection(db_connection, 
+                                            frame, 
+                                            obj.objID, 
+                                            obj.history[-1].frameID, 
+                                            obj.label,
+                                            obj.history[-1].confidence, 
+                                            obj.X, 
+                                            obj.Y, 
+                                            obj.history[-1].Width, 
+                                            obj.history[-1].Height)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now
@@ -208,6 +230,7 @@ def main():
             break
     cap.release()
     cv.destroyAllWindows()
+    databaseLogger.closeConnection(db_connection)
 
 if __name__ == "__main__":
     main()
