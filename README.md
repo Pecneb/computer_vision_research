@@ -24,12 +24,16 @@ The output have to be converted to a matrix of shape(number of detections, 3) wh
 
 ### Installation
 
+Download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
+
 create conda environment
 ```
 conda create -n <insert name here> python=3.9
 conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
 export PYTHONPATH="${PYTHONPATH};${PWD}/yolov7/"
 ```
+
+
 
 ## Tracking of detected objects
 
@@ -148,7 +152,61 @@ Kalman filter calculates velocities
 
 3. Implement classes for storing the detections and object trackings. The classes dont have to be overly complex, they must be easy to read and understand. A `class Detection()` and a `class TrackedObject()` was created. The implementation can be found in the historyClass.py file. Detection class has 7 attributes, label, confidence, X, Y, Width, Height, frameID. TrackedObject class has 11, objID, label, futureX, futureY, history, isMoving, time_since_update, max_age, mean, X, Y, VX, VY.
 
-4. Iplement object tracking algorithm. Base idea was to calculate x and y coordinate distances between detection objects. 
+4. Iplement object tracking algorithm. Base idea was to calculate x and y coordinate distances between detection objects. This is a very primitive way of tracking, for initial testing it was good, but I had to find a more accurate tracking algorithm. 
+
+5. First prediction algorithm with scikit-learn's LinearRegression function library.  The predictLinear() function takes 3 arguments, a trackedObject object from historyClass.py, historyDepth to determine, how big is the learning set, and a futureDepth to know how far in the future to predict. To do the regression, at least 3 detections should occur. With the k variable we can tell the LinearRegression algorithm, on how many points from the training set to train on. Before running the regression, the movementIsRight() function determines wheter the object moving right or left, this is crucial in generation of the prediction points. After we run the regression, the futureX and futureY vector of the trackedObject object can be updated with the predicted values.
+```python
+def movementIsRight(X_hist, historyDepth):
+    """Returns True if object moving left to right or False if right to left
+
+    Args:
+        X_hist (list(int)): list of X coordinates of length historyDepth
+        historyDepth (int): the length of the x coord list
+
+    Returns:
+        bool: retval
+    """
+    try:
+        return (X_hist[-1] > X_hist[-historyDepth])
+    except:
+        return (X_hist[-1] > X_hist[0])
+
+def predictLinear(trackedObject, historyDepth=3, futureDepth=30):
+    """Calculating future trajectory of the trackedObject
+
+    Args:
+        trackedObject (TrackedObject): the tracked Object
+        linear_model (sklearn linear_model): Linear model used to calculate the trajectory
+        historyDepth (int, optional): the number of detections that the trajectory should be calculated from. Defaults to 3.
+        futureDepth (int, optional): how far in the future should we predict. Defaults to 30.
+    
+    """
+    x_history = [det.X for det in trackedObject.history]
+    y_history = [det.Y for det in trackedObject.history]
+    if len(x_history) >= 3 and len(y_history) >= 3:
+        # k (int) : number of training points
+        k = len(trackedObject.history) 
+        # calculating even slices to pick k points to fit linear model on
+        slice = len(trackedObject.history) // k
+        X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
+        y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
+        # check if the movement is right or left, becouse the generated x_test vector
+        # if movement is right vector is ascending, otherwise descending
+        if movementIsRight(X_train, historyDepth):
+            X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
+        else:
+            X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
+        # fit linear model on the x_train vectors points
+        model = linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(n_jobs=-1), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1)
+        reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
+        y_pred = reg.predict(X_test.reshape(-1,1))
+        trackedObject.futureX = X_test
+        trackedObject.futureY = y_pred
+
+
+```
+
+6. Deep-SORT tracking. Kalman filter and CNN that has been trained to discriminate pedestrians on a large-scale person re-identification dataset. [[3]](#3) The Kalman filter implementation uses 8 dimensional space (x, y, a, h, vx, vy, va, vh) to track objects.
 
 ## References
 

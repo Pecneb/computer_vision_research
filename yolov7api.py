@@ -15,15 +15,15 @@ from yolov7.utils.general import check_img_size, non_max_suppression, apply_clas
     scale_coords, xyxy2xywh
 from yolov7.utils.torch_utils import select_device, load_classifier
 
-CONFIG = "yolov7/cfg/deploy/yolov7x.yaml"
-WEIGHTS = "yolov7/yolov7x.pt"
+CONFIG = "yolov7/cfg/deploy/yolov7.yaml"
+WEIGHTS = "yolov7/yolov7.pt"
 IMGSZ = 640 
 STRIDE = 32
 DEVICE = "cuda" 
 CLASSIFY = False 
 AUGMENT = True
 CONF_THRES = 0.35
-IOU_THRESH = 0.25
+IOU_THRESH = 0.50
 CLASSES = None
 
 def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):

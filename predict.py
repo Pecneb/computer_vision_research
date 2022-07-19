@@ -43,7 +43,7 @@ def movementIsRight(X_hist, historyDepth):
     except:
         return (X_hist[-1] > X_hist[0])
 
-def predictLinear(trackedObject, historyDepth=3, futureDepth=30, image=None):
+def predictLinear(trackedObject, historyDepth=3, futureDepth=30):
     """Calculating future trajectory of the trackedObject
 
     Args:
@@ -51,8 +51,7 @@ def predictLinear(trackedObject, historyDepth=3, futureDepth=30, image=None):
         linear_model (sklearn linear_model): Linear model used to calculate the trajectory
         historyDepth (int, optional): the number of detections that the trajectory should be calculated from. Defaults to 3.
         futureDepth (int, optional): how far in the future should we predict. Defaults to 30.
-        image (Opencv image, optional): if image is inputted, then trajectories are drawn to the image. Defaults to None.
-
+        
     """
     x_history = [det.X for det in trackedObject.history]
     y_history = [det.Y for det in trackedObject.history]
