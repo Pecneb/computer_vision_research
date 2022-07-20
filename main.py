@@ -149,10 +149,11 @@ def main():
         databaseLogger.init_db(vidname, db_name)
     except ValueError:
         print("Input source is a Video.")
+        # extracting video name from input source path and creating database name from it
         vidname = input.split('/', )[-1]
         vidname = vidname.split('.')[0]
         db_name = vidname + ".db"
-        databaseLogger.init_db(vidname, db_name)
+        databaseLogger.init_db(vidname, db_name) # initialize database for logging
     # get video capture object
     cap = cv.VideoCapture(input)
     # exit if video cant be opened
