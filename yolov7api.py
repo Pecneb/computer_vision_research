@@ -26,7 +26,26 @@ CONF_THRES = 0.35
 IOU_THRESH = 0.50
 CLASSES = None
 
+from GPUtil import showUtilization as gpu_usage
+from numba import cuda
+
+def free_gpu_cache():
+    print("Initial GPU Usage")
+    gpu_usage()                             
+
+    torch.cuda.empty_cache()
+
+    cuda.select_device(0)
+    cuda.close()
+    cuda.select_device(0)
+
+    print("GPU Usage after emptying the cache")
+    gpu_usage()
+
+
 def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
+    free_gpu_cache()
+
     device = select_device(device, batch_size=1)
     half = device.type != 'cpu'
 

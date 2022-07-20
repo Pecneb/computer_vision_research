@@ -53,6 +53,7 @@ def parseArgs():
                         help="remove detections with confidence below this value")
     parser.add_argument("-d", "--device", default='0', help="Choose device to run neuralnet. example: cpu, 0,1,2,3...")
     parser.add_argument("--yolov7", default=1, type=int, help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
+    parser.add_argument("--resume", "-r", action="store_true", help="Use this flag if want to resume video from last session left off.")
     args = parser.parse_args()
     return args
 
@@ -134,8 +135,7 @@ def main():
     args = parseArgs()
     if args.yolov7:
         import torch
-        torch.cuda.empty_cache()
-        torch.cuda.memory_summary(device="cuda", abbreviated=False)
+        
         import yolov7api 
     else:
         import hldnapi
@@ -176,6 +176,13 @@ def main():
     # create database connection
     # TODO database connection
     db_connection = databaseLogger.getConnection(os.path.join("research_data", vidname, db_name))
+    # resume video where it was left off, if resume flag is set
+    if args.resume:
+        lastframeNum = databaseLogger.getLatestFrame(db_connection)
+        print(lastframeNum)
+        print(cap.get(cv.CAP_PROP_FRAME_COUNT))
+        if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
+            cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
     # start main loop
     while(1):
         # things to log to stdout
@@ -183,6 +190,7 @@ def main():
         # get current frame from video
         ret, frame = cap.read()
         if frame is None:
+            print("Video ended, closing player.")
             break
         # get current frame number
         frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
@@ -202,10 +210,14 @@ def main():
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
+                # calculate predictions
                 predictMixedPoly(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                # draw predictions and tracking history
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)
+                # log to stdout
                 to_log.append(obj)
+                # log to database
                 if not databaseLogger.entryExists(db_connection, obj.objID, obj.history[-1].frameID):
                     databaseLogger.logDetection(db_connection, 
                                             frame, 

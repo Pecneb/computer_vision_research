@@ -37,6 +37,8 @@ export PYTHONPATH="${PYTHONPATH}:<PATH to YOLOV7 directory>"
 
 The setup of PYTHONPATH variable is very important, becouse python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
 
+In case this is not working, I implemented a gpu memory freeing function, which is called when yolov7 is imported or yolov7 model is loaded.  
+
 
 ## Tracking of detected objects
 

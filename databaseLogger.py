@@ -174,6 +174,8 @@ def getLatestFrame(conn: sqlite3.Connection):
         cur = conn.cursor()
         cur.execute(QUERY_LASTFRAME)
         data = cur.fetchone()
-        return data
+        if data is not None:
+            return data[0]
+        return False
     except Error as e:
         print(e)
