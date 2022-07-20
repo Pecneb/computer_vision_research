@@ -133,6 +133,9 @@ FUTUREPRED = 120
 def main():
     args = parseArgs()
     if args.yolov7:
+        import torch
+        torch.cuda.empty_cache()
+        torch.cuda.memory_summary(device="cuda", abbreviated=False)
         import yolov7api 
     else:
         import hldnapi
