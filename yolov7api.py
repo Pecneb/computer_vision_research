@@ -1,14 +1,8 @@
 import argparse
-from audioop import mul
-import time
-from pathlib import Path
-from tkinter import W
-
 import cv2 as cv
 import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
-
 from yolov7.models.experimental import attempt_load
 from yolov7.utils.datasets import letterbox
 from yolov7.utils.general import check_img_size, non_max_suppression, apply_classifier, \

@@ -29,9 +29,10 @@ import time
 import numpy as np
 from historyClass import Detection
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import draw_history, draw_predictions, predictMixedPoly, predictMixedSpline, predictSpline 
+from predict import draw_history, draw_predictions, predictLinPoly, predictWeightedLinPoly 
 import databaseLogger
 import os
+import tqdm
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -51,7 +52,7 @@ def parseArgs():
                         help="remove detections with confidence below this value")
     parser.add_argument("--nms_max_overlap", type=float, default=1.0,
                         help="remove detections with confidence below this value")
-    parser.add_argument("-d", "--device", default='0', help="Choose device to run neuralnet. example: cpu, 0,1,2,3...")
+    parser.add_argument("-d", "--device", default='cuda', help="Choose device to run neuralnet. example: cpu, cuda, 0,1,2,3...")
     parser.add_argument("--yolov7", default=1, type=int, help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
     parser.add_argument("--resume", "-r", action="store_true", help="Use this flag if want to resume video from last session left off.")
     args = parser.parse_args()
@@ -126,10 +127,11 @@ def log_to_stdout(*args):
                 print(ar)
         else:
             print(arg)
+    print('\n'*5)
 
 # global var for adjusting stored history length
-HISTORY_DEPTH = 120 
-FUTUREPRED = 120
+HISTORY_DEPTH = 30 
+FUTUREPRED = 30 
 
 def main():
     args = parseArgs()
@@ -174,17 +176,22 @@ def main():
     # create DeepSortTracker with command line arguments
     tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=HISTORY_DEPTH)
     # create database connection
-    # TODO database connection
     db_connection = databaseLogger.getConnection(os.path.join("research_data", vidname, db_name))
+    # log metadata to database
+    if args.yolov7:
+        yoloVersion = '7'
+    else:
+        yoloVersion = '4'
+    databaseLogger.logMetaData(db_connection, HISTORY_DEPTH, FUTUREPRED, args.device, yoloVersion)
     # resume video where it was left off, if resume flag is set
     if args.resume:
         lastframeNum = databaseLogger.getLatestFrame(db_connection)
-        print(lastframeNum)
-        print(cap.get(cv.CAP_PROP_FRAME_COUNT))
         if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
             cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
+    else:
+        lastframeNum = 0
     # start main loop
-    while(1):
+    for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
         # things to log to stdout
         to_log = []
         # get current frame from video
@@ -204,14 +211,14 @@ def main():
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history
-        updateHistory(history, tracker, targets)
+        updateHistory(history, tracker, targets, db_connection, historyDepth=HISTORY_DEPTH)
         # draw bounding boxes of filtered detections
         draw_boxes(history, frame, colors, frameNumber)
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
                 # calculate predictions
-                predictMixedPoly(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                predictWeightedLinPoly(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
                 # draw predictions and tracking history
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)
@@ -223,12 +230,11 @@ def main():
                                             frame, 
                                             obj.objID, 
                                             obj.history[-1].frameID, 
-                                            obj.label,
                                             obj.history[-1].confidence, 
-                                            obj.X, 
-                                            obj.Y, 
+                                            obj.X, obj.Y, 
                                             obj.history[-1].Width, 
-                                            obj.history[-1].Height)
+                                            obj.history[-1].Height,
+                                            obj.VX, obj.VY)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now

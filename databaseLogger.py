@@ -20,23 +20,50 @@
 import sqlite3
 from sqlite3 import Error
 import os
+import numpy
 
-INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, label, confidence, x, y, width, height)
-                    VALUES(?,?,?,?,?,?,?,?)"""
+INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device) VALUE(?,?,?,?)"""
+
+INSERT_OBJECT = """INSERT INTO detections (objID, label) VALUES(?,?)"""
+
+INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy)
+                    VALUES(?,?,?,?,?,?,?,?,?)"""
+
+INSERT_PREDICTION = """INSERT INTO detections (objID, frameNum, idx, x, y)
+                    VALUES(?,?,?,?,?)"""
 
 QUERY_ENTRY = """SELECT objID, frameNum 
                  FROM detections 
                  WHERE objID=? AND frameNum=?"""
 
-SCHEMA = """CREATE TABLE IF NOT EXISTS detections (
+SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
+                                objID INTEGER PRIMARY KEY NOT NULL,
+                                label TEXT NOT NULL
+                            );
+            CREATE TABLE IF NOT EXISTS detections (
                                 objID INTEGER NOT NULL,
                                 frameNum INTEGER NOT NULL,
-                                label TEXT NOT NULL,
                                 confidence REAL NOT NULL,
                                 x REAL NOT NULL,
                                 y REAL NOT NULL,
                                 width REAL NOT NULL,
-                                height REAL NOT NULL
+                                height REAL NOT NULL,
+                                vx REAL NOT NULL,
+                                vy REAL NOT NULL,
+                                FOREIGN KEY(objID) REFERENCES objects(objID)
+                            );
+            CREATE TABLE IF NOT EXISTS predictions (
+                                objID INTEGER NOT NULL,
+                                frameNum INTEGER NOT NULL,
+                                idx INTEGER NOT NULL,
+                                x REAL NOT NULL,
+                                y REAL NOT NULL
+                            );
+            CREATE TABLE IF NOT EXISTS metadata (
+                                historyDepth INTEGER NOT NULL,
+                                futureDepth INTEGER NOT NULL,
+                                yoloVersion INTEGER NOT NULL,   
+                                device TEXT NOT NULL
                             );"""
 
 QUERY_LASTFRAME = """SELECT frameNum
@@ -44,23 +71,35 @@ QUERY_LASTFRAME = """SELECT frameNum
                      ORDER BY frameNum DESC
                      LIMIT 1"""
 
-def bbox2float(img0, x, y, w, h):
-    """Downscale img0 bbox to float. 
+def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float):
+    """Downscale img0 bbox values to number between 0.0 - 1.0. 
     The output of this function should be the input of logDetection().
-    Downscales coordinates, bbox width and height ot floats with img0.shape.
+    Downscales coordinates, bbox width and height to floats with img0.shape.
 
     Args:
         x (int): center x coord
         y (int): center y coord
         w (int): width of bbox
         h (int): height of bbox
+        vx (float) : velocity x
+        vy (float) : velocity y
         
     Return:
-        return x, y, w, h
+        return x, y, w, h, vx, vy
     """
-    return x / img0.shape[1], y / img0.shape[0],  w / img0.shape[1], h / img0.shape[0]
+    return x / img0.shape[1], y / img0.shape[0],  w / img0.shape[1], h / img0.shape[0], vx / img0.shape[1], vy / img0.shape[0]
 
-def init_db(video_name, db_name):
+def prediction2float(img0: numpy.ndarray, x: int, y: int):
+    """Downscale prediction coordinates to floats.
+
+    Args:
+        img0 (numpy.ndarray): Actual frame when prediction occured.
+        x (int): X coordinate
+        y (int): Y coordinate
+    """
+    return x / img0.shape[1], y / img0.shape[0] 
+
+def init_db(video_name: str, db_name: str):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
     DB_name will be the name of the database. If directory does not exists,
     then create one. Creates database from given schema.
@@ -85,7 +124,7 @@ def init_db(video_name, db_name):
             conn.close()
             print("Detections table created!")
 
-def getConnection(db_path):
+def getConnection(db_path: str):
     """Creates connection to the database.
 
     Args:
@@ -116,7 +155,8 @@ def closeConnection(conn : sqlite3.Connection):
     except Error as e:
         print(e)
 
-def logDetection(conn : sqlite3.Connection, img0, objID, frameNum, label, confidence, x_coord, y_coord, width, height):
+def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
+    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: int, y_vel: int):
     """Logging detections to the database. Downscale bbox coordinates to floats. 
     Insert entry to database if there is no similar entry found.
 
@@ -134,14 +174,14 @@ def logDetection(conn : sqlite3.Connection, img0, objID, frameNum, label, confid
     """
     try:
         cur = conn.cursor()
-        x, y, w, h = bbox2float(img0, x_coord, y_coord, width, height)
-        cur.execute(INSERT_DETECTION, (objID, frameNum, label, confidence, x, y, w, h))
+        x, y, w, h, vx, vy = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel)
+        cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy))
         conn.commit()
-        print("Detection added to database.")
+        # print("Detection added to database.")
     except Error as e:
         print(e)
         
-def entryExists(conn: sqlite3.Connection, objID, frameNum):
+def entryExists(conn: sqlite3.Connection, objID: str, frameNum: int):
     """Check if entry already exists in database. 
     No multiple detections can occur in a single frame, that have the same objID.
 
@@ -177,5 +217,51 @@ def getLatestFrame(conn: sqlite3.Connection):
         if data is not None:
             return data[0]
         return False
+    except Error as e:
+        print(e)
+
+def logPrediction(conn: sqlite3.Connection, x: float, y: float):
+    """Log predictions to database, in format (objID, frameNum, idx, x, y)
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database. 
+        x (int): X coordinate prediction
+        y (int): Y coordinate prediction
+    """
+    try:
+        cur = conn.cursor()
+        x_pred, y_pred = prediction2float(x, y)
+        cur.execute(INSERT_PREDICTION, (x_pred, y_pred))
+        cur.commit()
+    except Error as e:
+        print(e)
+
+def logObject(conn: sqlite3.Connection, objID: int, label: str):
+    """Log new object to the database.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database. 
+        objID (int): Unique id of the new track. 
+        label (str): The type of an object, ex. car, person, etc... 
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(INSERT_OBJECT, (objID, label))
+        cur.commit()
+    except Error as e:
+        print(e)
+
+def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, yoloVersion: str, device: str):
+    """Logs environment data to the database.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database. 
+        historyDepth (int): Length of stored detection history in the memory 
+        futureDepth (int): Length of prediction vector. 
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device))
+        cur.coomit()
     except Error as e:
         print(e)

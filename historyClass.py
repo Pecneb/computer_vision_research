@@ -77,6 +77,8 @@ class TrackedObject():
     Y: int
     VX: float = field(init=False)
     VY: float = field(init=False)
+    AX: float = field(init=False)
+    AY: float = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -85,6 +87,8 @@ class TrackedObject():
         self.Y = first.Y
         self.VX = 0 
         self.VY = 0
+        self.AX = 0
+        self.AY = 0
         self.label = first.label
         self.isMoving = False
         self.futureX = []
@@ -94,11 +98,25 @@ class TrackedObject():
         self.mean = [] 
     
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY)
+        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.AX, self.AY)
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
         return np.average(areas)
+    
+    def updateAccel(self, new_vx, old_vx, new_vy, old_vy):
+        """Calculate accelaration based on kalman filters velocity.
+        Normal accelaration calculation (new_v - old_v) / (new_time - old_time).
+        The time between the two detection is the (new_time-old_time).
+
+        Args:
+            new_vx (float): New velocity of x 
+            old_vx (float): Old velocity of x from previous detection
+            new_vy (float): New velocity of y
+            old_vy (float): Old velocity of y from previous detection
+        """
+        self.AX = (new_vx - old_vx) / (self.time_since_update+1)
+        self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
     def update(self, detection=None, mean=None):
         """Update tracking
@@ -112,12 +130,16 @@ class TrackedObject():
             self.mean = mean 
             self.X = mean[0]
             self.Y = mean[1]
+            VX_old = self.VX
+            VY_old = self.VY
             self.VX = mean[4]
             self.VY = mean[5]
+            self.updateAccel(self.VX, VX_old, self.VY, VY_old)
             self.time_since_update = 0 
         else:
             self.time_since_update += 1
-        # it seem, that calculating euclidean distance of first and last stored detection, gives more accurate estimation of movement
+        # it seems, that calculating euclidean distance of first and last stored detection, gives more accurate estimation of movement, 
+        # it can filter out phantom motion, when yolov7 detects a motionless object a bit off where it was last detected.
         # if mean is not None:
         #     if (abs(self.VX) < 1.0 and abs(self.VY) < 1.0):
         #         self.isMoving = False

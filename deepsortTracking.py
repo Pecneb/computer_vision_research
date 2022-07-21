@@ -21,6 +21,9 @@ from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.tracker import Tracker
 from deep_sort.deep_sort.detection import Detection
 from historyClass import TrackedObject
+from historyClass import Detection as darknetDetection
+import databaseLogger
+import sqlite3
 
 def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
     """DeepSort metric factory
@@ -47,7 +50,7 @@ def getTracker(metricObj, historyDepth):
     """
     return Tracker(metricObj, historyDepth)
 
-def makeDetectionObject(darknetDetection):
+def makeDetectionObject(darknetDetection: darknetDetection):
     """DeepSort Detection object factory
 
     Args:
@@ -61,7 +64,7 @@ def makeDetectionObject(darknetDetection):
         darknetDetection.Height, darknetDetection.Height], 
         float(darknetDetection.confidence), [], darknetDetection)
 
-def updateHistory(history, Tracker, detections, historyDepth=30):
+def updateHistory(history: list, Tracker: Tracker, detections: list, db_connection: sqlite3.Connection, historyDepth=30):
     """Update TrackedObject history
 
     Args:
@@ -97,4 +100,7 @@ def updateHistory(history, Tracker, detections, historyDepth=30):
                     print("Warning at removal of obj ID {}".format(prevTO.objID))
                     print(e)
         if not updated:
-            history.append(TrackedObject(track.track_id, track.darknetDet, track._max_age))
+            newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
+            history.append(newTrack)
+            databaseLogger.logObject(db_connection, newTrack.objID, newTrack.label)
+            
