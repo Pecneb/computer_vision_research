@@ -25,5 +25,9 @@ CREATE TABLE IF NOT EXISTS metadata (
                 historyDepth INTEGER NOT NULL,
                 futureDepth INTEGER NOT NULL,
                 yoloVersion INTEGER NOT NULL,   
-                device TEXT NOT NULL
+                device TEXT NOT NULL,
+                imgsize INTEGER NOT NULL,
+                stride INTEGER NOT NULL,
+                confidence_threshold REAL NOT NULL,
+                iou_threshold REAL NOT NULL
             );

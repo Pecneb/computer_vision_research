@@ -155,7 +155,7 @@ def main():
         vidname = input.split('/', )[-1]
         vidname = vidname.split('.')[0]
         db_name = vidname + ".db"
-        databaseLogger.init_db(vidname, db_name) # initialize database for logging
+        databaseLogger.init_db(vidname) # initialize database for logging
     # get video capture object
     cap = cv.VideoCapture(input)
     # exit if video cant be opened
@@ -182,7 +182,7 @@ def main():
         yoloVersion = '7'
     else:
         yoloVersion = '4'
-    databaseLogger.logMetaData(db_connection, HISTORY_DEPTH, FUTUREPRED, args.device, yoloVersion)
+    databaseLogger.logMetaData(db_connection, HISTORY_DEPTH, FUTUREPRED, yoloVersion, yolov7api.DEVICE, yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
     # resume video where it was left off, if resume flag is set
     if args.resume:
         lastframeNum = databaseLogger.getLatestFrame(db_connection)

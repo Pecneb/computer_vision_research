@@ -211,7 +211,46 @@ def predictLinear(trackedObject, historyDepth=3, futureDepth=30):
 
 ```
 
-6. Deep-SORT tracking. Kalman filter and CNN that has been trained to discriminate pedestrians on a large-scale person re-identification dataset. [[3]](#3) The Kalman filter implementation uses 8 dimensional space (x, y, a, h, vx, vy, va, vh) to track objects.
+6. Integrating Deep-SORT tracking into the program. Kalman filter and CNN that has been trained to discriminate pedestrians on a large-scale person re-identification dataset. [[3]](#3) The Kalman filter implementation uses 8 dimensional space (x, y, a, h, vx, vy, va, vh) to track objects.
+
+7. Implement database logging, to save results for later analyzing. The init_db(video_name: str) function creates the database. Name of the video, that is being played, will be the name of the database with a .db appended at the end of it. After the database file is created, schema script will be executed.   
+This is the schema of the database.  
+```SQL
+CREATE TABLE IF NOT EXISTS objects (
+    objID INTEGER PRIMARY KEY NOT NULL,
+    label TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS detections (
+                objID INTEGER NOT NULL,
+                frameNum INTEGER NOT NULL,
+                confidence REAL NOT NULL,
+                x REAL NOT NULL,
+                y REAL NOT NULL,
+                width REAL NOT NULL,
+                height REAL NOT NULL,
+                vx REAL NOT NULL,
+                vy REAL NOT NULL,
+                FOREIGN KEY(objID) REFERENCES objects(objID)
+            );
+CREATE TABLE IF NOT EXISTS predictions (
+                objID INTEGER NOT NULL,
+                frameNum INTEGER NOT NULL,
+                idx INTEGER NOT NULL,
+                x REAL NOT NULL,
+                y REAL NOT NULL
+            );
+CREATE TABLE IF NOT EXISTS metadata (
+                historyDepth INTEGER NOT NULL,
+                futureDepth INTEGER NOT NULL,
+                yoloVersion INTEGER NOT NULL,   
+                device TEXT NOT NULL,
+                imgsize INTEGER NOT NULL,
+                stride INTEGER NOT NULL,
+                confidence_threshold REAL NOT NULL,
+                iou_threshold REAL NOT NULL
+            );
+```
+Every object is stored in the objects table, objID as primary key, will help us identify detections. Detections are stored in the detections table, here the objID is a foreign key, that tells us which detection belongs to which object. Predictions have an own table, to a single frame and a single object there can be multiple predictions. THe program's inner environment is also being logged as metadata, historyDepth is the length of the training set. FutureDepth is the length of the prediction vector. Yolo version is also being logged, becouse of the legacy version 4 (although yolov4 is not really used anymore, it is just an option, that propably will be taken out), imgsize is the input image size of the neural network, stride is how many pixels the convolutonal filter slides over the image. Confidence threshold and iou threshold will determine which detection of yolo will we accept, if the propability of a detection being right.  
 
 ## References
 

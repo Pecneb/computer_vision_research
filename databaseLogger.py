@@ -22,7 +22,8 @@ from sqlite3 import Error
 import os
 import numpy
 
-INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device) VALUE(?,?,?,?)"""
+INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
+                    VALUE(?,?,?,?,?,?,?,?)"""
 
 INSERT_OBJECT = """INSERT INTO detections (objID, label) VALUES(?,?)"""
 
@@ -63,7 +64,11 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 historyDepth INTEGER NOT NULL,
                                 futureDepth INTEGER NOT NULL,
                                 yoloVersion INTEGER NOT NULL,   
-                                device TEXT NOT NULL
+                                device TEXT NOT NULL,
+                                imgsize INTEGER NOT NULL,
+                                stride INTEGER NOT NULL,
+                                confidence_threshold REAL NOT NULL,
+                                iou_threshold REAL NOT NULL
                             );"""
 
 QUERY_LASTFRAME = """SELECT frameNum
@@ -99,7 +104,7 @@ def prediction2float(img0: numpy.ndarray, x: int, y: int):
     """
     return x / img0.shape[1], y / img0.shape[0] 
 
-def init_db(video_name: str, db_name: str):
+def init_db(video_name: str):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
     DB_name will be the name of the database. If directory does not exists,
     then create one. Creates database from given schema.
@@ -111,6 +116,7 @@ def init_db(video_name: str, db_name: str):
     if not os.path.isdir(os.path.join("research_data", video_name)):
         # chekc if directory already exists, if not create one
         os.mkdir(os.path.join("research_data", video_name))
+    db_name = video_name + ".db" # database name is the video name with .db appended at the end
     db_path = os.path.join("research_data", video_name, db_name)
     try:
         conn = getConnection(db_path)
@@ -251,7 +257,8 @@ def logObject(conn: sqlite3.Connection, objID: int, label: str):
     except Error as e:
         print(e)
 
-def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, yoloVersion: str, device: str):
+def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, 
+                yoloVersion: str, device: str, imsz: int, stride: int, conf_thres: float, iou_thres: float):
     """Logs environment data to the database.
 
     Args:
@@ -261,7 +268,7 @@ def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, y
     """
     try:
         cur = conn.cursor()
-        cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device))
+        cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device, imsz, stride, conf_thres, iou_thres))
         cur.coomit()
     except Error as e:
         print(e)

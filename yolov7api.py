@@ -17,7 +17,7 @@ DEVICE = "cuda"
 CLASSIFY = False 
 AUGMENT = True
 CONF_THRES = 0.35
-IOU_THRESH = 0.50
+IOU_THRES = 0.50
 CLASSES = None
 
 from GPUtil import showUtilization as gpu_usage
