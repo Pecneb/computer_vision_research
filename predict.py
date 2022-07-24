@@ -85,7 +85,7 @@ def predictPoly(trackedObject: TrackedObject, degree=3, historyDepth=3, futureDe
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
         # poly features
-        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.RANSACRegressor(base_estimator=linear_model.Ridge(alpha=0.5), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1))
+        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.Ridge(alpha=0.5))
         polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
         # print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
@@ -109,7 +109,7 @@ def predictSpline(trackedObject: TrackedObject, degree=3, historyDepth=3, future
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth, num=futureDepth)
         # poly features
-        splineModel= make_pipeline(SplineTransformer(degree=degree, n_knots=4), linear_model.Ridge(alpha=0.5)) 
+        splineModel= make_pipeline(SplineTransformer(degree=3, n_knots=4), linear_model.Ridge(alpha=1e-3)) 
         splineModel.fit(X_train[:, np.newaxis], y_train)
         y_pred = np.array(splineModel.predict(X_test[:, np.newaxis]))
         

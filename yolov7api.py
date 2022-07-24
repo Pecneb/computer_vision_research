@@ -73,7 +73,7 @@ COLORS = {}
 for name in NAMES:
     COLORS[name] = [random.randint(0, 255) for _ in range(3)]
 
-def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE, device=DEVICE, augment=AUGMENT, names=NAMES, colors=COLORS, conf_thres=CONF_THRES, iou_thres=IOU_THRESH, classes=CLASSES, classify=CLASSIFY):    
+def detect(img0, model=MODEL, modelc=None, half=HALF, imgsz=IMGSZ, stride=STRIDE, device=DEVICE, augment=AUGMENT, names=NAMES, colors=COLORS, conf_thres=CONF_THRES, iou_thres=IOU_THRES, classes=CLASSES, classify=CLASSIFY):    
     with torch.no_grad():
         # Scale img0 to model imgsz
         img = letterbox(img0, imgsz, stride=stride)[0]

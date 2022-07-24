@@ -23,7 +23,7 @@ import os
 import numpy
 
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
-                    VALUE(?,?,?,?,?,?,?,?)"""
+                    VALUES(?,?,?,?,?,?,?,?)"""
 
 INSERT_OBJECT = """INSERT INTO objects (objID, label) VALUES(?,?)"""
 
@@ -33,9 +33,13 @@ INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y,
 INSERT_PREDICTION = """INSERT INTO predictions (objID, frameNum, idx, x, y)
                     VALUES(?,?,?,?,?)"""
 
-QUERY_ENTRY = """SELECT objID, frameNum 
-                 FROM detections 
-                 WHERE objID=? AND frameNum=?"""
+QUERY_OBJ = """SELECT objID, label 
+                 FROM objects 
+                 WHERE objID=? AND label=?"""
+
+QUERY_DETECTION = """SELECT objID, frameNum
+                      FROM detections
+                      WHERE objID=? AND frameNum=?"""
 
 SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 objID INTEGER PRIMARY KEY NOT NULL,
@@ -78,7 +82,7 @@ QUERY_LASTFRAME = """SELECT frameNum
                      ORDER BY frameNum DESC
                      LIMIT 1"""
 
-def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float):
+def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float, ax: float, ay: float):
     """Downscale img0 bbox values to number between 0.0 - 1.0. 
     The output of this function should be the input of logDetection().
     Downscales coordinates, bbox width and height to floats with img0.shape.
@@ -94,9 +98,9 @@ def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, v
     Return:
         return x, y, w, h, vx, vy
     """
-    return x / img0.shape[1], y / img0.shape[0],  w / img0.shape[1], h / img0.shape[0], vx / img0.shape[1], vy / img0.shape[0]
+    return x / img0.shape[1], y / img0.shape[0],  w / img0.shape[1], h / img0.shape[0], vx / img0.shape[1], vy / img0.shape[0], ax / img0.shape[1], ay / img0.shape[0]
 
-def prediction2float(img0: numpy.ndarray, x: int, y: int):
+def prediction2float(img0: numpy.ndarray, x: float, y: float):
     """Downscale prediction coordinates to floats.
 
     Args:
@@ -162,9 +166,8 @@ def closeConnection(conn : sqlite3.Connection):
         print("Database connection closed!")
     except Error as e:
         print(e)
-
 def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
-    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: float, y_vel: float, ax: float, ay: float):
+    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: float, y_vel: float, x_acc: float, y_acc: float):
     """Logging detections to the database. Downscale bbox coordinates to floats. 
     Insert entry to database if there is no similar entry found.
 
@@ -172,6 +175,7 @@ def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, fra
         conn (sqlite3.Connection): Database connection, where data will be logged.
         img0 (numpy matrix): actual image where detections happened.
         objID (int): track id of detection
+
         frameNum (int): number of actual frame
         label (str): The label of the detected object.
         confidence (float): Confidence of the detection.
@@ -180,16 +184,17 @@ def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, fra
         width (int): Widht of bbox.
         height (int): Height of bbox.
     """
-    try:
-        cur = conn.cursor()
-        x, y, w, h, vx, vy = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel)
-        cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy))
-        conn.commit()
-        # print("Detection added to database.")
-    except Error as e:
-        print(e)
+    if not detectionExists(conn, objID, frameNum):
+        try:
+            cur = conn.cursor()
+            x, y, w, h, vx, vy, ax, ay = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel, x_acc, y_acc)
+            cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy, ax, ay))
+            conn.commit()
+            # print("Detection added to database.")
+        except Error as e:
+            print(e)
         
-def entryExists(conn: sqlite3.Connection, objID: str, frameNum: int):
+def objExists(conn: sqlite3.Connection, objID: int, label: str):
     """Check if entry already exists in database. 
     No multiple detections can occur in a single frame, that have the same objID.
 
@@ -203,7 +208,30 @@ def entryExists(conn: sqlite3.Connection, objID: str, frameNum: int):
     """
     try:
         cur = conn.cursor()
-        cur.execute(QUERY_ENTRY, (objID, frameNum))
+        cur.execute(QUERY_OBJ, (objID, label))
+        entry = cur.fetchone()
+        if entry is not None:
+            return True
+        else:
+            return False
+    except Error as e:
+        print(e)
+
+def detectionExists(conn: sqlite3.Connection, objID: int, frameNumber: int):
+    """Check if entry already exists in database. 
+    No multiple detections can occur in a single frame, that have the same objID.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        objID (int): ID of tracked object.
+        frameNum (int): Frame in the detection happened.
+
+    Returns:
+        bool: True if entry already exists.
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(QUERY_DETECTION, (objID, frameNumber))
         entry = cur.fetchone()
         if entry is not None:
             return True
@@ -228,7 +256,7 @@ def getLatestFrame(conn: sqlite3.Connection):
     except Error as e:
         print(e)
 
-def logPrediction(conn: sqlite3.Connection, x: float, y: float):
+def logPredictions(conn: sqlite3.Connection, img0: numpy.ndarray, objID:int, frameNumber: int, x: numpy.ndarray, y: numpy.ndarray):
     """Log predictions to database, in format (objID, frameNum, idx, x, y)
 
     Args:
@@ -238,9 +266,10 @@ def logPrediction(conn: sqlite3.Connection, x: float, y: float):
     """
     try:
         cur = conn.cursor()
-        x_pred, y_pred = prediction2float(x, y)
-        cur.execute(INSERT_PREDICTION, (x_pred, y_pred))
-        cur.commit()
+        for idx in range(len(x)):
+            x_pred, y_pred = prediction2float(img0, x[idx], y[idx])
+            cur.execute(INSERT_PREDICTION, (objID, frameNumber, idx, x_pred, y_pred))
+        conn.commit()
     except Error as e:
         print(e)
 
@@ -252,12 +281,13 @@ def logObject(conn: sqlite3.Connection, objID: int, label: str):
         objID (int): Unique id of the new track. 
         label (str): The type of an object, ex. car, person, etc... 
     """
-    try:
-        cur = conn.cursor()
-        cur.execute(INSERT_OBJECT, (objID, label))
-        cur.commit()
-    except Error as e:
-        print(e)
+    if not objExists(conn, objID, label):
+        try:
+            cur = conn.cursor()
+            cur.execute(INSERT_OBJECT, (objID, label))
+            conn.commit()
+        except Error as e:
+            print(e)
 
 def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, 
                 yoloVersion: str, device: str, imsz: int, stride: int, conf_thres: float, iou_thres: float):
@@ -271,6 +301,6 @@ def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int,
     try:
         cur = conn.cursor()
         cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device, imsz, stride, conf_thres, iou_thres))
-        cur.coomit()
+        conn.commit()
     except Error as e:
         print(e)

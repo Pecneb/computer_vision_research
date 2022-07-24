@@ -224,9 +224,8 @@ def main():
                 draw_history(obj, frame, frameNumber)
                 # log to stdout
                 to_log.append(obj)
-                # log to database
-                if not databaseLogger.entryExists(db_connection, obj.objID, obj.history[-1].frameID):
-                    databaseLogger.logDetection(db_connection, 
+                # log detections to database
+                databaseLogger.logDetection(db_connection, 
                                             frame, 
                                             obj.objID, 
                                             obj.history[-1].frameID, 
@@ -235,6 +234,8 @@ def main():
                                             obj.history[-1].Width, 
                                             obj.history[-1].Height,
                                             obj.VX, obj.VY, obj.AX, obj.AY)
+                # log predictions to database
+                databaseLogger.logPredictions(db_connection, frame, obj.objID, frameNumber, obj.futureX, obj.futureY)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now

@@ -2,6 +2,10 @@
 
 Predicting trajectories of objects
 
+## Abstract
+
+**TODO**: Abstract
+
 **TODO:** implement SQLite DB logging  
 
 **Notice:** linear regression implemented, very primitive, but working  
@@ -10,7 +14,7 @@ Predicting trajectories of objects
 
 ## Darknet
 
-For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)  
+For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1) 
 In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project. (My Makefile to build darknet can be found in the darknet_config_files directory)  
 
 **Notice:** Using the yolov4-csp-x-swish.cfg and weights with RTX 3070 TI is doing 26 FPS with 69.9% precision, this is the most stable detection so far, good base for tracking and predicting  
@@ -28,7 +32,7 @@ The output have to be converted to a matrix of shape(number of detections, 3) wh
 
 Download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
 
-create conda environment and add yolov7 to PYTHONPATH
+Create conda environment and add yolov7 to PYTHONPATH.
 ```
 conda create -n <insert name here> python=3.9
 conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
@@ -49,8 +53,6 @@ In case this is not working, I implemented a gpu memory freeing function, which 
 **Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. Pretty much based on Kalmanfilter. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[3]](#3)  
 
 ### Determining wheter an object moving or not
-
-This is a key step, to reduce computation time.  
 
 **Temporary solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
 
@@ -100,7 +102,7 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 
 Kalman filter calculates velocities 
 
-## Building steps
+## Documentation 
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
 ```python
@@ -159,7 +161,7 @@ Kalman filter calculates velocities
 
 4. Iplement object tracking algorithm. Base idea was to calculate x and y coordinate distances between detection objects. This is a very primitive way of tracking, for initial testing it was good, but I had to find a more accurate tracking algorithm. 
 
-5. First prediction algorithm with scikit-learn's LinearRegression function library.  The predictLinear() function takes 3 arguments, a trackedObject object from historyClass.py, historyDepth to determine, how big is the learning set, and a futureDepth to know how far in the future to predict. To do the regression, at least 3 detections should occur. With the k variable we can tell the LinearRegression algorithm, on how many points from the training set to train on. Before running the regression, the movementIsRight() function determines wheter the object moving right or left, this is crucial in generation of the prediction points. After we run the regression, the futureX and futureY vector of the trackedObject object can be updated with the predicted values.
+5. First prediction algorithm with scikit-learn's LinearRegression function library.  The predictLinear() function takes 3 arguments, a trackedObject object from historyClass.py, historyDepth to determine, how big is the learning set, and a futureDepth to know how far in the future to predict. To do the regression, at least 3 detections should occur. With the k variable we can tell the LinearRegression algorithm, on how many points from the training set to train on. Before running the regression, the movementIsRight() function determines wheter the object moving right or left, this is crucial in generation of the prediction points. After we run the regression, the futureX and futureY vector of the trackedObject object can be updated with the predicted values. For the regression I use the simple Ordinary Least Squares (OLS) method. Linear regression formula: $$\hat{y} (w, x) = w_0 + w_1 x_1 + ... + w_p x_p$$ Ordinary Least Squares formula: $$\min_{w} || X w - y||_2^2$$ 
 ```python
 def movementIsRight(X_hist, historyDepth):
     """Returns True if object moving left to right or False if right to left
@@ -215,6 +217,34 @@ def predictLinear(trackedObject, historyDepth=3, futureDepth=30):
 
 7. Implement database logging, to save results for later analyzing. The init_db(video_name: str) function creates the database. Name of the video, that is being played, will be the name of the database with a .db appended at the end of it. After the database file is created, schema script will be executed.   
 This is the schema of the database.  
+
+8. Prediction with Polynom fitting using Scikit-Learn's PolynomTransformer. This is similar to the Linear fitting, but this makes it possible to predict curves in an objects trajectory based on the object's position history. The only difference between the predictLinear and this algorithm, that a PolynomTransformer transforms the history data.
+```python
+def predictPoly(trackedObject: TrackedObject, degree=3, historyDepth=3, futureDepth=30):
+    x_history = [det.X for det in trackedObject.history]
+    y_history = [det.Y for det in trackedObject.history]
+    if len(x_history) >= 3 and len(y_history) >= 3:
+        # k (int) : number of training points
+        k = len(trackedObject.history) 
+        # calculating even slices to pick k points to fit linear model on
+        slice = len(trackedObject.history) // k
+        X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
+        y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
+        # generating future points
+        if movementIsRight(trackedObject):
+            X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
+        else:
+            X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
+        # poly features
+        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.Ridge(alpha=0.5))
+        polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
+        # print(X_train.shape, y_train.shape)
+        y_pred = polyModel.predict(X_test.reshape(-1, 1))
+        trackedObject.futureX = X_test
+        trackedObject.futureY = y_pred
+```
+
+9. Prediction with splines using Scikit-Learn's SplineTransformer. To make it work, a prediction with Polynow
 ```SQL
 CREATE TABLE IF NOT EXISTS objects (
     objID INTEGER PRIMARY KEY NOT NULL,
