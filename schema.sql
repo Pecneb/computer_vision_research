@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS detections (
                 height REAL NOT NULL,
                 vx REAL NOT NULL,
                 vy REAL NOT NULL,
+                ax REAL NOT NULL,
+                ay REAL NOT NULL,
                 FOREIGN KEY(objID) REFERENCES objects(objID)
             );
 CREATE TABLE IF NOT EXISTS predictions (

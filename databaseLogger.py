@@ -25,12 +25,12 @@ import numpy
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
                     VALUE(?,?,?,?,?,?,?,?)"""
 
-INSERT_OBJECT = """INSERT INTO detections (objID, label) VALUES(?,?)"""
+INSERT_OBJECT = """INSERT INTO objects (objID, label) VALUES(?,?)"""
 
-INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy)
-                    VALUES(?,?,?,?,?,?,?,?,?)"""
+INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy, ax, ay)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?)"""
 
-INSERT_PREDICTION = """INSERT INTO detections (objID, frameNum, idx, x, y)
+INSERT_PREDICTION = """INSERT INTO predictions (objID, frameNum, idx, x, y)
                     VALUES(?,?,?,?,?)"""
 
 QUERY_ENTRY = """SELECT objID, frameNum 
@@ -51,6 +51,8 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 height REAL NOT NULL,
                                 vx REAL NOT NULL,
                                 vy REAL NOT NULL,
+                                ax REAL NOT NULL,
+                                ay REAL NOT NULL,
                                 FOREIGN KEY(objID) REFERENCES objects(objID)
                             );
             CREATE TABLE IF NOT EXISTS predictions (
@@ -162,7 +164,7 @@ def closeConnection(conn : sqlite3.Connection):
         print(e)
 
 def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
-    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: int, y_vel: int):
+    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: float, y_vel: float, ax: float, ay: float):
     """Logging detections to the database. Downscale bbox coordinates to floats. 
     Insert entry to database if there is no similar entry found.
 

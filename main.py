@@ -234,7 +234,7 @@ def main():
                                             obj.X, obj.Y, 
                                             obj.history[-1].Width, 
                                             obj.history[-1].Height,
-                                            obj.VX, obj.VY)
+                                            obj.VX, obj.VY, obj.AX, obj.AY)
         # show video frame
         cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now
