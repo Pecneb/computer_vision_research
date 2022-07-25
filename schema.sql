@@ -37,5 +37,5 @@ CREATE TABLE IF NOT EXISTS regression (
                 linearFunction TEXT NOT NULL,
                 polynomFunction TEXT NOT NULL,
                 polynomDegree INTEGER NOT NULL,
-                trainingPoints INTEGER NOT NULL,
-)
+                trainingPoints INTEGER NOT NULL
+);

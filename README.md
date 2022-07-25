@@ -167,69 +167,69 @@ Kalman filter calculates velocities
 
 5. First prediction algorithm with scikit-learn's LinearRegression function library.  The predictLinear() function takes 3 arguments, a trackedObject object from historyClass.py, historyDepth to determine, how big is the learning set, and a futureDepth to know how far in the future to predict. To do the regression, at least 3 detections should occur. With the k variable we can tell the LinearRegression algorithm, on how many points from the training set to train on. Before running the regression, the movementIsRight() function determines wheter the object moving right or left, this is crucial in generation of the prediction points. After we run the regression, the futureX and futureY vector of the trackedObject object can be updated with the predicted values. For the regression I use the simple Ordinary Least Squares (OLS) method. Linear regression formula: $$\hat{y} (w, x) = w_0 + w_1 x_1 + ... + w_p x_p$$ Ordinary Least Squares formula: $$\min_{w} || X w - y||_2^2$$ 
 ```python
-def movementIsRight(X_hist, historyDepth):
-    """Returns True if object moving left to right or False if right to left
+def movementIsRight(obj: TrackedObject):
+    """Returns true, if the object moving right, false otherwise. 
 
     Args:
-        X_hist (list(int)): list of X coordinates of length historyDepth
-        historyDepth (int): the length of the x coord list
-
-    Returns:
-        bool: retval
-    """
-    try:
-        return (X_hist[-1] > X_hist[-historyDepth])
-    except:
-        return (X_hist[-1] > X_hist[0])
-
-def predictLinear(trackedObject, historyDepth=3, futureDepth=30):
-    """Calculating future trajectory of the trackedObject
-
-    Args:
-        trackedObject (TrackedObject): the tracked Object
-        linear_model (sklearn linear_model): Linear model used to calculate the trajectory
-        historyDepth (int, optional): the number of detections that the trajectory should be calculated from. Defaults to 3.
-        futureDepth (int, optional): how far in the future should we predict. Defaults to 30.
+        obj (TrackedObject): tracking data of an object 
     
+    Return:
+        bool: Tru if obj moving right.
+
+    """
+    return obj.VX > 0 
+    
+def predictLinear(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth=30):
+    """Fit linear function on detection history of an object, to predict future coordinates.
+
+    Args:
+        trackedObject (TrackedObject): The object, which's future coordinates should be predicted. 
+        k (int, optional): Number of training points, ex.: if historyDepth is 30 and k is 3, then the 1st, 15th and 30th points will be training points. Defaults to 3.
+        historyDepth (int, optional): Training history length. Defaults to 3.
+        futureDepth (int, optional): Prediction vectors length. Defaults to 30.
     """
     x_history = [det.X for det in trackedObject.history]
     y_history = [det.Y for det in trackedObject.history]
     if len(x_history) >= 3 and len(y_history) >= 3:
         # k (int) : number of training points
-        k = len(trackedObject.history) 
+        # k = len(trackedObject.history) 
         # calculating even slices to pick k points to fit linear model on
         slice = len(trackedObject.history) // k
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
         # check if the movement is right or left, becouse the generated x_test vector
         # if movement is right vector is ascending, otherwise descending
-        if movementIsRight(X_train, historyDepth):
+        if movementIsRight(trackedObject):
             X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
         # fit linear model on the x_train vectors points
-        model = linear_model.RANSACRegressor(base_estimator=linear_model.LinearRegression(n_jobs=-1), random_state=30, min_samples=X_train.reshape(-1,1).shape[1]+1)
+        model = linear_model.LinearRegression(n_jobs=-1)
         reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
         y_pred = reg.predict(X_test.reshape(-1,1))
         trackedObject.futureX = X_test
         trackedObject.futureY = y_pred
-
-
 ```
 
 6. Integrating Deep-SORT tracking into the program. Kalman filter and CNN that has been trained to discriminate pedestrians on a large-scale person re-identification dataset. [[3]](#3) The Kalman filter implementation uses 8 dimensional space (x, y, a, h, vx, vy, va, vh) to track objects.
 
-7. Implement database logging, to save results for later analyzing. The init_db(video_name: str) function creates the database. Name of the video, that is being played, will be the name of the database with a .db appended at the end of it. After the database file is created, schema script will be executed.   
-This is the schema of the database.  
-
-8. Prediction with Polynom fitting using Scikit-Learn's PolynomTransformer. This is similar to the Linear fitting, but this makes it possible to predict curves in an objects trajectory based on the object's position history. The only difference between the predictLinear and this algorithm, that a PolynomTransformer transforms the history data.
+7. Prediction with Polynom fitting using Scikit-Learn's PolynomTransformer. This is similar to the Linear fitting, but this makes it possible to predict curves in an objects trajectory based on the object's position history. The only difference between the predictLinear and this algorithm, that a PolynomTransformer transforms the history data.
 ```python
-def predictPoly(trackedObject: TrackedObject, degree=3, historyDepth=3, futureDepth=30):
+def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, futureDepth=30):
+    """Fit polynomial function on detection history of an object, to predict future coordinates.
+
+    Args:
+        trackedObject (TrackedObject): The object, which's future coordinates should be predicted. 
+        degree (int, optional): The polynomial functions degree. Defaults to 3.
+        k (int, optional): Number of training points, ex.: if historyDepth is 30 and k is 3, then the 1st, 15th and 30th points will be training points. Defaults to 3.
+        historyDepth (int, optional): Training history length. Defaults to 3.
+        futureDepth (int, optional): Prediction vectors length. Defaults to 30.
+    """
     x_history = [det.X for det in trackedObject.history]
     y_history = [det.Y for det in trackedObject.history]
     if len(x_history) >= 3 and len(y_history) >= 3:
         # k (int) : number of training points
-        k = len(trackedObject.history) 
+        # k = len(trackedObject.history) 
         # calculating even slices to pick k points to fit linear model on
         slice = len(trackedObject.history) // k
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
@@ -240,7 +240,7 @@ def predictPoly(trackedObject: TrackedObject, degree=3, historyDepth=3, futureDe
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth)
         # poly features
-        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.Ridge(alpha=0.5))
+        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.Ridge(alpha=1e-3))
         polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
         # print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
@@ -248,7 +248,13 @@ def predictPoly(trackedObject: TrackedObject, degree=3, historyDepth=3, futureDe
         trackedObject.futureY = y_pred
 ```
 
-9. Prediction with splines using Scikit-Learn's SplineTransformer. To make it work, a prediction with Polynow
+8. Prediction with splines using Scikit-Learn's SplineTransformer. Spline can only be fitted on data we have, so it cant predict on its own. Before fitting spline on any data, polynom fitting should be done first, then on the result data we can fit a spline curve. 
+```python
+# TODO
+```
+
+9. Implement database logging, to save results for later analyzing. The init_db(video_name: str) function creates the database. Name of the video, that is being played, will be the name of the database with a .db appended at the end of it. After the database file is created, schema script will be executed.   
+This is the schema of the database.
 ```SQL
 CREATE TABLE IF NOT EXISTS objects (
     objID INTEGER PRIMARY KEY NOT NULL,
@@ -264,6 +270,8 @@ CREATE TABLE IF NOT EXISTS detections (
                 height REAL NOT NULL,
                 vx REAL NOT NULL,
                 vy REAL NOT NULL,
+                ax REAL NOT NULL,
+                ay REAL NOT NULL,
                 FOREIGN KEY(objID) REFERENCES objects(objID)
             );
 CREATE TABLE IF NOT EXISTS predictions (
@@ -283,8 +291,14 @@ CREATE TABLE IF NOT EXISTS metadata (
                 confidence_threshold REAL NOT NULL,
                 iou_threshold REAL NOT NULL
             );
+CREATE TABLE IF NOT EXISTS regression (
+                linearFunction TEXT NOT NULL,
+                polynomFunction TEXT NOT NULL,
+                polynomDegree INTEGER NOT NULL,
+                trainingPoints INTEGER NOT NULL
+);
 ```
-Every object is stored in the objects table, objID as primary key, will help us identify detections. Detections are stored in the detections table, here the objID is a foreign key, that tells us which detection belongs to which object. Predictions have an own table, to a single frame and a single object there can be multiple predictions. THe program's inner environment is also being logged as metadata, historyDepth is the length of the training set. FutureDepth is the length of the prediction vector. Yolo version is also being logged, becouse of the legacy version 4 (although yolov4 is not really used anymore, it is just an option, that propably will be taken out), imgsize is the input image size of the neural network, stride is how many pixels the convolutonal filter slides over the image. Confidence threshold and iou threshold will determine which detection of yolo will we accept, if the propability of a detection being right.  
+Every object is stored in the objects table, objID as primary key, will help us identify detections. Detections are stored in the detections table, here the objID is a foreign key, that tells us which detection belongs to which object. Predictions have an own table, to a single frame and a single object there can be multiple predictions. THe program's inner environment is also being logged as metadata, historyDepth is the length of the training set. FutureDepth is the length of the prediction vector. Yolo version is also being logged, becouse of the legacy version 4 (although yolov4 is not really used anymore, it is just an option, that propably will be taken out), imgsize is the input image size of the neural network, stride is how many pixels the convolutonal filter slides over the image. Confidence threshold and iou threshold will determine which detection of yolo will we accept, if the propability of a detection being right. To the regression table, will be the regression function's configuration values stored. 
 
 ## References
 

@@ -42,6 +42,10 @@ def parseArgs():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Path to video.")
+    parser.add_argument("--history", default=30, type=int, help="Length of history for regression input.")
+    parser.add_argument("--future", default=30, type=int, help="Length of predicted coordinate vector.")
+    parser.add_argument("--k_trainingpoints", default=30, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
+    parser.add_argument("--degree", default=2, type=int, help="Degree of polynomial features used for Polynom fitting.")
     parser.add_argument("--max_cosine_distance", type=float, default=10.0,
                         help="remove detections with confidence below this value")
     parser.add_argument("--nn_budget", type=float, default=100,
@@ -129,15 +133,9 @@ def log_to_stdout(*args):
             print(arg)
     print('\n'*5)
 
-# global var for adjusting stored history length
-HISTORY_DEPTH = 30 
-FUTUREPRED = 120 
-
 def main():
     args = parseArgs()
     if args.yolov7:
-        import torch
-        
         import yolov7api 
     else:
         import hldnapi
@@ -148,7 +146,7 @@ def main():
         input = int(input)
         vidname = time.strftime("%Y%m%d_%H%M%S") # if input is camera source, then db name is the datetime
         db_name = vidname + ".db"
-        databaseLogger.init_db(vidname, db_name)
+        databaseLogger.init_db(vidname)
     except ValueError:
         print("Input source is a Video.")
         # extracting video name from input source path and creating database name from it
@@ -156,6 +154,8 @@ def main():
         vidname = vidname.split('.')[0]
         db_name = vidname + ".db"
         databaseLogger.init_db(vidname) # initialize database for logging
+    # path to datbase
+    path2db = os.path.join("research_data", vidname, db_name)
     # get video capture object
     cap = cv.VideoCapture(input)
     # exit if video cant be opened
@@ -174,15 +174,16 @@ def main():
     # get frame height
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
     # create DeepSortTracker with command line arguments
-    tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=HISTORY_DEPTH)
+    tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
     # create database connection
-    db_connection = databaseLogger.getConnection(os.path.join("research_data", vidname, db_name))
+    db_connection = databaseLogger.getConnection(path2db)
     # log metadata to database
     if args.yolov7:
         yoloVersion = '7'
     else:
         yoloVersion = '4'
-    databaseLogger.logMetaData(db_connection, HISTORY_DEPTH, FUTUREPRED, yoloVersion, yolov7api.DEVICE, yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
+    databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, yolov7api.DEVICE, yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
+    databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
     # resume video where it was left off, if resume flag is set
     if args.resume:
         lastframeNum = databaseLogger.getLatestFrame(db_connection)
@@ -211,14 +212,14 @@ def main():
         # filter detections, only return the ones given in the targetNames tuple
         targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
         # update track history
-        updateHistory(history, tracker, targets, db_connection, historyDepth=HISTORY_DEPTH)
+        updateHistory(history, tracker, targets, db_connection, historyDepth=args.history)
         # draw bounding boxes of filtered detections
         draw_boxes(history, frame, colors, frameNumber)
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
                 # calculate predictions
-                predictLinPoly(obj, k=HISTORY_DEPTH, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
                 # draw predictions and tracking history
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)

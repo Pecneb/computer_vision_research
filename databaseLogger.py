@@ -25,6 +25,9 @@ import numpy
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
                     VALUES(?,?,?,?,?,?,?,?)"""
 
+INSERT_REGRESSION = """INSERT INTO regression (linearFunction, polyomFunction, polynomDegree, polynomPoints)
+                    VALUES(?,?,?,?)"""
+
 INSERT_OBJECT = """INSERT INTO objects (objID, label) VALUES(?,?)"""
 
 INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy, ax, ay)
@@ -75,6 +78,12 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 stride INTEGER NOT NULL,
                                 confidence_threshold REAL NOT NULL,
                                 iou_threshold REAL NOT NULL
+                            );
+            CREATE TABLE IF NOT EXISTS regression (
+                                linearFunction TEXT NOT NULL,
+                                polynomFunction TEXT NOT NULL,
+                                polynomDegree INTEGER NOT NULL,
+                                trainingPoints INTEGER NOT NULL
                             );"""
 
 QUERY_LASTFRAME = """SELECT frameNum
@@ -292,7 +301,7 @@ def logObject(conn: sqlite3.Connection, objID: int, label: str):
 
 def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, 
                 yoloVersion: str, device: str, imsz: int, stride: int, conf_thres: float, iou_thres: float):
-    """Logs environment data to the database.
+    """Log environment data to the database.
 
     Args:
         conn (sqlite3.Connection): Connection to the database. 
@@ -302,6 +311,23 @@ def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int,
     try:
         cur = conn.cursor()
         cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device, imsz, stride, conf_thres, iou_thres))
+        conn.commit()
+    except Error as e:
+        print(e)
+
+def logRegression(conn: sqlite3.Connection, linearFunction: str, polynomFunction: str, polynomDegree: int, trainingPoints: int):
+    """Log regression function data to database.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database. 
+        linearFunction (str): Name of the linear regression function. 
+        polynomFunction (str): Name of the polynomial regression function. 
+        polynomDegree (int): Degree of polynomial features. 
+        trainingPoints (int): Number of training points. 
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute(INSERT_REGRESSION, (linearFunction, polynomFunction, polynomDegree, trainingPoints))
         conn.commit()
     except Error as e:
         print(e)

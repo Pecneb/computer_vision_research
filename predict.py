@@ -135,7 +135,7 @@ def predictSpline(trackedObject: TrackedObject, k=3, degree=3, n_knots=4, histor
         
 
 
-def predictLinPoly(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth=30):
+def predictLinPoly(trackedObject: TrackedObject, degree=2, k=3, historyDepth=3, futureDepth=30):
     """Fit linear or polynomial function on history data based on prediction results. 
     This function intended to filter out extreme polynomial function results.
     
@@ -146,7 +146,7 @@ def predictLinPoly(trackedObject: TrackedObject, k=3, historyDepth=3, futureDept
         historyDepth (int, optional): Training history length. Defaults to 3.
         futureDepth (int, optional): Prediction vectors length. Defaults to 30.
     """
-    predictPoly(trackedObject, degree=2, historyDepth=historyDepth, futureDepth=futureDepth)
+    predictPoly(trackedObject, degree=degree, historyDepth=historyDepth, futureDepth=futureDepth)
     for idx in range(1, len(trackedObject.futureY)-1):
         if ((trackedObject.futureY[idx] > trackedObject.futureY[idx-1] and trackedObject.futureY[idx] > trackedObject.futureY[idx+1]) or \
             (trackedObject.futureY[idx] < trackedObject.futureY[idx-1] and trackedObject.futureY[idx] < trackedObject.futureY[idx+1]) or \
