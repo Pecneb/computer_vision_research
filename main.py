@@ -218,7 +218,7 @@ def main():
         for obj in history:
             if obj.isMoving:
                 # calculate predictions
-                predictWeightedLinPoly(obj, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
+                predictLinPoly(obj, k=HISTORY_DEPTH, historyDepth=HISTORY_DEPTH, futureDepth=FUTUREPRED)
                 # draw predictions and tracking history
                 draw_predictions(obj, frame, frameNumber)
                 draw_history(obj, frame, frameNumber)

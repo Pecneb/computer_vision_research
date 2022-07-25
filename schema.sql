@@ -33,3 +33,9 @@ CREATE TABLE IF NOT EXISTS metadata (
                 confidence_threshold REAL NOT NULL,
                 iou_threshold REAL NOT NULL
             );
+CREATE TABLE IF NOT EXISTS regression (
+                linearFunction TEXT NOT NULL,
+                polynomFunction TEXT NOT NULL,
+                polynomDegree INTEGER NOT NULL,
+                trainingPoints INTEGER NOT NULL,
+)
