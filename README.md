@@ -102,6 +102,10 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 
 Kalman filter calculates velocities 
 
+### Global heatmap of traffic
+
+**TODO**: Clustering, KNN <- Scikit Learn
+
 ## Documentation 
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.

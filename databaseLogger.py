@@ -166,6 +166,7 @@ def closeConnection(conn : sqlite3.Connection):
         print("Database connection closed!")
     except Error as e:
         print(e)
+
 def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
     confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: float, y_vel: float, x_acc: float, y_acc: float):
     """Logging detections to the database. Downscale bbox coordinates to floats. 

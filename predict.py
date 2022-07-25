@@ -148,7 +148,7 @@ def draw_predictions(trackedObject: TrackedObject, image, frameNumber):
         idx = 0
         for x, y in zip(trackedObject.futureX, trackedObject.futureY):
             if (idx % 4) == 0:
-                cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
+                cv.circle(image, (int(x), int(y)), 2, color=(0,0,255))
             idx += 1
 
 def draw_history(trackedObject, image, frameNumber):

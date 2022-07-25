@@ -131,7 +131,7 @@ def log_to_stdout(*args):
 
 # global var for adjusting stored history length
 HISTORY_DEPTH = 30 
-FUTUREPRED = 30 
+FUTUREPRED = 120 
 
 def main():
     args = parseArgs()
@@ -242,7 +242,7 @@ def main():
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
         # print("FPS: {}".format(fps,))
-        log_to_stdout("FPS: {}".format(fps,), to_log[:])
+        log_to_stdout("FPS: {}".format(fps,), to_log[:], cap.get(cv.CAP_PROP_POS_FRAMES))
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume
