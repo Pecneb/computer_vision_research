@@ -25,7 +25,7 @@ import numpy
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
                     VALUES(?,?,?,?,?,?,?,?)"""
 
-INSERT_REGRESSION = """INSERT INTO regression (linearFunction, polyomFunction, polynomDegree, polynomPoints)
+INSERT_REGRESSION = """INSERT INTO regression (linearFunction, polynomFunction, polynomDegree, polynomPoints)
                     VALUES(?,?,?,?)"""
 
 INSERT_OBJECT = """INSERT INTO objects (objID, label) VALUES(?,?)"""
