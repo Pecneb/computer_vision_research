@@ -27,7 +27,7 @@ import cv2 as cv
 import argparse
 import time
 import numpy as np
-from utilityClasses import Detection
+from dataManagementClasses import Detection
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from predict import draw_history, draw_predictions, predictLinPoly, predictWeightedLinPoly 
 import databaseLogger
