@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from historyClass import TrackedObject
+from dataManagementClasses import TrackedObject
 
 def calcDist(prev, act):
     """Function to calculate distance between an object on previous frame and actual frame.
