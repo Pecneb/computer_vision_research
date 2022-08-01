@@ -20,8 +20,8 @@
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.tracker import Tracker
 from deep_sort.deep_sort.detection import Detection
-from historyClass import TrackedObject
-from historyClass import Detection as darknetDetection
+from dataManagementClasses import TrackedObject
+from dataManagementClasses import Detection as darknetDetection
 import databaseLogger
 import sqlite3
 

@@ -145,7 +145,7 @@ def init_db(video_name: str):
             conn.close()
             print("Detections table created!")
 
-def getConnection(db_path: str):
+def getConnection(db_path: str) -> sqlite3.Connection:
     """Creates connection to the database.
 
     Args:
@@ -204,7 +204,7 @@ def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, fra
         except Error as e:
             print(e)
         
-def objExists(conn: sqlite3.Connection, objID: int, label: str):
+def objExists(conn: sqlite3.Connection, objID: int, label: str) -> bool:
     """Check if entry already exists in database. 
     No multiple detections can occur in a single frame, that have the same objID.
 
