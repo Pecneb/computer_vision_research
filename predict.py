@@ -50,11 +50,11 @@ def predictLinear(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth
     y_history = [det.Y for det in trackedObject.history]
     if len(x_history) >= 3 and len(y_history) >= 3:
         # calculating even slices to pick k points to fit linear model on
-        if k >= historyDepth:
-            k_new = len(trackedObject.history)
-            slice = len(trackedObject.history) // k_new 
+        if k > len(trackedObject.history):
+            slice = 1
         else:
-            slice = len(trackedObject.history) // k
+            slice = len(trackedObject.history) // k 
+        print(slice)
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
         # check if the movement is right or left, becouse the generated x_test vector
@@ -84,11 +84,11 @@ def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, fut
     y_history = [det.Y for det in trackedObject.history]
     if len(x_history) >= 3 and len(y_history) >= 3:
         # calculating even slices to pick k points to fit linear model on
-        if k >= historyDepth:
-            k_new = len(trackedObject.history)
-            slice = len(trackedObject.history) // k_new 
+        if k > len(trackedObject.history):
+            slice = 1
         else:
             slice = len(trackedObject.history) // k
+        print(slice)
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
         # generating future points
@@ -97,7 +97,7 @@ def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, fut
         else:
             X_test = np.linspace(X_train[-1], X_train[-1]-futureDepth, num=futureDepth)
         # poly features
-        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.Ridge(alpha=0.5))
+        polyModel = make_pipeline(PolynomialFeatures(degree), linear_model.RANSACRegressor(estimator=linear_model.Ridge(alpha=0.5), min_samples=2))
         polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
         # print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
@@ -157,10 +157,6 @@ def predictLinPoly(trackedObject: TrackedObject, degree=2, k=3, historyDepth=3, 
             trackedObject.futureY[idx] < 0):
             predictLinear(trackedObject, k=k, futureDepth=futureDepth, historyDepth=historyDepth)
             break
-    try:
-        print(trackedObject.X, trackedObject.Y, trackedObject.futureX[0], trackedObject.futureY[0])
-    except:
-        pass
 
 def predictLinSpline(trackedObject: TrackedObject, historyDepth=3, futureDepth=30):
     """TODO: Spline implementation.

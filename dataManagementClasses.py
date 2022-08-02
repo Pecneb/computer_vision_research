@@ -41,6 +41,15 @@ class Detection:
     Width: int
     Height: int
     frameID: int
+    # These variables are optional, not needed in the main loop. These are used in the analyzer script and databaseLoader script.
+    VX: int = field(init=False,)
+    VY: int = field(init=False)
+    AX: int = field(init=False)
+    AY: int = field(init=False)
+    objID: int = field(init=False)
+
+    def __repr__(self) -> str:
+        return f"Label: {self.label}, Confidence: {self.confidence}, X: {self.X}, Y: {self.Y}, Width: {self.Width}, Height: {self.Height}, Framenumber: {self.frameID}"
 
 @dataclass
 class TrackedObject():
