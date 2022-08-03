@@ -182,7 +182,8 @@ def main():
         yoloVersion = '7'
     else:
         yoloVersion = '4'
-    databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, yolov7api.DEVICE, yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
+    # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
+    databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
     databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
     # resume video where it was left off, if resume flag is set
     if args.resume:

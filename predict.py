@@ -54,7 +54,6 @@ def predictLinear(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth
             slice = 1
         else:
             slice = len(trackedObject.history) // k 
-        print(slice)
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
         # check if the movement is right or left, becouse the generated x_test vector
@@ -88,7 +87,6 @@ def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, fut
             slice = 1
         else:
             slice = len(trackedObject.history) // k
-        print(slice)
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
         # generating future points

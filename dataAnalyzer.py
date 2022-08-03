@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
@@ -59,20 +60,56 @@ def coordinates2heatmap(path2db):
         detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
     X = np.array([det.X for det in detections])
     Y = np.array([det.Y for det in detections])
-    print(detections[:5])
     fig, ax1 = plt.subplots(1,1)
     ax1.scatter(X, Y)
     ax1.set_xlim(0,2)
     ax1.set_ylim(0,2)
     plt.show()
 
+def printConfig(path2db):
+    metadata = databaseLoader.loadMetadata(path2db)
+    regression = databaseLoader.loadRegression(path2db)
+    historydepth = metadata[0][0]
+    futuredepth = metadata[0][1]
+    yoloVersion = metadata[0][2]
+    device = metadata[0][3]
+    imgsize = metadata[0][4]
+    stride = metadata[0][5]
+    confThres = metadata[0][6]
+    iouThres = metadata[0][7]
+    linearFunc = regression[0][0]
+    polynomFunc = regression[0][1]
+    polynomDegree = regression[0][2]
+    trainingPoints = regression[0][3]
+    print(
+    f"""
+        Yolo config:
+            Version: {yoloVersion}
+            Device: {device}
+            NN image size: {imgsize}
+            Confidence threshold: {confThres}
+            IOU threshold: {iouThres}
+            Convolutional kernel stride: {stride}
+        Regression config:
+            Length of detection history: {historydepth}
+            Number of predicted coordinates: {futuredepth}
+            Number of detections used for training: {trainingPoints}
+            Name of function used in linear regression: {linearFunc}
+            Name of function used in polynom regression: {polynomFunc}
+            Degree of polynoms used for the regression: {polynomDegree}
+    """
+    )
+
 def main():
     argparser = argparse.ArgumentParser("Create plots from database data.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
     argparser.add_argument("-hm", "--heatmap", help="Use this flag if want to make a heatmap from the database data.", action="store_true", default=False)
+    argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.heatmap:
         coordinates2heatmap(args.database)
+    if args.config:
+        printConfig(args.database)
 
 if __name__ == "__main__":
     main()

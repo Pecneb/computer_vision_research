@@ -72,7 +72,7 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
             CREATE TABLE IF NOT EXISTS metadata (
                                 historyDepth INTEGER NOT NULL,
                                 futureDepth INTEGER NOT NULL,
-                                yoloVersion INTEGER NOT NULL,   
+                                yoloVersion TEXT NOT NULL,   
                                 device TEXT NOT NULL,
                                 imgsize INTEGER NOT NULL,
                                 stride INTEGER NOT NULL,
@@ -314,6 +314,7 @@ def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int,
         conn.commit()
     except Error as e:
         print(e)
+        print("SQL error at metadata logging.")
 
 def logRegression(conn: sqlite3.Connection, linearFunction: str, polynomFunction: str, polynomDegree: int, trainingPoints: int):
     """Log regression function data to database.

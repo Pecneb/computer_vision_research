@@ -286,7 +286,7 @@ CREATE TABLE IF NOT EXISTS predictions (
 CREATE TABLE IF NOT EXISTS metadata (
                 historyDepth INTEGER NOT NULL,
                 futureDepth INTEGER NOT NULL,
-                yoloVersion INTEGER NOT NULL,   
+                yoloVersion TEXT NOT NULL,   
                 device TEXT NOT NULL,
                 imgsize INTEGER NOT NULL,
                 stride INTEGER NOT NULL,
