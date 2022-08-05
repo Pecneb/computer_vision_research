@@ -90,7 +90,7 @@ def coordinates2heatmap(path2db):
     fig, ax1 = plt.subplots(1,1)
     colormap = makeColormap(path2db)
     print(colormap)
-    ax1.scatter(X, Y, np.ones_like(X)*0.75, colormap)
+    ax1.scatter(X, Y, np.ones_like(X), colormap)
     plt.show()
 
 def printConfig(path2db):

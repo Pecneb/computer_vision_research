@@ -67,7 +67,7 @@ def predictLinear(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth
         reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
         y_pred = reg.predict(X_test.reshape(-1,1))
         trackedObject.futureX = X_test
-        trackedObject.futureY = y_pred[:,0]
+        trackedObject.futureY = y_pred
 
 def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, futureDepth=30):
     """Fit polynomial function on detection history of an object, to predict future coordinates.
@@ -100,7 +100,7 @@ def predictPoly(trackedObject: TrackedObject, degree=3, k=3, historyDepth=3, fut
         # print(X_train.shape, y_train.shape)
         y_pred = polyModel.predict(X_test.reshape(-1, 1))
         trackedObject.futureX = X_test
-        trackedObject.futureY = y_pred[:,0]
+        trackedObject.futureY = y_pred
 
 def predictSpline(trackedObject: TrackedObject, k=3, degree=3, n_knots=4, historyDepth=3, futureDepth=30):
     """TODO: Spline implementation.
@@ -186,7 +186,7 @@ def draw_predictions(trackedObject: TrackedObject, image, frameNumber):
         idx = 0
         for x, y in zip(trackedObject.futureX, trackedObject.futureY):
             if (idx % 4) == 0:
-                cv.circle(image, (int(x), int(y)), 2, color=(0,0,255))
+                cv.circle(image, (int(x), int(y)), 1, color=(0,0,255))
             idx += 1
 
 def draw_history(trackedObject, image, frameNumber):

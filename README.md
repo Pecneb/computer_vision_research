@@ -304,6 +304,8 @@ Every object is stored in the objects table, objID as primary key, will help us 
 
 10. The logging makes it possible, to analyze the data without running the videos each time. For this, data loading functions are needed, that fetches the resutls from the database. These functions are implemented in the databaseLoader.py script. Each function returns a list of all entries logged in the database.
 
+11. Next step after data loading module, is to create heatmap of the traffic data logged from videos. The idea is to use clustering algorithm on the gathered data.
+
 ## References
 
 ### Darknet-YOLO
