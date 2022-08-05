@@ -105,6 +105,7 @@ Kalman filter calculates velocities
 ### Global heatmap of traffic
 
 **TODO**: Clustering, KNN <- Scikit Learn
+**Clustering Algorithm**: Affinity Propagation
 
 To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history. To 
 
