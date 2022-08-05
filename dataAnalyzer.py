@@ -52,6 +52,31 @@ def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x
     retDet.AY = ay
     return retDet
 
+def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
+    """Convert OpenCV Y axis coordinates to numpy coordinates.
+
+    Args:
+        Y (np.ndarray): Y axis coordinate vector
+
+    Returns:
+        np.ndarray: Y axis coordinate vector
+    """
+    return 1 - Y
+
+def makeColormap(path2db):
+    objects = databaseLoader.loadObjects(path2db)
+    detections = databaseLoader.loadDetections(path2db)
+    objectVector = []
+    detectionVector = []
+    [objectVector.append(obj) for obj in objects]
+    [detectionVector.append(det) for det in detections]
+    colors = np.random.rand(len(objectVector))
+    colormap = np.zeros(shape=(len(detectionVector)))
+    for i in range(len(objectVector)):
+        for j in range(len(detectionVector)):
+            if objectVector[i][0] == detectionVector[j][0]:
+                colormap[j] = colors[i]
+    return colormap
 
 def coordinates2heatmap(path2db):
     databaseDetections = databaseLoader.loadDetections(path2db)
@@ -60,10 +85,12 @@ def coordinates2heatmap(path2db):
         detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
     X = np.array([det.X for det in detections])
     Y = np.array([det.Y for det in detections])
+    # converting Y coordinates, becouse in opencv, coordinates start from top to bottom, ex.: coordinate (0,0) is in top left corner, not bottom left
+    Y = cvCoord2npCoord(Y) 
     fig, ax1 = plt.subplots(1,1)
-    ax1.scatter(X, Y)
-    ax1.set_xlim(0,2)
-    ax1.set_ylim(0,2)
+    colormap = makeColormap(path2db)
+    print(colormap)
+    ax1.scatter(X, Y, np.ones_like(X)*0.75, colormap)
     plt.show()
 
 def printConfig(path2db):
