@@ -12,3 +12,5 @@ pandas
 pyyaml
 seaborn
 tqdm
+GPUtil
+numba
