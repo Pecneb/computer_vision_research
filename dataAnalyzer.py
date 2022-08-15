@@ -85,6 +85,12 @@ def makeColormap(path2db):
     return colormap
 
 def coordinates2heatmap(path2db):
+    """Create heatmap from detection data.
+    Every object has its own coloring.
+
+    Args:
+        path2db (str): Path to database file. 
+    """
     databaseDetections = databaseLoader.loadDetections(path2db)
     detections = detectionParser(databaseDetections) 
     X = np.array([det.X for det in detections])
@@ -136,6 +142,12 @@ def printConfig(path2db):
     )
 
 def kmeans_clustering(path2db):
+    """Use kmean algorithm to cluster detection data.
+    Number of clusters have to be given, so it is still hardcoded.
+
+    Args:
+        path2db (str): Path to the datbase file. 
+    """
     from sklearn.cluster import KMeans 
     from itertools import cycle
     rawDetectionData = databaseLoader.loadDetections(path2db)
@@ -144,15 +156,19 @@ def kmeans_clustering(path2db):
     y = np.array([det.Y for det in detections])
     y = cvCoord2npCoord(y)
     X = np.array([[x,y] for x,y in zip(x,y)]) 
+    # Number of clusters have to be given
     cluster = KMeans(n_clusters=2).fit(X)
+    # A list with the cluster numberings. Same lenght as the X.
     labels = cluster.labels_
+    # Taking x and y coordinates apart into clusters.
     x_0 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 0])
     y_0 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 0])
     x_1 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 1])
     y_1 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 1])
-    colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
-    print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
+    # colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
     fig, axes = plt.subplots()
+    # Using scatter plot to show the clusters with different coloring.
     axes.scatter(x_0, y_0, c='r', s=0.3)
     axes.scatter(x_1, y_1, c='g', s=0.3)
     fig2save = plt.gcf()
