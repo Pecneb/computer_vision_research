@@ -22,6 +22,7 @@ import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax:float, ay: float) -> Detection:
     """Creates Detection object.
@@ -62,6 +63,12 @@ def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
     """
     return 1 - Y
 
+def detectionParser(rawDetectionData):
+    detections = []
+    for entry in rawDetectionData:
+        detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
+    return detections 
+
 def makeColormap(path2db):
     objects = databaseLoader.loadObjects(path2db)
     detections = databaseLoader.loadDetections(path2db)
@@ -79,20 +86,20 @@ def makeColormap(path2db):
 
 def coordinates2heatmap(path2db):
     databaseDetections = databaseLoader.loadDetections(path2db)
-    detections = []
-    for entry in databaseDetections:
-        detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
+    detections = detectionParser(databaseDetections) 
     X = np.array([det.X for det in detections])
     Y = np.array([det.Y for det in detections])
     # converting Y coordinates, becouse in opencv, coordinates start from top to bottom, ex.: coordinate (0,0) is in top left corner, not bottom left
     Y = cvCoord2npCoord(Y) 
     fig, ax1 = plt.subplots(1,1)
     colormap = makeColormap(path2db)
-    print(colormap)
     ax1.scatter(X, Y, np.ones_like(X), colormap)
     ax1.set_xlim(0,1)
     ax1.set_ylim(0,1)
+    fig2save = plt.gcf()
     plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_heatmap"
+    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def printConfig(path2db):
     metadata = databaseLoader.loadMetadata(path2db)
@@ -128,27 +135,36 @@ def printConfig(path2db):
     """
     )
 
-def affinityPropagartionClustering(path2db):
-    from sklearn.cluster import AffinityPropagation
+def kmeans_clustering(path2db):
+    from sklearn.cluster import KMeans 
     from itertools import cycle
-    from sklearn import metrics   
     rawDetectionData = databaseLoader.loadDetections(path2db)
-    detections = [detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]) for entry in rawDetectionData]
-    x = [det.X for det in detections]
-    y = [det.Y for det in detections]
+    detections = detectionParser(rawDetectionData)
+    x = np.array([det.X for det in detections])
+    y = np.array([det.Y for det in detections])
+    y = cvCoord2npCoord(y)
     X = np.array([[x,y] for x,y in zip(x,y)]) 
-    af = AffinityPropagation().fit(X)
-    cluster_centers_indices = af.cluster_centers_indices_
-    labels = af.labels_
-    n_clusters_ = len(cluster_centers_indices)
-
+    cluster = KMeans(n_clusters=2).fit(X)
+    labels = cluster.labels_
+    x_0 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 0])
+    y_0 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 0])
+    x_1 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 1])
+    y_1 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 1])
     colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
-    for k, col in zip(range(n_clusters_), colors):
-        class_members = labels == k
-        cluster_centers = X[cluster_centers_indices[k]]
-    print(f"Cluster center indices: {cluster_centers_indices}")
-    print(f"Labels: {labels}")
-    print(f"Number of clusters: {n_clusters_}")
+    print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
+    fig, axes = plt.subplots()
+    axes.scatter(x_0, y_0, c='r', s=0.3)
+    axes.scatter(x_1, y_1, c='g', s=0.3)
+    fig2save = plt.gcf()
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_2"
+    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+
+def findDirections(path2db):
+    rawDetData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetData)
+    print(detections[::10])
+    
 
 def main():
     argparser = argparse.ArgumentParser("Create plots from database data.")
@@ -156,13 +172,20 @@ def main():
     argparser.add_argument("-hm", "--heatmap", help="Use this flag if want to make a heatmap from the database data.", action="store_true", default=False)
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     argparser.add_argument("-cl", "--cluster", help="Use this flag to create clusters from video data.", action="store_true", default=False)
+    argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     args = argparser.parse_args()
     if args.config:
         printConfig(args.database)
     if args.heatmap:
+        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
+            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
+            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         coordinates2heatmap(args.database)
     if args.cluster:
-        affinityPropagartionClustering(args.database)
+        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
+            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
+            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
+        kmeans_clustering(args.database)
 
 if __name__ == "__main__":
     main()

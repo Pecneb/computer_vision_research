@@ -107,7 +107,9 @@ Kalman filter calculates velocities
 **TODO**: Clustering, KNN <- Scikit Learn
 **Clustering Algorithm**: Affinity Propagation. (**NOTICE**: This algorithm seems to give nonsense results, will have to test other ones too.)  
 
-To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history. To 
+To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history.  
+
+**NOTICE**: New idea, gather detections, that velocity vector points in the same direction. 
 
 ## Documentation 
 
