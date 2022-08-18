@@ -141,12 +141,13 @@ def printConfig(path2db):
     """
     )
 
-def kmeans_clustering(path2db):
+def kmeans_clustering(path2db, n_clusters):
     """Use kmean algorithm to cluster detection data.
-    Number of clusters have to be given, so it is still hardcoded.
+    The number of clusters have to be given initially for k_means algorithm.
 
     Args:
         path2db (str): Path to the datbase file. 
+        n_clusters (int): Number of clusters in data.
     """
     from sklearn.cluster import KMeans 
     from itertools import cycle
@@ -157,23 +158,21 @@ def kmeans_clustering(path2db):
     y = cvCoord2npCoord(y)
     X = np.array([[x,y] for x,y in zip(x,y)]) 
     # Number of clusters have to be given
-    cluster = KMeans(n_clusters=2).fit(X)
+    cluster = KMeans(n_clusters=n_clusters).fit(X)
     # A list with the cluster numberings. Same lenght as the X.
     labels = cluster.labels_
-    # Taking x and y coordinates apart into clusters.
-    x_0 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 0])
-    y_0 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 0])
-    x_1 = np.array([x[i] for i in range(0, len(x)) if labels[i] == 1])
-    y_1 = np.array([y[i] for i in range(0, len(y)) if labels[i] == 1])
-    # colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
     fig, axes = plt.subplots()
     # Using scatter plot to show the clusters with different coloring.
-    axes.scatter(x_0, y_0, c='r', s=0.3)
-    axes.scatter(x_1, y_1, c='g', s=0.3)
+    for idx in range(n_clusters):
+        # Exctracting cluster number {idx} from vector x and y
+        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
+        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
+        axes.scatter(_x, _y, c=colors[idx], s=0.3)
     fig2save = plt.gcf()
     plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_2"
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}"
     fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def findDirections(path2db):
@@ -183,11 +182,12 @@ def findDirections(path2db):
     
 
 def main():
-    argparser = argparse.ArgumentParser("Create plots from database data.")
+    argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
     argparser.add_argument("-hm", "--heatmap", help="Use this flag if want to make a heatmap from the database data.", action="store_true", default=False)
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     argparser.add_argument("-cl", "--cluster", help="Use this flag to create clusters from video data.", action="store_true", default=False)
+    argparser.add_argument("--n_clusters", type=int, default=2, help="If clustering is chosen, set number of clusters.")
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     args = argparser.parse_args()
     if args.config:
@@ -201,7 +201,7 @@ def main():
         if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
             os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
             print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
-        kmeans_clustering(args.database)
+        kmeans_clustering(args.database, args.n_clusters)
 
 if __name__ == "__main__":
     main()

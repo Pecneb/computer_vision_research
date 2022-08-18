@@ -6,11 +6,7 @@ Predicting trajectories of objects
 
 **TODO**: Abstract
 
-**TODO:** implement SQLite DB logging  
-
 **Notice:** linear regression implemented, very primitive, but working  
-**Notice:** tracking could be improved: calculating the average of bounging box area, x, y, width, height or iterate trough the history for a given depth  
-**Notice:** To tell which direction is the object moving is very tricky, made a quick function to tell its in main.py  
 
 ## Darknet
 
@@ -78,9 +74,9 @@ reg = model.fit(X_train.reshape(-1,1), y_train.reshape(-1,1))
 y_pred = reg.predict(X_test.reshape(-1,1))  
 ```
 
-Best working linear model RANSACRegressor() with base_estimator LinearRegression().  
+Best working linear model RANSACRegressor() with base_estimator LinearRegression(). RANSACRegressor is goot at ignoring outliers.
 
-**TODO**: this has to implemented, calculate weights based on detecions position.  
+**TODO**: this has to be implemented, calculate weights based on detecions position.  
 
 #### Polynom fitting
 
@@ -106,6 +102,8 @@ Kalman filter calculates velocities
 
 **TODO**: Clustering, KNN <- Scikit Learn
 **Clustering Algorithm**: Affinity Propagation. (**NOTICE**: This algorithm seems to give nonsense results, will have to test other ones too.)  
+
+**K_MEANS**: Seems to give better results than Affinity Propagation, but still not the results, what we want.
 
 To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history.  
 
@@ -309,8 +307,20 @@ Every object is stored in the objects table, objID as primary key, will help us 
 10. The logging makes it possible, to analyze the data without running the videos each time. For this, data loading functions are needed, that fetches the resutls from the database. These functions are implemented in the databaseLoader.py script. Each function returns a list of all entries logged in the database.
 
 11. Next step after data loading module, is to create heatmap of the traffic data logged from videos. For better visuals, each object has its own coloring, so it also shows, how good DeepSort algorithm works.  
-
-12. With scikit-learn's clustering module, clusters from the gathered data can be created. The point of this, is when a crossroad being observed, the paths can be identified, with this knowledge, personalised training can be done for each scenario.
+ 
+12. With scikit-learn's clustering module, clusters from the gathered data can be created. The point of this, is when a crossroad being observed, the paths can be identified, with this knowledge, personalised training can be done for each scenario. For first k_means algorithm was tested. The KMeans algorithm clusters data by trying to separate samples in n groups of equal variance, minimizing a criterion known as the inertia or within-cluster sum-of-squares (see below). This algorithm requires the number of clusters to be specified. It scales well to large numbers of samples and has been used across a large range of application areas in many different fields. The k-means algorithm divides a set of N samples X into K disjoint clusters C, each described by the mean of the samples in the cluster. The means are commonly called the cluster “centroids”; note that they are not, in general, points from X, although they live in the same space. The K-means algorithm aims to choose centroids that minimise the inertia, or within-cluster sum-of-squares criterion: $$\sum_{i=0}^{n}\min_{\mu_j \in C}(||x_i - \mu_j||^2)$$ Although this algorithm does not require that much computation, cant identify lanes on a crossroad. The result plots can be found in dir "research_data/sherbrooke_video/".  
+<figure>
+    <img src="research_data/sherbrooke_video/sherbrooke_video_kmeans_n_cluster_2.png" alt="Result of k_means with n_clusters = 2">
+    <figcaption align="center">k_means algorithm with 2 initial cluster</figcaption>
+</figure>
+<figure>
+    <img src="research_data/sherbrooke_video/sherbrooke_video_kmeans_n_cluster_3.png" alt="Result of k_means with n_clusters = 3">
+    <figcaption align="center">k_means algorithm with 3 initial cluster</figcaption>
+</figure>
+<figure>
+    <img src="research_data/sherbrooke_video/sherbrooke_video_kmeans_n_cluster_4.png" alt="Result of k_means with n_clusters = 3">
+    <figcaption align="center">k_means algorithm with 4 initial cluster</figcaption>
+</figure>
 
 ## References
 
