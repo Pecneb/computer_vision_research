@@ -150,7 +150,6 @@ def kmeans_clustering(path2db, n_clusters):
         n_clusters (int): Number of clusters in data.
     """
     from sklearn.cluster import KMeans 
-    from itertools import cycle
     rawDetectionData = databaseLoader.loadDetections(path2db)
     detections = detectionParser(rawDetectionData)
     x = np.array([det.X for det in detections])
@@ -175,6 +174,29 @@ def kmeans_clustering(path2db, n_clusters):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}"
     fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
+def spectral_clustering(path2db, n_clusters):
+    from sklearn.cluster import SpectralClustering 
+    rawDetectionData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetectionData)
+    x = np.array([det.X for det in detections])
+    y = np.array([det.Y for det in detections])
+    y = cvCoord2npCoord(y)
+    X = np.array([[x,y] for x,y in zip(x,y)])
+    labels = SpectralClustering(n_clusters=n_clusters).fit_predict(X)
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
+    fig, axes = plt.subplots()
+    # Using scatter plot to show the clusters with different coloring.
+    for idx in range(n_clusters):
+        # Exctracting cluster number {idx} from vector x and y
+        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
+        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
+        axes.scatter(_x, _y, c=colors[idx], s=0.3)
+    fig2save = plt.gcf()
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
+    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+
 def findDirections(path2db):
     rawDetData = databaseLoader.loadDetections(path2db)
     detections = detectionParser(rawDetData)
@@ -186,9 +208,10 @@ def main():
     argparser.add_argument("-db", "--database", help="Path to database file.")
     argparser.add_argument("-hm", "--heatmap", help="Use this flag if want to make a heatmap from the database data.", action="store_true", default=False)
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
-    argparser.add_argument("-cl", "--cluster", help="Use this flag to create clusters from video data.", action="store_true", default=False)
-    argparser.add_argument("--n_clusters", type=int, default=2, help="If clustering is chosen, set number of clusters.")
+    argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
+    argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
+    argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.config:
         printConfig(args.database)
@@ -197,11 +220,16 @@ def main():
             os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
             print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         coordinates2heatmap(args.database)
-    if args.cluster:
+    if args.kmeans:
         if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
             os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
             print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         kmeans_clustering(args.database, args.n_clusters)
+    if args.spectral:
+        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
+            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
+            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
+        spectral_clustering(args.database, args.n_clusters)
 
 if __name__ == "__main__":
     main()
