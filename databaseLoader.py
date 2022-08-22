@@ -33,10 +33,19 @@ LOAD_METADATA_SCRIPT = """SELECT * FROM metadata"""
 LOAD_REGRESSION_SCRIPT = """SELECT * FROM regression"""
 
 def loadObjects(path2db: str) -> list:
+    """Load objects from database.
+    A raw object entry in the database looks like this: [objID, label]
+
+    Args:
+        path2db (str): Path to database file 
+
+    Returns:
+        list: list of raw object entries 
+    """
     conn = getConnection(path2db)
     try:
         cur = conn.cursor()
-        data = cur.execute(LOAD_OBJECTS_SCRIPT)
+        data = cur.execute(LOAD_OBJECTS_SCRIPT).fetchall()
         return data
     except Error as e:
         print(e)

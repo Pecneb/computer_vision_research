@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import os
 
 def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax:float, ay: float) -> Detection:
-    """Creates Detection object.
+    """Create Detection object.
 
     Args:
         objID (int): Object ID, to which object the Detection belongs to. 
@@ -52,6 +52,26 @@ def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x
     retDet.AY = ay
     return retDet
 
+def trackedObjectFactory(detections: list) -> TrackedObject:
+    """Create trackedObject object from list of detections
+
+    Args:
+        detections (list): list of detection 
+
+    Returns:
+        TrackedObject:  trackedObject
+    """
+    tmpObj = TrackedObject(detections[0].objID, detections[0], len(detections))
+    for det in detections:
+        tmpObj.history.append(det)
+        tmpObj.X = det.X
+        tmpObj.Y = det.Y
+        tmpObj.VX = det.VX
+        tmpObj.VY = det.VY
+        tmpObj.AX = det.AX
+        tmpObj.AY = det.AY
+    return tmpObj
+
 def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
     """Convert OpenCV Y axis coordinates to numpy coordinates.
 
@@ -63,13 +83,31 @@ def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
     """
     return 1 - Y
 
-def detectionParser(rawDetectionData):
+def detectionParser(rawDetectionData) -> list:
+    """Parse raw detection data loaded from database.
+    Returns a list of detections. 
+
+    Args:
+        rawDetectionData (list): list of raw detection entries
+
+    Returns:
+        detections: list of parsed detections 
+    """
     detections = []
     for entry in rawDetectionData:
         detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
     return detections 
 
 def makeColormap(path2db):
+    """Make colormap based on number of objects logged in the database.
+    This colormap vector will be input to matplotlib scatter plot.
+
+    Args:
+        path2db (str): Path to database 
+
+    Returns:
+        colormap: list of color gradient vectors (R,G,B)
+    """
     objects = databaseLoader.loadObjects(path2db)
     detections = databaseLoader.loadDetections(path2db)
     objectVector = []
@@ -197,11 +235,29 @@ def spectral_clustering(path2db, n_clusters):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
     fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
-def findDirections(path2db):
-    rawDetData = databaseLoader.loadDetections(path2db)
-    detections = detectionParser(rawDetData)
-    print(detections[::10])
-    
+def findEnterAndExitPoints(path2db):
+    rawDetectionData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetectionData)
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for obj in rawObjectData:
+        tmpDets = []
+        for det in detections:
+           if det.objID == obj[0]:
+            tmpDets.append(det)
+        if len(tmpDets) > 0:
+            trackedObjects.append(trackedObjectFactory(tmpDets))
+    # TODO: making trackObjects from database data is done, next step is feature extraction
+
+def checkDir(path2db):
+    """Check for dir of given database, to be able to save plots.
+
+    Args:
+        path2db (str): Path to database. 
+    """
+    if not os.path.isdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0])):
+        os.mkdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0]))
+        print("Directory \"research_data/{}\" is created.".format(path2db.split('/')[-1].split('.')[0]))
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -212,24 +268,21 @@ def main():
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
+    argparser.add_argument("--enter_exit", help="Use this flag to find first and last detections of objects.", default=False, action="store_true")
     args = argparser.parse_args()
+    if args.database is not None:
+        checkDir(args.database)
     if args.config:
         printConfig(args.database)
     if args.heatmap:
-        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
-            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
-            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         coordinates2heatmap(args.database)
     if args.kmeans:
-        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
-            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
-            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         kmeans_clustering(args.database, args.n_clusters)
     if args.spectral:
-        if not os.path.isdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0])):
-            os.mkdir(os.path.join("research_data", args.database.split('/')[-1].split('.')[0]))
-            print("Directory \"research_data/{}\" is created.".format(args.database.split('/')[-1].split('.')[0]))
         spectral_clustering(args.database, args.n_clusters)
+    if args.enter_exit:
+        findEnterAndExitPoints(args.database)
+
 
 if __name__ == "__main__":
     main()

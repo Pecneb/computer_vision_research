@@ -101,6 +101,7 @@ Kalman filter calculates velocities
 ### Global heatmap of traffic
 
 **TODO**: Clustering, KNN <- Scikit Learn
+**Feature extraction -> Clustering**
 **Clustering Algorithm**: Affinity Propagation. (**NOTICE**: This algorithm seems to give nonsense results, will have to test other ones too.)  
 
 **K_MEANS**: Seems to give better results than Affinity Propagation, but still not the results, what we want.
@@ -108,6 +109,9 @@ Kalman filter calculates velocities
 To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history.  
 
 **NOTICE**: New idea, gather detections, that velocity vector points in the same direction. 
+
+**Feature extraction -> Classification**
+**Classification**
 
 ## Documentation 
 
@@ -309,6 +313,7 @@ Every object is stored in the objects table, objID as primary key, will help us 
 11. Next step after data loading module, is to create heatmap of the traffic data logged from videos. For better visuals, each object has its own coloring, so it also shows, how good DeepSort algorithm works.  
  
 12. With scikit-learn's clustering module, clusters from the gathered data can be created. The point of this, is when a crossroad being observed, the paths can be identified, with this knowledge, personalised training can be done for each scenario. For first k_means algorithm was tested. The KMeans algorithm clusters data by trying to separate samples in n groups of equal variance, minimizing a criterion known as the inertia or within-cluster sum-of-squares (see below). This algorithm requires the number of clusters to be specified. It scales well to large numbers of samples and has been used across a large range of application areas in many different fields. The k-means algorithm divides a set of N samples X into K disjoint clusters C, each described by the mean of the samples in the cluster. The means are commonly called the cluster “centroids”; note that they are not, in general, points from X, although they live in the same space. The K-means algorithm aims to choose centroids that minimise the inertia, or within-cluster sum-of-squares criterion: $$\sum_{i=0}^{n}\min_{\mu_j \in C}(||x_i - \mu_j||^2)$$ Although this algorithm does not require that much computation, cant identify lanes on a crossroad. The result plots can be found in dir "research_data/sherbrooke_video/".  
+
 <figure>
     <img src="research_data/sherbrooke_video/sherbrooke_video_kmeans_n_cluster_2.png" alt="Result of k_means with n_clusters = 2">
     <figcaption align="center">k_means algorithm with 2 initial cluster</figcaption>
@@ -321,6 +326,8 @@ Every object is stored in the objects table, objID as primary key, will help us 
     <img src="research_data/sherbrooke_video/sherbrooke_video_kmeans_n_cluster_4.png" alt="Result of k_means with n_clusters = 3">
     <figcaption align="center">k_means algorithm with 4 initial cluster</figcaption>
 </figure>
+
+13. Using clustering on all detection data, seems to be pointsless, the algorithms cant discriminate different directions from each other. A better approach would be, creating feature vectors from trajectories, then run the clustering algorithms on the extracted features.
 
 ## References
 
