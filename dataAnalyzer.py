@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+import time
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
@@ -255,26 +256,52 @@ def findEnterAndExitPoints(path2db: str):
             tmpDets.append(det)
         if len(tmpDets) > 0:
             trackedObjects.append(trackedObjectFactory(tmpDets))
-    # TODO: making trackObjects from database data is done, next step is feature extraction
     enterDetections = [obj.history[0] for obj in trackedObjects]
     exitDetections = [obj.history[-1] for obj in trackedObjects]
     return enterDetections, exitDetections 
 
-def makeFeatureVectors(detections):
-    from sklearn.cluster import AffinityPropagation 
-    from itertools import cycle
+def makeFeatureVectors(detections: list) -> np.ndarray:
+    """Create feature vectors from inputted detections.
+
+    Args:
+        detections (list): Any list that contains detecion objects. 
+
+    Returns:
+        np.ndarray: numpy ndarray of shape ({length of detections}, 2) 
+    """
     # create ndarray of ndarrays containing the x,y coordinated of detections
     featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
-    af = AffinityPropagation()
-    cluster_center_indices = af.cluster_centers_indices_
-    labels = af.labels_ 
-    n_clusters_ = len(cluster_center_indices)
+    return featureVectors
+
+def affinityPropagation_on_featureVector(featureVectors, path2db):
+    """Run affinity propagation clustering algorithm on list of feature vectors. 
+
+    Args:
+        featureVector (list): A numpy ndarray of numpy ndarrays. ex.: [[x,y], [x2,y2]] 
+    """
+    from sklearn.cluster import AffinityPropagation 
+    from itertools import cycle
+    af= AffinityPropagation(random_state=5).fit(featureVectors)
+    cluster_center_indices_= af.cluster_centers_indices_
+    labels_ = af.labels_ 
+    n_clusters_= len(cluster_center_indices_)
     print("Estimated number of clusters: %d" % n_clusters_)
     colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+    fig, axes = plt.subplots()
     for k, col in zip(range(n_clusters_), colors):
-        class_members = labels == k
-        cluster_center = featureVectors[cluster_center_indices[k]]
-    # TODO: continue this clustering 
+        axes.scatter(np.array([featureVectors[idx, 0] for idx in range(len(labels_)) if labels_[idx]==k]), 
+        np.array([1-featureVectors[idx, 1] for idx in range(len(labels_)) if labels_[idx]==k]), c=col)
+    fig2save = plt.gcf()
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_affinity_propagation_featureVectors_n_clusters_{n_clusters_}_{time.strftime('%Y%m%d_%H:%M:%S')}"
+    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+
+def affinityPropagation_on_enter_and_exit_points(path2db):
+    enter, exit = findEnterAndExitPoints(path2db)
+    enterFeatures= makeFeatureVectors(enter)
+    exitFeatures= makeFeatureVectors(exit)
+    affinityPropagation_on_featureVector(enterFeatures, path2db)
+    affinityPropagation_on_featureVector(exitFeatures, path2db)
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -295,7 +322,7 @@ def main():
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
-    argparser.add_argument("--enter_exit", help="Use this flag to find first and last detections of objects.", default=False, action="store_true")
+    argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -307,8 +334,8 @@ def main():
         kmeans_clustering(args.database, args.n_clusters)
     if args.spectral:
         spectral_clustering(args.database, args.n_clusters)
-    if args.enter_exit:
-        findEnterAndExitPoints(args.database)
+    if args.affinity_on_enters_and_exits:
+        affinityPropagation_on_enter_and_exit_points(args.database)
 
 
 if __name__ == "__main__":
