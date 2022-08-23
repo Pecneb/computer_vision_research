@@ -235,7 +235,15 @@ def spectral_clustering(path2db, n_clusters):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
     fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
-def findEnterAndExitPoints(path2db):
+def findEnterAndExitPoints(path2db: str):
+    """Extracting only the first and the last detections of tracked objects.
+
+    Args:
+        path2db (str): Path to the database file. 
+
+    Returns:
+        enterDetection, exitDetections: List of first and last detections of objects. 
+    """
     rawDetectionData = databaseLoader.loadDetections(path2db)
     detections = detectionParser(rawDetectionData)
     rawObjectData = databaseLoader.loadObjects(path2db)
@@ -248,6 +256,25 @@ def findEnterAndExitPoints(path2db):
         if len(tmpDets) > 0:
             trackedObjects.append(trackedObjectFactory(tmpDets))
     # TODO: making trackObjects from database data is done, next step is feature extraction
+    enterDetections = [obj.history[0] for obj in trackedObjects]
+    exitDetections = [obj.history[-1] for obj in trackedObjects]
+    return enterDetections, exitDetections 
+
+def makeFeatureVectors(detections):
+    from sklearn.cluster import AffinityPropagation 
+    from itertools import cycle
+    # create ndarray of ndarrays containing the x,y coordinated of detections
+    featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
+    af = AffinityPropagation()
+    cluster_center_indices = af.cluster_centers_indices_
+    labels = af.labels_ 
+    n_clusters_ = len(cluster_center_indices)
+    print("Estimated number of clusters: %d" % n_clusters_)
+    colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+    for k, col in zip(range(n_clusters_), colors):
+        class_members = labels == k
+        cluster_center = featureVectors[cluster_center_indices[k]]
+    # TODO: continue this clustering 
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.

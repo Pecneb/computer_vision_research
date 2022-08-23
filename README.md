@@ -98,20 +98,27 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 
 Kalman filter calculates velocities 
 
-### Global heatmap of traffic
+### Feature extraction, clustering, classification (building a model) 
 
-**TODO**: Clustering, KNN <- Scikit Learn
-**Feature extraction -> Clustering**
+**TODO**: Clustering, KNN <- Scikit Learn  
+
+**Feature extraction -> Clustering**  
+
 **Clustering Algorithm**: Affinity Propagation. (**NOTICE**: This algorithm seems to give nonsense results, will have to test other ones too.)  
 
-**K_MEANS**: Seems to give better results than Affinity Propagation, but still not the results, what we want.
+**K_MEANS**: Seems to give better results than Affinity Propagation, but still not the results, what we want.  
 
 To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history.  
 
-**NOTICE**: New idea, gather detections, that velocity vector points in the same direction. 
+**NOTICE**: New idea, gather detections, that velocity vector points in the same direction.  
 
-**Feature extraction -> Classification**
-**Classification**
+**Feature extraction -> Classification**  
+
+#### Creating the perfect feature vector for clustering
+
+[x, y] the x and y coordinates of the detection  
+
+[x, y, vx, vy] the x, y coordinates and the x, y velocities of the detection  
 
 ## Documentation 
 
