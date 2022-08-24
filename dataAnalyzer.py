@@ -260,6 +260,64 @@ def findEnterAndExitPoints(path2db: str):
     exitDetections = [obj.history[-1] for obj in trackedObjects]
     return enterDetections, exitDetections 
 
+def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
+    """Calculate euclidean distance of 2D vectors.
+
+    Args:
+        q1 (float): First element of vector1. 
+        p1 (float): First element of vector2. 
+        q2 (float): Second element of vector1. 
+        p2 (float): Second element of vector2.
+        
+    Returns:
+        float: euclidean distance of the two vectors. 
+    """
+    return (((q1-p1)**2)+((q2-p2)**2))**0.5
+    
+
+def filter_out_false_positive_detections(path2db: str, threshold: float):
+    """Filter out objects with enter and exit point distances lower than threshold.
+    This filtering will help choose best training points for clustering.
+
+    Args:
+        path2db (str): Path to database. 
+        threshold (float): Threshold of distance. 
+    """
+    enterPoints, exitPoints = findEnterAndExitPoints(path2db)
+    filteredEnterPoints = []
+    filteredExitPoints = []
+    outfilteredEnterPoints = []
+    outfilteredExitPoints = []
+    for enterp, exitp in zip(enterPoints, exitPoints):
+        d = euclidean_distance(enterp.X, exitp.X, enterp.Y, exitp.Y)
+        if d > threshold:
+            filteredEnterPoints.append(enterp)
+            filteredExitPoints.append(exitp)
+        else:
+            outfilteredEnterPoints.append(enterp)
+            outfilteredExitPoints.append(exitp)
+    fig, axes = plt.subplots(1,3)
+    axes[0].scatter([det.X for det in enterPoints], [1-det.Y for det in enterPoints], c='b')
+    axes[0].scatter([det.X for det in exitPoints], [1-det.Y for det in exitPoints], c='r', s=4)
+    axes[0].set_xlim(0,1)
+    axes[0].set_ylim(0,1)
+    axes[1].scatter([det.X for det in filteredEnterPoints], [1-det.Y for det in filteredEnterPoints], c='b')
+    axes[1].scatter([det.X for det in filteredExitPoints], [1-det.Y for det in filteredExitPoints], c='r', s=4)
+    axes[1].set_xlim(0,1)
+    axes[1].set_ylim(0,1)
+    axes[2].scatter([det.X for det in outfilteredEnterPoints], [1-det.Y for det in outfilteredEnterPoints], c='b')
+    axes[2].scatter([det.X for det in outfilteredExitPoints], [1-det.Y for det in outfilteredExitPoints], c='r', s=4)
+    axes[2].set_xlim(0,1)
+    axes[2].set_ylim(0,1)
+    axes[0].set_title("All points.")
+    axes[1].set_title("Filtered points.")
+    axes[2].set_title("False postitives.")
+    for ax in axes:
+        ax.set_xlabel("Enter points")
+        ax.set_ylabel("Exit points")
+    plt.show()
+
+
 def makeFeatureVectors(detections: list) -> np.ndarray:
     """Create feature vectors from inputted detections.
 
@@ -323,6 +381,7 @@ def main():
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
+    argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -336,7 +395,8 @@ def main():
         spectral_clustering(args.database, args.n_clusters)
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database)
-
+    if args.filter_enter_and_exit is not None:
+        filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
 
 if __name__ == "__main__":
     main()
