@@ -180,61 +180,6 @@ def printConfig(path2db):
     """
     )
 
-def kmeans_clustering(path2db, n_clusters):
-    """Use kmean algorithm to cluster detection data.
-    The number of clusters have to be given initially for k_means algorithm.
-
-    Args:
-        path2db (str): Path to the datbase file. 
-        n_clusters (int): Number of clusters in data.
-    """
-    from sklearn.cluster import KMeans 
-    rawDetectionData = databaseLoader.loadDetections(path2db)
-    detections = detectionParser(rawDetectionData)
-    x = np.array([det.X for det in detections])
-    y = np.array([det.Y for det in detections])
-    y = cvCoord2npCoord(y)
-    X = np.array([[x,y] for x,y in zip(x,y)]) 
-    # Number of clusters have to be given
-    cluster = KMeans(n_clusters=n_clusters).fit(X)
-    # A list with the cluster numberings. Same lenght as the X.
-    labels = cluster.labels_
-    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
-    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
-    fig, axes = plt.subplots()
-    # Using scatter plot to show the clusters with different coloring.
-    for idx in range(n_clusters):
-        # Exctracting cluster number {idx} from vector x and y
-        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
-        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
-        axes.scatter(_x, _y, c=colors[idx], s=0.3)
-    fig2save = plt.gcf()
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}"
-    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
-
-def spectral_clustering(path2db, n_clusters):
-    from sklearn.cluster import SpectralClustering 
-    rawDetectionData = databaseLoader.loadDetections(path2db)
-    detections = detectionParser(rawDetectionData)
-    x = np.array([det.X for det in detections])
-    y = np.array([det.Y for det in detections])
-    y = cvCoord2npCoord(y)
-    X = np.array([[x,y] for x,y in zip(x,y)])
-    labels = SpectralClustering(n_clusters=n_clusters).fit_predict(X)
-    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
-    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
-    fig, axes = plt.subplots()
-    # Using scatter plot to show the clusters with different coloring.
-    for idx in range(n_clusters):
-        # Exctracting cluster number {idx} from vector x and y
-        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
-        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
-        axes.scatter(_x, _y, c=colors[idx], s=0.3)
-    fig2save = plt.gcf()
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
-    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def findEnterAndExitPoints(path2db: str):
     """Extracting only the first and the last detections of tracked objects.
@@ -296,7 +241,7 @@ def filter_out_false_positive_detections(path2db: str, threshold: float):
         else:
             outfilteredEnterPoints.append(enterp)
             outfilteredExitPoints.append(exitp)
-    fig, axes = plt.subplots(1,3)
+    """fig, axes = plt.subplots(1,3)
     axes[0].scatter([det.X for det in enterPoints], [1-det.Y for det in enterPoints], c='b')
     axes[0].scatter([det.X for det in exitPoints], [1-det.Y for det in exitPoints], c='r', s=4)
     axes[0].set_xlim(0,1)
@@ -315,7 +260,8 @@ def filter_out_false_positive_detections(path2db: str, threshold: float):
     for ax in axes:
         ax.set_xlabel("Enter points")
         ax.set_ylabel("Exit points")
-    plt.show()
+    plt.show()"""
+    return filteredEnterPoints, filteredExitPoints
 
 
 def makeFeatureVectors(detections: list) -> np.ndarray:
@@ -331,7 +277,7 @@ def makeFeatureVectors(detections: list) -> np.ndarray:
     featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
     return featureVectors
 
-def affinityPropagation_on_featureVector(featureVectors, path2db):
+def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: str):
     """Run affinity propagation clustering algorithm on list of feature vectors. 
 
     Args:
@@ -354,12 +300,88 @@ def affinityPropagation_on_featureVector(featureVectors, path2db):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_affinity_propagation_featureVectors_n_clusters_{n_clusters_}_{time.strftime('%Y%m%d_%H:%M:%S')}"
     fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
-def affinityPropagation_on_enter_and_exit_points(path2db):
+def affinityPropagation_on_enter_and_exit_points(path2db: str):
+    """Run affinity propagation clustering on first and last detections of objects.
+    This way, the enter and exit areas on a videa can be determined.
+
+    Args:
+        path2db (str): Path to database file 
+    """
     enter, exit = findEnterAndExitPoints(path2db)
     enterFeatures= makeFeatureVectors(enter)
     exitFeatures= makeFeatureVectors(exit)
     affinityPropagation_on_featureVector(enterFeatures, path2db)
     affinityPropagation_on_featureVector(exitFeatures, path2db)
+
+def k_means_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
+    """Run kmeans clustrering algorithm on extracted feature vectors.
+
+    Args:
+        featureVectors (np.ndarray): a numpy array of extracted features 
+        n_clusters (int): number of initial clusters for kmeans 
+
+    Returns:
+        np.ndarray: vector of labels, same length as given featureVectors vector 
+    """
+    from sklearn.cluster import KMeans
+    kmeans = KMeans(n_clusters=n_clusters).fit(featureVectors)
+    return kmeans.labels_
+    
+
+def kmeans_clustering(path2db: str, n_clusters: int, threshold: float):
+    """Run kmeans clustering on filtered feature vectors.
+
+    Args:
+        path2db (str): Path to database file. 
+        n_clusters (int): number of initial clusters for kmeans 
+        threshold (float): the threshold for the filtering algorithm 
+    """
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    filteredEnterFeatures  = makeFeatureVectors(filteredEnterDets)
+    filteredExitFeatures = makeFeatureVectors(filteredExitDets)
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    labels_enter = k_means_on_featureVectors(filteredEnterFeatures, n_clusters)
+    labels_exit = k_means_on_featureVectors(filteredExitFeatures, n_clusters)
+    fig, axes = plt.subplots(2,1, figsize=(10,10))
+    axes[0].set_xlim(0,1)
+    axes[0].set_ylim(0,1)
+    axes[1].set_xlim(0,1)
+    axes[1].set_ylim(0,1)
+    axes[0].set_title("Clusters of enter points")
+    axes[1].set_title("Clusters of exit points")
+    for i in range(n_clusters):
+        enter_x = np.array([filteredEnterFeatures[idx][0] for idx in range(len(filteredEnterFeatures)) if labels_enter[idx]==i])
+        enter_y = np.array([1-filteredEnterFeatures[idx][1] for idx in range(len(filteredEnterFeatures)) if labels_enter[idx]==i])
+        axes[0].scatter(enter_x, enter_y, c=colors[i])
+        exit_x = np.array([filteredExitFeatures[idx][0] for idx in range(len(filteredExitFeatures)) if labels_exit[idx]==i])
+        exit_y = np.array([1-filteredExitFeatures[idx][1] for idx in range(len(filteredExitFeatures)) if labels_exit[idx]==i])
+        axes[1].scatter(exit_x, exit_y, c=colors[i])
+    plt.show()
+
+    
+
+def spectral_clustering(path2db: str, n_clusters: int):
+    from sklearn.cluster import SpectralClustering 
+    rawDetectionData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetectionData)
+    x = np.array([det.X for det in detections])
+    y = np.array([det.Y for det in detections])
+    y = cvCoord2npCoord(y)
+    X = np.array([[x,y] for x,y in zip(x,y)])
+    labels = SpectralClustering(n_clusters=n_clusters).fit_predict(X)
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
+    fig, axes = plt.subplots()
+    # Using scatter plot to show the clusters with different coloring.
+    for idx in range(n_clusters):
+        # Exctracting cluster number {idx} from vector x and y
+        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
+        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
+        axes.scatter(_x, _y, c=colors[idx], s=0.3)
+    fig2save = plt.gcf()
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
+    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -378,6 +400,7 @@ def main():
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
+    argparser.add_argument("--threshold", type=float, default=0.01, help="When kmean and spectral clustering flag used, use this flag to give a threshold value to filter out false positive detections.")
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
@@ -390,7 +413,7 @@ def main():
     if args.heatmap:
         coordinates2heatmap(args.database)
     if args.kmeans:
-        kmeans_clustering(args.database, args.n_clusters)
+        kmeans_clustering(args.database, args.n_clusters, args.threshold)
     if args.spectral:
         spectral_clustering(args.database, args.n_clusters)
     if args.affinity_on_enters_and_exits:
