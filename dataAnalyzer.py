@@ -25,6 +25,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+def savePlot(fig: plt.Figure, name: str):
+    fig.savefig(name, dpi=150)
+
 def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax:float, ay: float) -> Detection:
     """Create Detection object.
 
@@ -141,10 +144,9 @@ def coordinates2heatmap(path2db):
     ax1.scatter(X, Y, np.ones_like(X), colormap)
     ax1.set_xlim(0,1)
     ax1.set_ylim(0,1)
-    fig2save = plt.gcf()
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_heatmap"
-    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def printConfig(path2db):
     metadata = databaseLoader.loadMetadata(path2db)
@@ -264,7 +266,7 @@ def filter_out_false_positive_detections(path2db: str, threshold: float):
     return filteredEnterPoints, filteredExitPoints
 
 
-def makeFeatureVectors(detections: list) -> np.ndarray:
+def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
     """Create feature vectors from inputted detections.
 
     Args:
@@ -275,6 +277,20 @@ def makeFeatureVectors(detections: list) -> np.ndarray:
     """
     # create ndarray of ndarrays containing the x,y coordinated of detections
     featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
+    return featureVectors
+
+def makeFeatureVectorsNx4(detections_a: list, detections_b: list) -> np.ndarray:
+    """Create feature vectors from the two inputted detection lists.
+    The vector is created from the detections_a x,y and the detections_b x,y coordinates.
+
+    Args:
+        detections_a (list): detection list a 
+        detections_b (list): detection list b 
+
+    Returns:
+        np.ndarray: 
+    """
+    featureVectors = np.array([np.array([ent.X, ent.Y, ex.X, ex.Y]) for ent, ex in zip(detections_a, detections_b)])
     return featureVectors
 
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: str):
@@ -295,10 +311,9 @@ def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: st
     for k, col in zip(range(n_clusters_), colors):
         axes.scatter(np.array([featureVectors[idx, 0] for idx in range(len(labels_)) if labels_[idx]==k]), 
         np.array([1-featureVectors[idx, 1] for idx in range(len(labels_)) if labels_[idx]==k]), c=col)
-    fig2save = plt.gcf()
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_affinity_propagation_featureVectors_n_clusters_{n_clusters_}_{time.strftime('%Y%m%d_%H:%M:%S')}"
-    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def affinityPropagation_on_enter_and_exit_points(path2db: str):
     """Run affinity propagation clustering on first and last detections of objects.
@@ -339,7 +354,7 @@ def kmeans_clustering(path2db: str, n_clusters: int, threshold: float):
     filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
     filteredEnterFeatures  = makeFeatureVectors(filteredEnterDets)
     filteredExitFeatures = makeFeatureVectors(filteredExitDets)
-    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    colors = "bgrcmyk"
     labels_enter = k_means_on_featureVectors(filteredEnterFeatures, n_clusters)
     labels_exit = k_means_on_featureVectors(filteredExitFeatures, n_clusters)
     fig, axes = plt.subplots(2,1, figsize=(10,10))
@@ -357,8 +372,31 @@ def kmeans_clustering(path2db: str, n_clusters: int, threshold: float):
         exit_y = np.array([1-filteredExitFeatures[idx][1] for idx in range(len(filteredExitFeatures)) if labels_exit[idx]==i])
         axes[1].scatter(exit_x, exit_y, c=colors[i])
     plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
+    fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-    
+def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    labels = k_means_on_featureVectors(featureVectors, n_clusters)
+    fig, axes = plt.subplots(2,1, figsize=(10,10))
+    axes[0].set_xlim(0,1)
+    axes[0].set_ylim(0,1)
+    axes[1].set_xlim(0,1)
+    axes[1].set_ylim(0,1)
+    axes[0].set_title("Clusters of enter points")
+    axes[1].set_title("Clusters of exit points")
+    for i in range(n_clusters):
+        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+        axes[0].scatter(enter_x, enter_y, c=colors[i])
+        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+        axes[1].scatter(exit_x, exit_y, c=colors[i])
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
+    fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
 def spectral_clustering(path2db: str, n_clusters: int):
     from sklearn.cluster import SpectralClustering 
@@ -378,10 +416,9 @@ def spectral_clustering(path2db: str, n_clusters: int):
         _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
         _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
         axes.scatter(_x, _y, c=colors[idx], s=0.3)
-    fig2save = plt.gcf()
     plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}"
-    fig2save.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}.png"
+    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150, format='png')
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -404,7 +441,7 @@ def main():
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
-    argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
+    #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -413,13 +450,13 @@ def main():
     if args.heatmap:
         coordinates2heatmap(args.database)
     if args.kmeans:
-        kmeans_clustering(args.database, args.n_clusters, args.threshold)
+        kmeans_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
     if args.spectral:
         spectral_clustering(args.database, args.n_clusters)
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database)
-    if args.filter_enter_and_exit is not None:
-        filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
+    #if args.filter_enter_and_exit is not None:
+    #    filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
 
 if __name__ == "__main__":
     main()
