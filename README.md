@@ -36,7 +36,7 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib 
 export PYTHONPATH="${PYTHONPATH}:<PATH to YOLOV7 directory>"
 ```
 
-The setup of PYTHONPATH variable is very important, becouse python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
+The setup of PYTHONPATH variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
 
 In case this is not working, I implemented a gpu memory freeing function, which is called when yolov7 is imported or yolov7 model is loaded.  
 
@@ -208,7 +208,7 @@ def predictLinear(trackedObject: TrackedObject, k=3, historyDepth=3, futureDepth
         slice = len(trackedObject.history) // k
         X_train = np.array([x for x in x_history[-historyDepth:-1:slice]])
         y_train = np.array([y for y in y_history[-historyDepth:-1:slice]])
-        # check if the movement is right or left, becouse the generated x_test vector
+        # check if the movement is right or left, because the generated x_test vector
         # if movement is right vector is ascending, otherwise descending
         if movementIsRight(trackedObject):
             X_test = np.linspace(X_train[-1], X_train[-1]+futureDepth)
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS regression (
 );
 ```
 
-Every object is stored in the objects table, objID as primary key, will help us identify detections. Detections are stored in the detections table, here the objID is a foreign key, that tells us which detection belongs to which object. Predictions have an own table, to a single frame and a single object there can be multiple predictions. THe program's inner environment is also being logged as metadata, historyDepth is the length of the training set. FutureDepth is the length of the prediction vector. Yolo version is also being logged, becouse of the legacy version 4 (although yolov4 is not really used anymore, it is just an option, that propably will be taken out), imgsize is the input image size of the neural network, stride is how many pixels the convolutonal filter slides over the image. Confidence threshold and iou threshold will determine which detection of yolo will we accept, if the propability of a detection being right. To the regression table, will be the regression function's configuration values stored.  
+Every object is stored in the objects table, objID as primary key, will help us identify detections. Detections are stored in the detections table, here the objID is a foreign key, that tells us which detection belongs to which object. Predictions have an own table, to a single frame and a single object there can be multiple predictions. THe program's inner environment is also being logged as metadata, historyDepth is the length of the training set. FutureDepth is the length of the prediction vector. Yolo version is also being logged, because of the legacy version 4 (although yolov4 is not really used anymore, it is just an option, that propably will be taken out), imgsize is the input image size of the neural network, stride is how many pixels the convolutonal filter slides over the image. Confidence threshold and iou threshold will determine which detection of yolo will we accept, if the propability of a detection being right. To the regression table, will be the regression function's configuration values stored.  
 
 10. The logging makes it possible, to analyze the data without running the videos each time. For this, data loading functions are needed, that fetches the resutls from the database. These functions are implemented in the databaseLoader.py script. Each function returns a list of all entries logged in the database.
 
@@ -341,9 +341,24 @@ Every object is stored in the objects table, objID as primary key, will help us 
 15.  First try at feature extraction and clustering. First I chose Affinity Propagation Clustring algorithm. AffinityPropagation creates clusters by sending messages between pairs of samples until convergence. A dataset is then described using a small number of exemplars, which are identified as those most representative of other samples. The messages sent between pairs represent the suitability for one sample to be the exemplar of the other, which is updated in response to the values from other pairs. This updating happens iteratively until convergence, at which point the final exemplars are chosen, and hence the final clustering is given. Affinity Propagation can be interesting as it chooses the number of clusters based on the data provided. For this purpose, the two important parameters are the preference, which controls how many exemplars are used, and the damping factor which damps the responsibility and availability messages to avoid numerical oscillations when updating these messages. Algorithm description: The messages sent between points belong to one of two categories. The first is the responsibility $r(i, k)$, which is the accumulated evidence that sample $k$ should be the exemplar for sample $i$. The second is the availability $a(i, k)$ which is the accumulated evidence that sample $i$ should choose $k$ sample to be its exemplar, and considers the values for all other samples that $k$ should be an exemplar. In this way, exemplars are chosen by samples if they are (1) similar enough to many samples and (2) chosen by many samples to be representative of themselves.  More formally, the responsibility of a sample $k$ to be the exemplar of sample $i$ is given by: $$r(i, k) \leftarrow s(i, k) - max [ a(i, k') + s(i, k') \forall k' \neq k ]$$  
 Where $s(i, k)$ is the similarity between samples $i$ and $k$. The availability of sample $k$ to be the exemplar of sample $i$ is given by: $$a(i, k) \leftarrow min [0, r(k, k) + \sum_{i'~s.t.~i' \notin \{i, k\}}{r(i', k)}]$$  
 To begin with, all values for $r$ and $a$ are set to zero, and the calculation of each iterates until convergence. As discussed above, in order to avoid numerical oscillations when updating the messages, the damping factor $\lambda$ is introduced to iteration process: $$r_{t+1}(i, k) = \lambda\cdot r_{t}(i, k) + (1-\lambda)\cdot r_{t+1}(i, k)$$ $$a_{t+1}(i, k) = \lambda\cdot a_{t}(i, k) + (1-\lambda)\cdot a_{t+1}(i, k)$$ where $t$ indicates the iteration times.  
-**TODO:** Insert pictures of results of affinity propagation.
 
-16. Although affinity propagation does not require initial cluster number, it seems that the results are not usable. Other algorithm should be tested ex.: K-Mean, Spectral. For better results, detections should be filtered out, becouse of false positive detections. Standing objects were detected, so those should be filtered out.
+16. Although affinity propagation does not require initial cluster number, it seems that the results are not usable, because it finds too meny clusters. Other algorithm should be tested ex.: K-Mean, Spectral. For better results, detections should be filtered out, because of false positive detections. Standing objects were detected, so those should be filtered out. The algorithm to filter out only the best data to run clustering on is based on the euclidean distance between enter and exit point pairs. $$ d(p,q) = \sqrt{\sum_{i=1}^{n}{(p_i - q_i)^2}} $$
+ 
+<figure>
+    <img src="research_data/0005_2_36min/0005_2_36min_affinity_propagation_featureVectors_n_clusters_18_threshold_0.4.png">
+    <figcaption align="center">Result of affinity propagation on video 0005_2_36min.mp4</figcaption>
+<figure>
+
+17. Kmeans and Spectral clustering give far better results with the filtered detections, than affinity propagation. Here are the results on the 0005_2_36min.mp4 video.
+
+<figure>
+    <img src="research_data/0005_2_36min/0005_2_36min_kmeans_on_nx4_n_cluster_4_threshold_0.6.png">
+    <figcaption align="center">Result of kmeans clustering on 0005_2_36min.mp4</figcaption>
+</figure>
+<figure>
+    <img src="research_data/0005_2_36min/0005_2_36min_spectral_on_nx4_n_cluster_4_threshold_0.6.png">
+    <figcaption align="center">Result of spectral clustering on 0005_2_36min.mp4</figcaption>
+</figure>
 
 ## References
 

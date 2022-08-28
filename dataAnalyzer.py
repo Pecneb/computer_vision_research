@@ -297,36 +297,41 @@ def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: st
     """Run affinity propagation clustering algorithm on list of feature vectors. 
 
     Args:
-        featureVector (list): A numpy ndarray of numpy ndarrays. ex.: [[x,y], [x2,y2]] 
+        featureVector (list): A numpy ndarray of numpy ndarrays. ex.: [[x,y,x,y], [x2,y2,x2,y2]] 
     """
     from sklearn.cluster import AffinityPropagation 
-    from itertools import cycle
-    af= AffinityPropagation(random_state=5).fit(featureVectors)
+    af= AffinityPropagation(preference=-50, random_state=0).fit(featureVectors)
     cluster_center_indices_= af.cluster_centers_indices_
     labels_ = af.labels_ 
-    n_clusters_= len(cluster_center_indices_)
-    print("Estimated number of clusters: %d" % n_clusters_)
-    colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
-    fig, axes = plt.subplots()
-    for k, col in zip(range(n_clusters_), colors):
-        axes.scatter(np.array([featureVectors[idx, 0] for idx in range(len(labels_)) if labels_[idx]==k]), 
-        np.array([1-featureVectors[idx, 1] for idx in range(len(labels_)) if labels_[idx]==k]), c=col)
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_affinity_propagation_featureVectors_n_clusters_{n_clusters_}_{time.strftime('%Y%m%d_%H:%M:%S')}"
-    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+    return labels_, cluster_center_indices_
+    
 
-def affinityPropagation_on_enter_and_exit_points(path2db: str):
+def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float):
     """Run affinity propagation clustering on first and last detections of objects.
     This way, the enter and exit areas on a videa can be determined.
 
     Args:
         path2db (str): Path to database file 
+        threshold (float): Threshold value for filtering algorithm.
     """
-    enter, exit = findEnterAndExitPoints(path2db)
-    enterFeatures= makeFeatureVectors(enter)
-    exitFeatures= makeFeatureVectors(exit)
-    affinityPropagation_on_featureVector(enterFeatures, path2db)
-    affinityPropagation_on_featureVector(exitFeatures, path2db)
+    from itertools import cycle
+    enter, exit = filter_out_false_positive_detections(path2db, threshold)
+    featureVectors = makeFeatureVectorsNx4(enter, exit)
+    labels, cluster_center_indices_= affinityPropagation_on_featureVector(featureVectors, path2db)
+    n_clusters_= len(cluster_center_indices_)
+    print("Estimated number of clusters: %d" % n_clusters_)
+    colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+    fig, axes = plt.subplots(2,1)
+    axes[0].set_title("Enter points")
+    axes[1].set_title("Exit points")
+    for k, col in zip(range(n_clusters_), colors):
+        axes[0].scatter(np.array([featureVectors[idx, 0] for idx in range(len(labels)) if labels[idx]==k]), 
+        np.array([1-featureVectors[idx, 1] for idx in range(len(labels)) if labels[idx]==k]), c=col)
+        axes[1].scatter(np.array([featureVectors[idx, 2] for idx in range(len(labels)) if labels[idx]==k]), 
+        np.array([1-featureVectors[idx, 3] for idx in range(len(labels)) if labels[idx]==k]), c=col)
+    plt.show()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_affinity_propagation_featureVectors_n_clusters_{n_clusters_}_threshold_{threshold}.png"
+    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def k_means_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     """Run kmeans clustrering algorithm on extracted feature vectors.
@@ -343,7 +348,7 @@ def k_means_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     return kmeans.labels_
     
 
-def kmeans_clustering(path2db: str, n_clusters: int, threshold: float):
+def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     """Run kmeans clustering on filtered feature vectors.
 
     Args:
@@ -376,6 +381,13 @@ def kmeans_clustering(path2db: str, n_clusters: int, threshold: float):
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
 def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
+    """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
+
+    Args:
+        path2db (str): Path to database file. 
+        n_clusters (int): Number of clusters. 
+        threshold (float): Threshold value for the false positive filter algorithm. 
+    """
     filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
     featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
@@ -398,27 +410,37 @@ def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-def spectral_clustering(path2db: str, n_clusters: int):
+def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
+    """Run spectral clustering on N x 4 (x,y,x,y) feature vectors.
+
+    Args:
+        path2db (str): Path to database file. 
+        n_clusters (int): Number of clusters. 
+        threshold (float): Threshold value for the false positive filter algorithm. 
+    """
     from sklearn.cluster import SpectralClustering 
-    rawDetectionData = databaseLoader.loadDetections(path2db)
-    detections = detectionParser(rawDetectionData)
-    x = np.array([det.X for det in detections])
-    y = np.array([det.Y for det in detections])
-    y = cvCoord2npCoord(y)
-    X = np.array([[x,y] for x,y in zip(x,y)])
-    labels = SpectralClustering(n_clusters=n_clusters).fit_predict(X)
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
-    # print(f"Size of x_0: {len(x_0)} \n Size of x_1: {len(x_1)} \n")
-    fig, axes = plt.subplots()
-    # Using scatter plot to show the clusters with different coloring.
-    for idx in range(n_clusters):
-        # Exctracting cluster number {idx} from vector x and y
-        _x= np.array([x[i] for i in range(0, len(x)) if labels[i] == idx])
-        _y = np.array([y[i] for i in range(len(y)) if labels[i] == idx])
-        axes.scatter(_x, _y, c=colors[idx], s=0.3)
+    spec = SpectralClustering(n_clusters=n_clusters, n_jobs=-1).fit(featureVectors)
+    labels = spec.labels_ 
+    fig, axes = plt.subplots(2,1, figsize=(10,10))
+    axes[0].set_xlim(0,1)
+    axes[0].set_ylim(0,1)
+    axes[1].set_xlim(0,1)
+    axes[1].set_ylim(0,1)
+    axes[0].set_title("Clusters of enter points")
+    axes[1].set_title("Clusters of exit points")
+    for i in range(n_clusters):
+        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+        axes[0].scatter(enter_x, enter_y, c=colors[i])
+        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+        axes[1].scatter(exit_x, exit_y, c=colors[i])
     plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_n_cluster_{n_clusters}.png"
-    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150, format='png')
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
+    fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -452,9 +474,9 @@ def main():
     if args.kmeans:
         kmeans_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
     if args.spectral:
-        spectral_clustering(args.database, args.n_clusters)
+        spectral_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
     if args.affinity_on_enters_and_exits:
-        affinityPropagation_on_enter_and_exit_points(args.database)
+        affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     #if args.filter_enter_and_exit is not None:
     #    filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
 
