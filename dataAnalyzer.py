@@ -390,6 +390,7 @@ def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     """
     filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
     featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     labels = k_means_on_featureVectors(featureVectors, n_clusters)
     fig, axes = plt.subplots(2,1, figsize=(10,10))
@@ -402,10 +403,12 @@ def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     for i in range(n_clusters):
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[0].scatter(enter_x, enter_y, c=colors[i])
+        axes[0].scatter(enter_x, enter_y, c=colors[i], s=6, label=f"Cluster number {i}")
         exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[1].scatter(exit_x, exit_y, c=colors[i])
+        axes[1].scatter(exit_x, exit_y, c=colors[i], s=6, label=f"Cluster number {i}")
+    axes[0].legend()
+    axes[1].legend()
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
@@ -421,6 +424,7 @@ def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     from sklearn.cluster import SpectralClustering 
     filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
     featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     spec = SpectralClustering(n_clusters=n_clusters, n_jobs=-1).fit(featureVectors)
     labels = spec.labels_ 
@@ -434,10 +438,12 @@ def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     for i in range(n_clusters):
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[0].scatter(enter_x, enter_y, c=colors[i])
+        axes[0].scatter(enter_x, enter_y, c=colors[i], s=6, label=f"Cluster of number {i}")
         exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[1].scatter(exit_x, exit_y, c=colors[i])
+        axes[1].scatter(exit_x, exit_y, c=colors[i], s=6, label=f"Cluster of number {i}")
+    axes[0].legend()
+    axes[1].legend()
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')

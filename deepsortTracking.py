@@ -78,7 +78,7 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
     Tracker.update(wrapped_Detections)
     for track in Tracker.tracks:
         updated = False
-        prevTO = None
+        #prevTO = None
         for trackedObject in history:
             if track.track_id == trackedObject.objID:
                 if track.time_since_update == 0:
@@ -88,17 +88,19 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
                 else:
                     # if arg in update is None, then time_since_update += 1
                     trackedObject.update()
+                    if trackedObject.max_age == trackedObject.time_since_update:
+                        history.remove(trackedObject)
                 updated = True 
                 prevTO = trackedObject
                 break
-        if prevTO is not None:
-            if prevTO.max_age == prevTO.time_since_update:
-                try:
-                    history.remove(prevTO)
-                    print(len(history))
-                except Exception as e:
-                    print("Warning at removal of obj ID {}".format(prevTO.objID))
-                    print(e)
+        #if prevTO is not None:
+        #    if prevTO.max_age == prevTO.time_since_update:
+        #        try:
+        #            history.remove(prevTO)
+        #            print(len(history))
+        #        except Exception as e:
+        #            print("Warning at removal of obj ID {}".format(prevTO.objID))
+        #            print(e)
         if not updated:
             newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
             history.append(newTrack)

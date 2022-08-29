@@ -123,6 +123,13 @@ def draw_boxes(history, image, colors, frameNumber):
                         (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
                         colors[detection.label], 2)
 
+def num_of_moving_objs(history: list) -> int:
+    n = 0
+    for obj in history:
+        if obj.isMoving:
+            n += 1
+    return n
+
 def log_to_stdout(*args):
     print('\n' * 200) 
     for arg in args:
@@ -244,7 +251,7 @@ def main():
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
         # print("FPS: {}".format(fps,))
-        log_to_stdout("FPS: {}".format(fps,), to_log[:], cap.get(cv.CAP_PROP_POS_FRAMES))
+        log_to_stdout("FPS: {}".format(fps,), to_log[:], num_of_moving_objs(history))
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume
