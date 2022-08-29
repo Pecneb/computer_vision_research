@@ -180,8 +180,6 @@ def main():
     frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     # get frame height
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
-    # create DeepSortTracker with command line arguments
-    tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
     # create database connection
     db_connection = databaseLogger.getConnection(path2db)
     # log metadata to database
@@ -197,8 +195,12 @@ def main():
         lastframeNum = databaseLogger.getLatestFrame(db_connection)
         if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
             cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
+        # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
+        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection)
     else:
         lastframeNum = 0
+        # DeepSortTracker without db_connection, starts objID count from 1
+        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
     # start main loop
     for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
         # things to log to stdout
@@ -251,7 +253,7 @@ def main():
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
         # print("FPS: {}".format(fps,))
-        log_to_stdout("FPS: {}".format(fps,), to_log[:], num_of_moving_objs(history))
+        log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}")
         # press 'p' to pause playing the video
         if cv.waitKey(1) == ord('p'):
             # press 'r' to resume

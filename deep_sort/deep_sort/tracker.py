@@ -38,7 +38,7 @@ class Tracker:
         Max number of darknetDetection objects stored in a track
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, historyDepth=3):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, historyDepth=3, _next_id=1):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
@@ -46,7 +46,7 @@ class Tracker:
         
         self.kf = kalman_filter.KalmanFilter()
         self.tracks = []
-        self._next_id = 1
+        self._next_id = _next_id 
         self.historyDepth = historyDepth
 
     def predict(self):

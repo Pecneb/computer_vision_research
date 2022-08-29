@@ -23,6 +23,7 @@ from deep_sort.deep_sort.detection import Detection
 from dataManagementClasses import TrackedObject
 from dataManagementClasses import Detection as darknetDetection
 import databaseLogger
+import databaseLoader
 import sqlite3
 
 def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
@@ -39,7 +40,7 @@ def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
     return nn_matching.NearestNeighborDistanceMetric(
         metric, max_cosine_distance, nn_budget)
 
-def getTracker(metricObj, historyDepth):
+def getTracker(metricObj, historyDepth, db_connection = None):
     """DeepSort Tracker object fractory
 
     Args:
@@ -48,7 +49,10 @@ def getTracker(metricObj, historyDepth):
     Returns:
         tracker: deep_sort Tracker object 
     """
-    return Tracker(metricObj, historyDepth)
+    if db_connection is not None:
+        return Tracker(metricObj, historyDepth, _next_id=databaseLoader.queryLastObjID(db_connection))
+    else:
+        return Tracker(metricObj, historyDepth)
 
 def makeDetectionObject(darknetDetection: darknetDetection):
     """DeepSort Detection object factory
@@ -71,6 +75,7 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
         history (list[TrackedObject]): the history of tracked objects 
         Tracker (Tracker): deep_sort Tracker obj 
         detections (list[Detection]): list of new detections fresh from darknet 
+        db_connection (sqlite3.Connection): Connection object to database, to log objects.
         historyDepth (int) : number of detections stored in trackedObject.history 
     """
     wrapped_Detections = [makeDetectionObject(det) for det in detections] 

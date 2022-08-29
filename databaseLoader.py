@@ -22,6 +22,8 @@ from sqlite3 import Error
 
 LOAD_OBJECTS_SCRIPT = """SELECT * FROM objects"""
 
+GET_LAST_OBJ_ID = """SELECT objID FROM objects WHERE objID=(SELECT MAX(objID) FROM objects)"""
+
 LOAD_DETECTIONS_SCRIPT = """SELECT detections.objID, frameNum, label, confidence, x, y, width, height, vx, vy, ax, ay
                             FROM detections, objects 
                             WHERE detections.objID = objects.objID"""
@@ -92,3 +94,15 @@ def loadRegression(path2db: str) -> list:
         print(e)
     closeConnection(conn)
 
+def queryLastObjID(path2db) -> int:
+    if type(path2db) == str:
+        conn = getConnection(path2db)
+    else:
+        conn = path2db
+    try:
+        cur = conn.cursor()
+        data = cur.execute(GET_LAST_OBJ_ID).fetchone()
+        return int(data[0])
+    except Error as e:
+        print(e)
+    closeConnection(conn)
