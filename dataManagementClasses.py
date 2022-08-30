@@ -69,6 +69,7 @@ class TrackedObject():
         Y(int): last detected y coord of the object
         VX(float): last calculated velocity of X
         VY(float): last calculated velocity of Y
+        bugged(int): int value to count stuck tracks, this happens when the program is running for a long time, this is a bit hacky but necessary, still dont know what causes this problem
         Methods:
          avgArea(): returns the average bbox area of all the detections in the history
          update(): called when tracking can be updated
@@ -88,6 +89,7 @@ class TrackedObject():
     VY: float = field(init=False)
     AX: float = field(init=False)
     AY: float = field(init=False)
+    bugged: int = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -104,10 +106,11 @@ class TrackedObject():
         self.futureY = []
         self.max_age = max_age
         self.time_since_update = 0
-        self.mean = [] 
+        self.mean = []
+        self.bugged = 0 
     
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.AX, self.AY)
+        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}, Age: {}, Bugged: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, self.bugged, len(self.history))
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
@@ -134,7 +137,7 @@ class TrackedObject():
             detection (Detection, optional): historyClass Detecton object. If none, increment time_since_update. Defaults to None.
             features (list[int], optional): x, y, a, h, vx, vy, va, h --> coordinates, aspect ratio, height and their velocities. Defaults to None.
         """
-        if detection is not None:
+        if detection is not None and mean is not None:
             self.history.append(detection)
             self.mean = mean 
             self.X = mean[0]
@@ -154,10 +157,16 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        if len(self.history) >= 2:
+        if len(self.history) > 0:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
             self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 10.0 
         if not self.isMoving:
             self.VX = 0.0
             self.VY = 0.0
+        # this is a fix for a specific problem, when an track is stuck, and showed as moving object
+        # this is just a hack for now, TODO: find real solution
+        if len(self.history) == 2:
+                self.bugged += 1
+        else:
+            self.bugged = 0

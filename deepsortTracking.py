@@ -93,10 +93,10 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
                 else:
                     # if arg in update is None, then time_since_update += 1
                     trackedObject.update()
-                    if trackedObject.max_age == trackedObject.time_since_update:
+                    if trackedObject.max_age <= trackedObject.time_since_update or trackedObject.max_age <= trackedObject.bugged:
                         history.remove(trackedObject)
                 updated = True 
-                prevTO = trackedObject
+                # prevTO = trackedObject
                 break
         #if prevTO is not None:
         #    if prevTO.max_age == prevTO.time_since_update:
