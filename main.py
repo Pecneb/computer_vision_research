@@ -59,6 +59,7 @@ def parseArgs():
     parser.add_argument("-d", "--device", default='cuda', help="Choose device to run neuralnet. example: cpu, cuda, 0,1,2,3...")
     parser.add_argument("--yolov7", default=1, type=int, help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
     parser.add_argument("--resume", "-r", action="store_true", help="Use this flag if want to resume video from last session left off.")
+    parser.add_argument("--show", action="store_true", default=False, help="Use this flag to display video while running detection, prediction on video.")
     args = parser.parse_args()
     return args
 
@@ -224,15 +225,17 @@ def main():
         # update track history
         updateHistory(history, tracker, targets, db_connection, historyDepth=args.history)
         # draw bounding boxes of filtered detections
-        draw_boxes(history, frame, colors, frameNumber)
+        if args.show:
+            draw_boxes(history, frame, colors, frameNumber)
         # run prediction algorithm and draw predictions on objects, that are in motion
         for obj in history:
             if obj.isMoving:
                 # calculate predictions
                 predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
                 # draw predictions and tracking history
-                draw_predictions(obj, frame, frameNumber)
-                draw_history(obj, frame, frameNumber)
+                if args.show:
+                    draw_predictions(obj, frame, frameNumber)
+                    draw_history(obj, frame, frameNumber)
                 # log to stdout
                 to_log.append(obj)
                 # log detections to database
@@ -248,7 +251,8 @@ def main():
                 # log predictions to database
                 databaseLogger.logPredictions(db_connection, frame, obj.objID, frameNumber, obj.futureX, obj.futureY)
         # show video frame
-        cv.imshow("FRAME", frame)
+        if args.show:
+            cv.imshow("FRAME", frame)
         # calculating fps from time before computation and time now
         fps = int(1/(time.time() - prev_time))
         # print FPS to stdout
@@ -263,7 +267,8 @@ def main():
         if cv.waitKey(10) == ord('q'):
             break
     cap.release()
-    cv.destroyAllWindows()
+    if args.show:
+        cv.destroyAllWindows()
     databaseLogger.closeConnection(db_connection)
 
 if __name__ == "__main__":

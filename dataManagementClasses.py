@@ -89,7 +89,7 @@ class TrackedObject():
     VY: float = field(init=False)
     AX: float = field(init=False)
     AY: float = field(init=False)
-    bugged: int = field(init=False)
+    # bugged: int = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -107,10 +107,10 @@ class TrackedObject():
         self.max_age = max_age
         self.time_since_update = 0
         self.mean = []
-        self.bugged = 0 
+        #self.bugged = 0 
     
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}, Age: {}, Bugged: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, self.bugged, len(self.history))
+        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, len(self.history))
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
@@ -130,7 +130,7 @@ class TrackedObject():
         self.AX = (new_vx - old_vx) / (self.time_since_update+1)
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
-    def update(self, detection=None, mean=None):
+    def update(self, detection=None, mean=None, historyDepth = 30):
         """Update tracking
 
         Args:
@@ -157,16 +157,16 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        if len(self.history) > 0:
+        if len(self.history) > historyDepth:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
-            self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 10.0 
+            self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 10.0  
         if not self.isMoving:
             self.VX = 0.0
             self.VY = 0.0
         # this is a fix for a specific problem, when an track is stuck, and showed as moving object
         # this is just a hack for now, TODO: find real solution
-        if len(self.history) == 2:
-                self.bugged += 1
-        else:
-            self.bugged = 0
+        #if len(self.history) == 2:
+        #        self.bugged += 1
+        #else:
+        #    self.bugged = 0
