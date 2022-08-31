@@ -30,7 +30,7 @@ Download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolo
 
 Create conda environment and add yolov7 to PYTHONPATH.
 
-```
+```shell
 conda create -n <insert name here> python=3.9
 conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
 export PYTHONPATH="${PYTHONPATH}:<PATH to YOLOV7 directory>"
@@ -100,7 +100,7 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 
 #### Regression with coordinate depending weigths
 
-Kalman filter calculates velocities
+Kalman filter calculates velocities, these velocities can be used as weight in the regression.
 
 ### Feature extraction, clustering, classification (building a model)
 
@@ -117,6 +117,86 @@ To make the predictions smarter, a learning algorithm have to be implemented, th
 [x, y] the x and y coordinates of the detection  
 
 [x, y, vx, vy] the x, y coordinates and the x, y velocities of the detection  
+
+Not all feature vectors are good for us, there are many false positive detections, that are come from the inaccuracy of yolo. These false positives can be filtered out based on their euclidean distance. Although a threshold value have to be given. The enter and exit points, that distance is under this value, is not chosen as training data for the clustaring algorithm.  
+
+#### Clustering performance evaluation
+
+There are several algorithms that can evaluate the results of our clustering. There are no ground thruth available to us, so only those evaluation algorithms are useful, that require none.  
+Scikit-Learn have a few of these: Silhouette Coefficient, Calinski-Harabasz Index, Davies-Bouldin Index. [Clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation)
+
+
+The results of the evaluation algorithms can be displayed with elbow diagrams. There is a python module for this, which is implemented for Scikit-Learns's KMeans algorithm. https://www.scikit-yb.org/en/latest/api/cluster/elbow.html
+
+#### Silhouette Coefficient
+
+Hihger Silhouette Coefficient score realtes to a model with better defined clusters. The Silhouette Coefficient is defined for each sample and is composed of two scores:  
+
+* a: he mean distance between a sample and all other points in the same class.
+* b: The mean distance between a sample and all other points in the next nearest cluster.
+
+The Solhouette Coefficient $s$ for a single sample is then given as: $$s = \frac{b - a}{max(a, b)}$$
+
+* The score is bounded between -1 for incorrect clustering and +1 for highly dense clustering. Scores around zero indicate overlapping clusters.
+* The score is higher when clusters are dense and well separated, which relates to a standard concept of a cluster.
+
+##### Drawbacks
+
+* The Silhouette Coefficient is generally higher for convex clusters than other concepts of clusters.
+
+##### References
+
+* Peter J. Rousseeuw (1987). [“Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”](https://doi.org/10.1016/0377-0427(87)90125-7). Computational and Applied Mathematics 20: 53–65.
+
+#### Calinski-Harabasz Index
+
+Known as the Variance Ratio Criterion - can be used to evaluate the model, where a higher Calinski-Harabasz score relates to a model with better defined clusters.  
+The index is the ratio of the sum of between-clusters dispersion and of whithin-cluster dispersion for all clusters (where dispersion is defined as the sum of distances squared).
+
+* The score is higher when clusters are dense and well separated, which relates to a standard concept of a cluster.
+* The score is fast to compute.
+
+##### Drawbacks
+
+* The Calinski-Harabasz index is generally higher for convex clusters than other concepts of clusters.
+
+##### The Math
+
+For a set of data $E$ of size $n_E$ which has been clustered into $k$ clusters, the Calinski-Harabasz score $s$ is defined as the ratio of the between-clusters dispersion mean and the within-cluster dispersion: $$s = \frac{\mathrm{tr}(B_k)}{\mathrm{tr}(W_k)} \times \frac{n_E - k}{k - 1}$$ where $tr(B_k)$ is trace of the between group dispersion matrix and $tr(W_k)$ is ther tace of the within-cluster dispersion matrix defined by: $$W_k = \sum_{q=1}^k \sum_{x \in C_q} (x - c_q) (x - c_q)^T$$ $$B_k = \sum_{q=1}^k n_q (c_q - c_E) (c_q - c_E)^T$$ with $C_q$ the set of points in cluster $q$, $c_q$ the center of cluster $q$, $c_E$ the center of $E$,, and $n_q$ the number of points in cluster $q$.  
+
+##### References
+
+* Caliński, T., & Harabasz, J. (1974). [“A Dendrite Method for Cluster Analysis”](https://www.researchgate.net/publication/233096619_A_Dendrite_Method_for_Cluster_Analysis). Communications in Statistics-theory and Methods 3: 1-27.
+
+#### Davies-Bouldin Index
+
+The Davies-Bouldin index can be used to evaluate the model, where a lower Davies-Bouldin index relates to a model with better separation between the clusters.  
+This index signifies the average ‘similarity’ between clusters, where the similarity is a measure that compares the distance between clusters with the size of the clusters themselves.  
+Zero is the lowest possible score. Values closer to zero indicate a better partition.  
+
+* The computation of Davies-Bouldin is simpler than that of Silhouette scores.
+* The index is solely based on quantities and features inherent to the dataset as its computation only uses point-wise distances.
+
+##### Drawbacks
+
+* The Davies-Boulding index is generally higher for convex clusters than other concepts of clusters.
+* The usage of centroid distance limits the distance metric to Euclidean space.
+
+##### The Math
+
+The index is defined as the average similarity between each cluster $C_i$ for $i=1,...,k$ and its most similar one $C_j$. In the context of this index, smilarity is defined as a measure $R_ij$ that trades off:
+
+* $s_i$ the average distance between each points of cluster $i$ and the cetroid of that cluster - also known as cluster diameter.
+* $d_ij$ the distance between cluster centroids $i$ and $j$.
+
+A simple choice to construct $R_ij$ so that it is nonnegative and symmetric is: $$R_{ij} = \frac{s_i + s_j}{d_{ij}}$$
+Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \max_{i \neq j} R_{ij}$$
+
+##### References
+
+* Davies, David L.; Bouldin, Donald W. (1979). [“A Cluster Separation Measure”](https://doi.org/10.1109/TPAMI.1979.4766909) IEEE Transactions on Pattern Analysis and Machine Intelligence. PAMI-1 (2): 224-227.
+* Halkidi, Maria; Batistakis, Yannis; Vazirgiannis, Michalis (2001). [“On Clustering Validation Techniques”](https://doi.org/10.1023/A:1012801612483) Journal of Intelligent Information Systems, 17(2-3), 107-145.
+* [Wikipedia entry for Davies-Bouldin index](https://en.wikipedia.org/wiki/Davies%E2%80%93Bouldin_index).
 
 ## Documentation
 
@@ -347,13 +427,14 @@ Where $s(i, k)$ is the similarity between samples $i$ and $k$. The availability 
 To begin with, all values for $r$ and $a$ are set to zero, and the calculation of each iterates until convergence. As discussed above, in order to avoid numerical oscillations when updating the messages, the damping factor $\lambda$ is introduced to iteration process: $$r_{t+1}(i, k) = \lambda\cdot r_{t}(i, k) + (1-\lambda)\cdot r_{t+1}(i, k)$$ $$a_{t+1}(i, k) = \lambda\cdot a_{t}(i, k) + (1-\lambda)\cdot a_{t+1}(i, k)$$ where $t$ indicates the iteration times.  
 
 16. Although affinity propagation does not require initial cluster number, it seems that the results are not usable, because it finds too meny clusters. Other algorithm should be tested ex.: K-Mean, Spectral. For better results, detections should be filtered out, because of false positive detections. Standing objects were detected, so those should be filtered out. The algorithm to filter out only the best data to run clustering on is based on the euclidean distance between enter and exit point pairs. $$d(p,q) = \sqrt{\sum_{i=1}^{n}{(p_i - q_i)^2}}$$
+
  
 <figure>
     <img src="research_data/0005_2_36min/0005_2_36min_affinity_propagation_featureVectors_n_clusters_18_threshold_0.4.png">
     <figcaption align="center">Result of affinity propagation on video 0005_2_36min.mp4</figcaption>
 <figure>
 
-17. Kmeans and Spectral clustering give far better results with the filtered detections, than affinity propagation. Here are the results on the 0005_2_36min.mp4 video.
+1.  Kmeans and Spectral clustering give far better results with the filtered detections, than affinity propagation. Here are the results on the 0005_2_36min.mp4 video.
 
 <figure>
     <img src="research_data/0005_2_36min/0005_2_36min_kmeans_on_nx4_n_cluster_4_threshold_0.6.png">
