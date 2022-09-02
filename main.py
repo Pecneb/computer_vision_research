@@ -172,6 +172,9 @@ def main():
         exit(0)
     # forward declaration of history(list[TrackedObject])
     history = []
+    # buffer to log at the end
+    buffer2log = []
+    _, bufferedFrame = cap.read() 
     # generating colors for bounding boxes based on the class names of the neural net
     if args.yolov7:
         colors = yolov7api.COLORS 
@@ -204,71 +207,85 @@ def main():
         tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
     # start main loop
     for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
-        # things to log to stdout
-        to_log = []
-        # get current frame from video
-        ret, frame = cap.read()
-        if frame is None:
-            print("Video ended, closing player.")
-            break
-        # get current frame number
-        frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
-        # time before computation
-        prev_time = time.time()
-        # use darknet neural net to detects objects
-        if args.yolov7:
-            detections = yolov7api.detect(frame) 
-        else:
-            detections = hldnapi.cvimg2detections(frame)
-        # filter detections, only return the ones given in the targetNames tuple
-        targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
-        # update track history
-        updateHistory(history, tracker, targets, db_connection, historyDepth=args.history)
-        # draw bounding boxes of filtered detections
-        if args.show:
-            draw_boxes(history, frame, colors, frameNumber)
-        # run prediction algorithm and draw predictions on objects, that are in motion
-        for obj in history:
-            if obj.isMoving:
-                # calculate predictions
-                predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
-                # draw predictions and tracking history
-                if args.show:
-                    draw_predictions(obj, frame, frameNumber)
-                    draw_history(obj, frame, frameNumber)
-                # log to stdout
-                to_log.append(obj)
-                # log detections to database
-                databaseLogger.logDetection(db_connection, 
-                                            frame, 
-                                            obj.objID, 
-                                            obj.history[-1].frameID, 
-                                            obj.history[-1].confidence, 
-                                            obj.X, obj.Y, 
-                                            obj.history[-1].Width, 
-                                            obj.history[-1].Height,
-                                            obj.VX, obj.VY, obj.AX, obj.AY)
-                # log predictions to database
-                databaseLogger.logPredictions(db_connection, frame, obj.objID, frameNumber, obj.futureX, obj.futureY)
-        # show video frame
-        if args.show:
-            cv.imshow("FRAME", frame)
-        # calculating fps from time before computation and time now
-        fps = int(1/(time.time() - prev_time))
-        # print FPS to stdout
-        # print("FPS: {}".format(fps,))
-        log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}")
-        # press 'p' to pause playing the video
-        if cv.waitKey(1) == ord('p'):
-            # press 'r' to resume
-            if cv.waitKey(0) == ord('r'):
-                continue
-        # press 'q' to stop playing video
-        if cv.waitKey(10) == ord('q'):
+        try:
+            # things to log to stdout
+            to_log = []
+            # get current frame from video
+            ret, frame = cap.read()
+            if frame is None:
+                print("Video ended, closing player.")
+                break
+            # get current frame number
+            frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
+            # time before computation
+            prev_time = time.time()
+            # use darknet neural net to detects objects
+            if args.yolov7:
+                detections = yolov7api.detect(frame) 
+            else:
+                detections = hldnapi.cvimg2detections(frame)
+            # filter detections, only return the ones given in the targetNames tuple
+            targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
+            # update track history
+            updateHistory(history, tracker, targets, db_connection, historyDepth=args.history)
+            # draw bounding boxes of filtered detections
+            if args.show:
+                draw_boxes(history, frame, colors, frameNumber)
+            # run prediction algorithm and draw predictions on objects, that are in motion
+            for obj in history:
+                if obj.isMoving:
+                    # calculate predictions
+                    predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
+                    # draw predictions and tracking history
+                    if args.show:
+                        draw_predictions(obj, frame, frameNumber)
+                        draw_history(obj, frame, frameNumber)
+                    # log to stdout
+                    to_log.append(obj)
+                    # log detections to database
+                    #databaseLogger.logDetection(db_connection, 
+                    #                            frame, 
+                    #                            obj.objID, 
+                    #                            obj.history[-1].frameID, 
+                    #                            obj.history[-1].confidence, 
+                    #                            obj.X, obj.Y, 
+                    #                            obj.history[-1].Width, 
+                    #                            obj.history[-1].Height,
+                    #                            obj.VX, obj.VY, obj.AX, obj.AY)
+                    # log predictions to database
+                    #databaseLogger.logPredictions(db_connection, frame, obj.objID, frameNumber, obj.futureX, obj.futureY)
+                    # save data in buffer
+                    buffer2log.append([obj.objID, 
+                                    obj.history[-1].frameID, 
+                                    obj.history[-1].confidence, 
+                                    obj.X, obj.Y, 
+                                    obj.history[-1].Width, 
+                                    obj.history[-1].Height,
+                                    obj.VX, obj.VY, obj.AX, obj.AY, 
+                                    obj.futureX, obj.futureY
+                                    ])
+            # show video frame
+            if args.show:
+                cv.imshow("FRAME", frame)
+            # calculating fps from time before computation and time now
+            fps = int(1/(time.time() - prev_time))
+            # print FPS to stdout
+            # print("FPS: {}".format(fps,))
+            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}", f"Buffersize: {len(buffer2log)}")
+            # press 'p' to pause playing the video
+            if cv.waitKey(1) == ord('p'):
+                # press 'r' to resume
+                if cv.waitKey(0) == ord('r'):
+                    continue
+            # press 'q' to stop playing video
+            if cv.waitKey(10) == ord('q'):
+                break
+        except KeyboardInterrupt:
             break
     cap.release()
     if args.show:
         cv.destroyAllWindows()
+    databaseLogger.logBufferSpeedy(db_connection, bufferedFrame, buffer2log)
     databaseLogger.closeConnection(db_connection)
 
 if __name__ == "__main__":

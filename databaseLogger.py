@@ -276,9 +276,11 @@ def logPredictions(conn: sqlite3.Connection, img0: numpy.ndarray, objID:int, fra
     """
     try:
         cur = conn.cursor()
+        predictions2log = []
         for idx in range(len(x)):
             x_pred, y_pred = prediction2float(img0, x[idx], y[idx])
-            cur.execute(INSERT_PREDICTION, (objID, frameNumber, idx, x_pred, y_pred))
+            predictions2log.append((objID, frameNumber, idx, x_pred, y_pred))
+        cur.executemany(INSERT_PREDICTION, predictions2log)
         conn.commit()
     except Error as e:
         print(e)
@@ -330,5 +332,66 @@ def logRegression(conn: sqlite3.Connection, linearFunction: str, polynomFunction
         cur = conn.cursor()
         cur.execute(INSERT_REGRESSION, (linearFunction, polynomFunction, polynomDegree, trainingPoints))
         conn.commit()
+    except Error as e:
+        print(e)
+
+def logBuffer(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
+    """Log buffer to the database after main loop is ended.
+
+    Args:
+        conn (sqlite3.Connection): connection object to the database 
+        frame (np.ndarray): frame 
+        buffer (list): the buffered data to log, 
+        in this sepcific scenario the buffer looks like this list[[objID, 
+                                                                   obj.history[-1].frameID,
+                                                                   obj.history[-1].confidence
+                                                                   obj.X, obj.Y,
+                                                                   obj.history[-1].Width,
+                                                                   obj.history[-1].Height,
+                                                                   obj.VX, obj.VY, obj.AX, obj.AY,
+                                                                   obj.futureX, obj.futureY]] 
+    """
+    import tqdm
+    for idx in tqdm.tqdm(range(len(buffer)), desc="Do not interrupt! Logging buffer to database!"):
+        logDetection(conn, frame, 
+        buffer[idx][0], buffer[idx][1], buffer[idx][2], 
+        buffer[idx][3], buffer[idx][4], buffer[idx][5], 
+        buffer[idx][6], buffer[idx][7], buffer[idx][8], 
+        buffer[idx][9], buffer[idx][10])
+        logPredictions(conn, frame, buffer[idx][0], buffer[idx][1], buffer[idx][11], buffer[idx][12])
+
+def logBufferSpeedy(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
+    """Log buffer to the database after main loop is ended. 
+    Faster than logBuffer(), thanks to executemany() function.
+
+    Args:
+        conn (sqlite3.Connection): connection object to the database 
+        frame (np.ndarray): frame 
+        buffer (list): the buffered data to log, 
+        in this sepcific scenario the buffer looks like this list[[objID, 
+                                                                   obj.history[-1].frameID,
+                                                                   obj.history[-1].confidence
+                                                                   obj.X, obj.Y,
+                                                                   obj.history[-1].Width,
+                                                                   obj.history[-1].Height,
+                                                                   obj.VX, obj.VY, obj.AX, obj.AY,
+                                                                   obj.futureX, obj.futureY]] 
+    """
+    print("Dont interrupt! Logging buffer to database!")
+    detections2log = []
+    for buf in buffer:
+        x,y,w,h,vx,vy,ax,ay = bbox2float(frame, buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10])
+        detections2log.append((buf[0], buf[1], buf[2], x,y,w,h,vx,vy,ax,ay))
+    predictions2log = []
+    for i in range(len(buffer)):
+        for j in range(len(buffer[i][11])):
+            x,y = prediction2float(frame, buffer[i][11][j], buffer[i][12][j])
+            predictions2log.append((buffer[i][0], buffer[i][1], j, x, y))
+    try:
+        cur = conn.cursor()
+        cur.executemany(INSERT_DETECTION, detections2log)
+        cur.executemany(INSERT_PREDICTION, predictions2log)
+        conn.commit()
+        print("Buffer to database successfully logged!")
     except Error as e:
         print(e)
