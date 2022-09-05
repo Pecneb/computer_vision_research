@@ -24,6 +24,7 @@ from dataManagementClasses import Detection, TrackedObject
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import tqdm
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -196,7 +197,7 @@ def findEnterAndExitPoints(path2db: str):
     detections = detectionParser(rawDetectionData)
     rawObjectData = databaseLoader.loadObjects(path2db)
     trackedObjects = []
-    for obj in rawObjectData:
+    for obj in tqdm.tqdm(rawObjectData, desc="Filter out enter and exit points."):
         tmpDets = []
         for det in detections:
            if det.objID == obj[0]:
@@ -235,7 +236,7 @@ def filter_out_false_positive_detections(path2db: str, threshold: float):
     filteredExitPoints = []
     outfilteredEnterPoints = []
     outfilteredExitPoints = []
-    for enterp, exitp in zip(enterPoints, exitPoints):
+    for enterp, exitp in tqdm.tqdm(zip(enterPoints, exitPoints), desc="Filter out false positive enter and exit points."):
         d = euclidean_distance(enterp.X, exitp.X, enterp.Y, exitp.Y)
         if d > threshold:
             filteredEnterPoints.append(enterp)
@@ -290,7 +291,7 @@ def makeFeatureVectorsNx4(detections_a: list, detections_b: list) -> np.ndarray:
     Returns:
         np.ndarray: 
     """
-    featureVectors = np.array([np.array([ent.X, ent.Y, ex.X, ex.Y]) for ent, ex in zip(detections_a, detections_b)])
+    featureVectors = np.array([np.array([ent.X, ent.Y, ex.X, ex.Y]) for ent, ex in tqdm.tqdm(zip(detections_a, detections_b), desc="Make feature vectors N x 4")])
     return featureVectors
 
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: str):
@@ -458,6 +459,19 @@ def checkDir(path2db):
         os.mkdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0]))
         print("Directory \"research_data/{}\" is created.".format(path2db.split('/')[-1].split('.')[0]))
 
+def elbow_on_kmeans(path2db: str, threshold: float):
+    """Evaluate clustering results and create elbow diagram.
+
+    Args:
+        path2db (str): Path to database file. 
+        threshold (float): Threshold value for filtering algorithm. 
+    """
+    from yellowbrick.cluster.elbow import kelbow_visualizer 
+    from sklearn.cluster import KMeans
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    X = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    kelbow_visualizer(KMeans(), X, k=(2,10))
+
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
@@ -469,6 +483,7 @@ def main():
     argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
+    argparser.add_argument("--elbow_on_kmeans", default=False, action="store_true", help="Use this flag to draw elbow diagram, from kmeans clustering results.")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
@@ -483,6 +498,8 @@ def main():
         spectral_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
+    if args.elbow_on_kmeans:
+        elbow_on_kmeans(args.database, args.threshold)
     #if args.filter_enter_and_exit is not None:
     #    filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
 
