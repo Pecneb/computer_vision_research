@@ -183,7 +183,7 @@ def printConfig(path2db):
     """
     )
 
-
+# TODO: implement multiprocessed version of this function 
 def findEnterAndExitPoints(path2db: str):
     """Extracting only the first and the last detections of tracked objects.
 
@@ -208,6 +208,51 @@ def findEnterAndExitPoints(path2db: str):
     exitDetections = [obj.history[-1] for obj in trackedObjects]
     return enterDetections, exitDetections 
 
+def order2track(args: list):
+    """Orders enter and exit dets to object.
+
+    Args:
+        args (list): list of args, that should look like [detections, objID] 
+
+    Returns:
+        tuple: tuple of dets, enter det and exit det 
+        bool: returns False, when tuple is empty
+    """
+    dets = []
+    for det in args[0]:
+        if det.objID == args[1]:
+            dets.append(det)
+    if dets:
+        return (dets[0], dets[-1])
+    else:
+        return False
+
+def findEnterAndExitPointsMultithreaded(path2db: str):
+    """Extract only the first and last detections of tracked objects.
+    This is a multithreaded implementation of function findEnterAndExitPoints(path2db: str)
+
+    Args:
+        path2db (str): Path to database file. 
+    """
+    from multiprocessing import Pool
+    import concurrent.futures
+    rawDetectionData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetectionData)
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    enterDetections = []
+    exitDetections = []
+    iterable = [[detections, obj[0]] for obj in rawObjectData]
+    with Pool(processes=20) as executor:
+        start = time.time()
+        results = executor.map(order2track, iterable) 
+        print("Enter and Exit points with multiprocessing: %f"%(time.time()-start))
+        for result in tqdm.tqdm(results, desc="Enter and Exit points."):
+            if result:
+                enterDetections.append(result[0])
+                exitDetections.append(result[1])
+    return enterDetections, exitDetections
+
+
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     """Calculate euclidean distance of 2D vectors.
 
@@ -223,48 +268,24 @@ def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     return (((q1-p1)**2)+((q2-p2)**2))**0.5
     
 
-def filter_out_false_positive_detections(path2db: str, threshold: float):
-    """Filter out objects with enter and exit point distances lower than threshold.
-    This filtering will help choose best training points for clustering.
+def filter_out_false_positive_detections(trackedObjects: list, threshold: float):
+    """This function is to filter out false positive detections, 
+    that enter and exit points are closer, than the threshold value given in the arguments.
 
     Args:
-        path2db (str): Path to database. 
-        threshold (float): Threshold of distance. 
+        trackedObjects (list): list of object trackings 
+        threshold (float): if enter and exit points are closer than this value, they are exclueded from the return list
+
+    Returns:
+        list: list of returned filtered tracks 
     """
-    enterPoints, exitPoints = findEnterAndExitPoints(path2db)
-    filteredEnterPoints = []
-    filteredExitPoints = []
-    outfilteredEnterPoints = []
-    outfilteredExitPoints = []
-    for enterp, exitp in tqdm.tqdm(zip(enterPoints, exitPoints), desc="Filter out false positive enter and exit points."):
-        d = euclidean_distance(enterp.X, exitp.X, enterp.Y, exitp.Y)
+    filteredTracks = []
+    for obj in tqdm.tqdm(trackedObjects, desc="False positive filtering."):
+        d = euclidean_distance(obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y)
         if d > threshold:
-            filteredEnterPoints.append(enterp)
-            filteredExitPoints.append(exitp)
-        else:
-            outfilteredEnterPoints.append(enterp)
-            outfilteredExitPoints.append(exitp)
-    """fig, axes = plt.subplots(1,3)
-    axes[0].scatter([det.X for det in enterPoints], [1-det.Y for det in enterPoints], c='b')
-    axes[0].scatter([det.X for det in exitPoints], [1-det.Y for det in exitPoints], c='r', s=4)
-    axes[0].set_xlim(0,1)
-    axes[0].set_ylim(0,1)
-    axes[1].scatter([det.X for det in filteredEnterPoints], [1-det.Y for det in filteredEnterPoints], c='b')
-    axes[1].scatter([det.X for det in filteredExitPoints], [1-det.Y for det in filteredExitPoints], c='r', s=4)
-    axes[1].set_xlim(0,1)
-    axes[1].set_ylim(0,1)
-    axes[2].scatter([det.X for det in outfilteredEnterPoints], [1-det.Y for det in outfilteredEnterPoints], c='b')
-    axes[2].scatter([det.X for det in outfilteredExitPoints], [1-det.Y for det in outfilteredExitPoints], c='r', s=4)
-    axes[2].set_xlim(0,1)
-    axes[2].set_ylim(0,1)
-    axes[0].set_title("All points.")
-    axes[1].set_title("Filtered points.")
-    axes[2].set_title("False postitives.")
-    for ax in axes:
-        ax.set_xlabel("Enter points")
-        ax.set_ylabel("Exit points")
-    plt.show()"""
-    return filteredEnterPoints, filteredExitPoints
+            filteredTracks.append(obj)
+    print(filteredTracks)
+    return filteredTracks
 
 
 def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
@@ -280,7 +301,7 @@ def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
     featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
     return featureVectors
 
-def makeFeatureVectorsNx4(detections_a: list, detections_b: list) -> np.ndarray:
+def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
     """Create feature vectors from the two inputted detection lists.
     The vector is created from the detections_a x,y and the detections_b x,y coordinates.
 
@@ -291,10 +312,10 @@ def makeFeatureVectorsNx4(detections_a: list, detections_b: list) -> np.ndarray:
     Returns:
         np.ndarray: 
     """
-    featureVectors = np.array([np.array([ent.X, ent.Y, ex.X, ex.Y]) for ent, ex in tqdm.tqdm(zip(detections_a, detections_b), desc="Make feature vectors N x 4")])
+    featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
-def affinityPropagation_on_featureVector(featureVectors: np.ndarray, path2db: str):
+def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
     """Run affinity propagation clustering algorithm on list of feature vectors. 
 
     Args:
@@ -316,9 +337,17 @@ def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float)
         threshold (float): Threshold value for filtering algorithm.
     """
     from itertools import cycle
-    enter, exit = filter_out_false_positive_detections(path2db, threshold)
-    featureVectors = makeFeatureVectorsNx4(enter, exit)
-    labels, cluster_center_indices_= affinityPropagation_on_featureVector(featureVectors, path2db)
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for rawObj in rawObjectData:
+        tmpDets = []
+        rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObj[0])
+        for det in rawDets:
+            tmpDets.append(detectionParser(det))
+        trackedObjects.append(trackedObjectFactory(tmpDets))
+    filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
+    featureVectors = makeFeatureVectorsNx4(filteredTrackedObjects)
+    labels, cluster_center_indices_= affinityPropagation_on_featureVector(featureVectors)
     n_clusters_= len(cluster_center_indices_)
     print("Estimated number of clusters: %d" % n_clusters_)
     colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
@@ -363,7 +392,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     colors = "bgrcmyk"
     labels_enter = k_means_on_featureVectors(filteredEnterFeatures, n_clusters)
     labels_exit = k_means_on_featureVectors(filteredExitFeatures, n_clusters)
-    fig, axes = plt.subplots(2,1, figsize=(10,10))
+    fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
     axes[0].set_xlim(0,1)
     axes[0].set_ylim(0,1)
     axes[1].set_xlim(0,1)
@@ -381,38 +410,71 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-def kmeans_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
+def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
     """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
-        path2db (str): Path to database file. 
+        trackedObjects (list): List of object tracks. 
         n_clusters (int): Number of clusters. 
         threshold (float): Threshold value for the false positive filter algorithm. 
     """
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
-    featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    featureVectors = makeFeatureVectorsNx4(trackedObjects)
     print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     labels = k_means_on_featureVectors(featureVectors, n_clusters)
-    fig, axes = plt.subplots(2,1, figsize=(10,10))
-    axes[0].set_xlim(0,1)
-    axes[0].set_ylim(0,1)
-    axes[1].set_xlim(0,1)
-    axes[1].set_ylim(0,1)
-    axes[0].set_title("Clusters of enter points")
-    axes[1].set_title("Clusters of exit points")
-    for i in range(n_clusters):
-        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
-        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[0].scatter(enter_x, enter_y, c=colors[i], s=6, label=f"Cluster number {i}")
-        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
-        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[1].scatter(exit_x, exit_y, c=colors[i], s=6, label=f"Cluster number {i}")
-    axes[0].legend()
-    axes[1].legend()
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
+    fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
+    if n_clusters > 1:
+        for i in range(n_clusters):
+            axes[i].set_xlim(0,1)
+            axes[i].set_ylim(0,1)   
+            axes[i].set_title(f"Axis of cluster number {i}")
+            enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+            enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+            exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+            exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+            axes[i].legend()
+    else:
+        axes.set_xlim(0,1)
+        axes.set_ylim(0,1)   
+        axes.set_title(f"Axis of cluster number {0}")
+        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
+        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
+        axes.scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
+        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
+        axes.scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+        axes.legend()
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
+
+def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
+    """This function automates the task of running kmeans clustering on different cluster numbers.
+
+    Args:
+        path2db (str): path to database file 
+        n_cluster_start (int): starting number cluster 
+        n_cluster_end (int): ending number cluster 
+        threshold (float): threshold for filtering algorithm 
+
+    Returns:
+        bool: returns false if some crazy person uses the program 
+    """
+    if k[0] < 1 or k[1] < k[0]:
+        print("Error: this is not how we use this program properly")
+        return False
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for rawObj in tqdm.tqdm(rawObjectData, desc="Loading detections of tracks."):
+        tmpDets = []
+        rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObj[0])
+        if len(rawDets) > 0:
+            tmpDets = detectionParser(rawDets)
+            trackedObjects.append(trackedObjectFactory(tmpDets))
+    filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
+    for i in range(k[0], k[1]):
+        kmeans_clustering_on_nx4(filteredTrackedObjects, i, threshold, path2db)
 
 def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
     """Run spectral clustering on N x 4 (x,y,x,y) feature vectors.
@@ -480,8 +542,7 @@ def main():
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("--threshold", type=float, default=0.01, help="When kmean and spectral clustering flag used, use this flag to give a threshold value to filter out false positive detections.")
-    argparser.add_argument("-fd", "--findDirections", action="store_true", default=False, help="Use this flag, when want to find directions.")
-    argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
+    #argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
     argparser.add_argument("--elbow_on_kmeans", default=False, action="store_true", help="Use this flag to draw elbow diagram, from kmeans clustering results.")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
@@ -493,15 +554,14 @@ def main():
     if args.heatmap:
         coordinates2heatmap(args.database)
     if args.kmeans:
-        kmeans_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
-    if args.spectral:
-        spectral_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
+        # start cluster number is still hardcoded
+        kmeans_worker(args.database, args.threshold, (2, args.n_clusters+1))
+    #if args.spectral:
+    #    spectral_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
         elbow_on_kmeans(args.database, args.threshold)
-    #if args.filter_enter_and_exit is not None:
-    #    filter_out_false_positive_detections(args.database, args.filter_enter_and_exit)
-
+    
 if __name__ == "__main__":
     main()
