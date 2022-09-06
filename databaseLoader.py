@@ -106,3 +106,13 @@ def queryLastObjID(path2db) -> int:
     except Error as e:
         print(e)
     closeConnection(conn)
+
+def loadDetectionsOfObject(path2db: str, objID: int) -> list:
+    conn = getConnection(path2db)
+    try:
+        cur = conn.cursor()
+        data = cur.execute(f"""SELECT d.objID, frameNum, o.label, confidence, x, y, width, height, vx, vy, ax, ay FROM detections d, objects o WHERE d.objID={objID} AND d.objID=o.objID  ORDER BY d.frameNum ASC""").fetchall()
+        return data
+    except Error as e:
+        print(e)
+    closeConnection(conn)
