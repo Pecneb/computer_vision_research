@@ -157,7 +157,6 @@ def getConnection(db_path: str) -> sqlite3.Connection:
     conn = None
     try:
         conn = sqlite3.connect(db_path)
-        print("Database connection created!")
         return conn
     except Error as e:
         print(e)
@@ -172,7 +171,6 @@ def closeConnection(conn : sqlite3.Connection):
     """
     try:
         conn.close()
-        print("Database connection closed!")
     except Error as e:
         print(e)
 
