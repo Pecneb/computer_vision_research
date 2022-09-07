@@ -433,7 +433,20 @@ def k_means_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     from sklearn.cluster import KMeans
     kmeans = KMeans(n_clusters=n_clusters).fit(featureVectors)
     return kmeans.labels_
-    
+
+def spectral_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
+    """Run spectral clustering algorithm on extracted feature vectors.
+
+    Args:
+        featureVectors (np.ndarray): a numpy array of extracted features 
+        n_clusters (int): number of initial clusters for spectral 
+
+    Returns:
+        np.ndarray: vector of labels, same length as given featureVectors vector 
+    """
+    from sklearn.cluster import SpectralClustering 
+    spectral = SpectralClustering(n_clusters=n_clusters).fit(featureVectors)
+    return spectral.labels_
 
 def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     """Run kmeans clustering on filtered feature vectors.
@@ -506,7 +519,6 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-# TODO: maybe try multiprocessing, assign each object a process
 def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
     """This function automates the task of running kmeans clustering on different cluster numbers.
 
@@ -572,6 +584,51 @@ def checkDir(path2db):
         os.mkdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0]))
         print("Directory \"research_data/{}\" is created.".format(path2db.split('/')[-1].split('.')[0]))
 
+#TODO: implement own elbow diagram visualizer
+def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric='euclidean') -> plt.Figure:
+    if type(k) == int:
+        n_clusters = [i for i in range(k)]
+    elif type(k) == tuple:
+        n_clusters = [i for i in range(k[0], k[1])]
+    elif type(k) == list:
+        n_clusters = [i for i in range(k[0], k[1])]
+    if metric == 'silhouette':
+        from sklearn.metrics import silhouette_score 
+        if model == 'kmeans':
+            cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [silhouette_score(X, labels, metric=distance_metric) for labels in cluster_labels]
+        elbow = scores.index(max(scores))
+    elif metric == 'calinski-harabasz':
+        from sklearn.metrics import calinski_harabasz_score
+        if model == 'kmeans':
+            cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [calinski_harabasz_score(X, labels) for labels in cluster_labels]
+        elbow = scores.index(max(scores))
+    elif metric == 'davies-bouldin':
+        from sklearn.metrics import davies_bouldin_score 
+        if model == 'kmeans':
+            cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [davies_bouldin_score(X, labels) for labels in cluster_labels]
+        elbow = scores.index(min(scores))
+    fig, ax = plt.subplots(1,1)
+    ax.plot(n_clusters, scores, marker='o')
+    elbow_line = ax.axvline(n_clusters[elbow], ls='--', color='r', label=f'Elbow at k={n_clusters[elbow]},score={scores[elbow]}')
+    ax.grid(True)
+    ax.set_title(f"{metric} score elbow for {model} clustering")
+    ax.set_xlabel("k")
+    ax.set_ylabel(f"{metric} score")
+    ax.legend(handles=[elbow_line])
+    plt.show()
+    return fig
+
+def elbow_on_clustering(path2db: str, threshold: float, model: str, metric: str):
+    tracks = preprocess_database_data_multiprocessed(path2db)
+    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    X = makeFeatureVectorsNx4(filteredTracks)
+    fig2save = elbow_visualizer(X, k=(2,10), metric=metric)
+    filename = f"elbow_on_{model}_2-10_metric_{metric}_thresh_{threshold}.png"
+    fig2save.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename))
+
 def elbow_on_kmeans(path2db: str, threshold: float):
     """Evaluate clustering results and create elbow diagram.
 
@@ -613,7 +670,7 @@ def main():
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
+        #elbow_on_clustering(args.database, args.threshold, model='kmeans', metric='davies-bouldin')
         elbow_on_kmeans(args.database, args.threshold)
-    
 if __name__ == "__main__":
     main()
