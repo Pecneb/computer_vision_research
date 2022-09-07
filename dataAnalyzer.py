@@ -103,6 +103,64 @@ def detectionParser(rawDetectionData) -> list:
         detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
     return detections 
 
+def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
+    """Takes an objID and the path 2 database, then returns a trackedObject object if detections can be assigned to the object.
+
+    Args:
+        rawObjID (int): ID of an object 
+        path2db (str): path to database 
+
+    Returns:
+        trackedObject: trackedObject object from dataManagement class, if no dets can be assigned to it, then returns False 
+    """
+    rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObjID)
+    if len(rawDets) > 0:
+        return trackedObjectFactory(detectionParser(rawDets))
+    else:
+        return False
+
+def preprocess_database_data(path2db: str):
+    """Preprocessing database data (detections). Assigning detections to objects.
+
+    Args:
+        path2db (str): Path to database file. 
+
+    Returns:
+        list: list of object tracks 
+    """
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for rawObj in tqdm.tqdm(rawObjectData, desc="Loading detections of tracks."):
+        tmpDets = []
+        rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObj[0])
+        if len(rawDets) > 0:
+            tmpDets = detectionParser(rawDets)
+            trackedObjects.append(trackedObjectFactory(tmpDets))
+    return trackedObjects
+
+def preprocess_database_data_multiprocessed(path2db: str):
+    """Preprocessing database data (detections). Assigning detections to objects.
+    This is the multoprocessed variant of the preprocess_database_data() func.
+
+    Args:
+        path2db (str): Path to database file. 
+
+    Returns:
+        list: list of object tracks 
+    """
+    from multiprocessing import Pool
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    tracks = []
+    with Pool(processes=None) as pool:
+        start = time.time()
+        results = pool.starmap_async(parseRawObject2TrackedObject, [[rawObj[0], path2db] for rawObj in rawObjectData])
+        for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
+            if result:
+                tracks.append(result)
+        print(f"Detections assigned to Objects in {time.time()-start}s")
+    return tracks
+    
+
 def makeColormap(path2db):
     """Make colormap based on number of objects logged in the database.
     This colormap vector will be input to matplotlib scatter plot.
@@ -284,7 +342,6 @@ def filter_out_false_positive_detections(trackedObjects: list, threshold: float)
         d = euclidean_distance(obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y)
         if d > threshold:
             filteredTracks.append(obj)
-    print(filteredTracks)
     return filteredTracks
 
 
@@ -449,6 +506,7 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
+# TODO: maybe try multiprocessing, assign each object a process
 def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
     """This function automates the task of running kmeans clustering on different cluster numbers.
 
@@ -464,14 +522,7 @@ def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
     if k[0] < 1 or k[1] < k[0]:
         print("Error: this is not how we use this program properly")
         return False
-    rawObjectData = databaseLoader.loadObjects(path2db)
-    trackedObjects = []
-    for rawObj in tqdm.tqdm(rawObjectData, desc="Loading detections of tracks."):
-        tmpDets = []
-        rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObj[0])
-        if len(rawDets) > 0:
-            tmpDets = detectionParser(rawDets)
-            trackedObjects.append(trackedObjectFactory(tmpDets))
+    trackedObjects = preprocess_database_data_multiprocessed(path2db)
     filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
     for i in range(k[0], k[1]):
         kmeans_clustering_on_nx4(filteredTrackedObjects, i, threshold, path2db)
@@ -530,8 +581,9 @@ def elbow_on_kmeans(path2db: str, threshold: float):
     """
     from yellowbrick.cluster.elbow import kelbow_visualizer 
     from sklearn.cluster import KMeans
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
-    X = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    tracks = preprocess_database_data_multiprocessed(path2db)
+    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    X = makeFeatureVectorsNx4(filteredTracks)
     kelbow_visualizer(KMeans(), X, k=(2,10))
 
 def main():
