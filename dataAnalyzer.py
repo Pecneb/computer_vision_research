@@ -480,6 +480,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
+#TODO: draw not only enter and exit points, but also trajectory between those points
 def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
     """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
 
