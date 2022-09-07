@@ -519,7 +519,19 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
+def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
+    """Just plots and saves one clustering.
+
+    Args:
+        path2db (str): Path to database. 
+        threshold (float): threshold value to filtering algorithm 
+        n_clusters (int): number of clusters 
+    """
+    tracks = preprocess_database_data_multiprocessed(path2db)
+    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
+
+def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5)):
     """This function automates the task of running kmeans clustering on different cluster numbers.
 
     Args:
@@ -537,9 +549,10 @@ def kmeans_worker(path2db: str, threshold: float, k=(4,5)):
     trackedObjects = preprocess_database_data_multiprocessed(path2db)
     filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
     for i in range(k[0], k[1]):
-        kmeans_clustering_on_nx4(filteredTrackedObjects, i, threshold, path2db)
+        for j in range(threshold[0], threshold[1], 0.1):
+            kmeans_clustering_on_nx4(filteredTrackedObjects, i, j, path2db)
 
-def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
+def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
     """Run spectral clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -548,31 +561,50 @@ def spectral_clustering_on_nx4(path2db: str, n_clusters: int, threshold: float):
         threshold (float): Threshold value for the false positive filter algorithm. 
     """
     from sklearn.cluster import SpectralClustering 
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
-    featureVectors = makeFeatureVectorsNx4(filteredEnterDets, filteredExitDets)
+    featureVectors = makeFeatureVectorsNx4(trackedObjects)
     print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     spec = SpectralClustering(n_clusters=n_clusters, n_jobs=-1).fit(featureVectors)
     labels = spec.labels_ 
-    fig, axes = plt.subplots(2,1, figsize=(10,10))
-    axes[0].set_xlim(0,1)
-    axes[0].set_ylim(0,1)
-    axes[1].set_xlim(0,1)
-    axes[1].set_ylim(0,1)
-    axes[0].set_title("Clusters of enter points")
-    axes[1].set_title("Clusters of exit points")
-    for i in range(n_clusters):
-        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
-        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[0].scatter(enter_x, enter_y, c=colors[i], s=6, label=f"Cluster of number {i}")
-        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
-        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-        axes[1].scatter(exit_x, exit_y, c=colors[i], s=6, label=f"Cluster of number {i}")
-    axes[0].legend()
-    axes[1].legend()
+    fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
+    if n_clusters > 1:
+        for i in range(n_clusters):
+            axes[i].set_xlim(0,1)
+            axes[i].set_ylim(0,1)   
+            axes[i].set_title(f"Axis of cluster number {i}")
+            enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+            enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+            exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+            exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+            axes[i].legend()
+    else:
+        axes.set_xlim(0,1)
+        axes.set_ylim(0,1)   
+        axes.set_title(f"Axis of cluster number {0}")
+        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
+        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
+        axes.scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
+        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
+        axes.scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+        axes.legend()
     plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}.png"
+    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
+
+def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
+    """Create on spectral clustering plot with given parameters.
+
+    Args:
+        path2db (str): Path to datbase 
+        threshold (float): threshold value for filtering algorithm 
+        n_clusters (int): number of cluster 
+    """
+    tracks = preprocess_database_data_multiprocessed(path2db)
+    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -585,7 +617,21 @@ def checkDir(path2db):
         print("Directory \"research_data/{}\" is created.".format(path2db.split('/')[-1].split('.')[0]))
 
 #TODO: implement own elbow diagram visualizer
-def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric='euclidean') -> plt.Figure:
+def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric='euclidean', show=False) -> plt.Figure:
+    """Create elbow plot, to visualize what cluster number fits the best for the dataset.
+
+    Args:
+        X (np.ndarray): dataset for the clustering 
+        k (int, tuple, list): number of clusters, can be an int, tuple, list,
+                              if int then it will run clusters from 2 to given number 
+        model (str, optional): Name of clustering algorithm. Defaults to 'kmeans'. Choices: 'kmeans', 'spectral'.
+        metric (str, optional): The scoring metric, to score the clusterings with. Defaults to 'silhouette'. Choices: 'silhouette', 'calinksi-karabasz', 'davies-bouldin'.
+        distance_metric (str, optional): Some of the metric algorithm need a distance metric. Defaults to 'euclidean'. For now this is the only one, but who knows what the future brings.
+        show (bool): True if want to show plot
+
+    Returns:
+        plt.Figure: Returns a matplotlib figure object, that can be saved. 
+    """
     if type(k) == int:
         n_clusters = [i for i in range(k)]
     elif type(k) == tuple:
@@ -597,11 +643,17 @@ def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric=
         if model == 'kmeans':
             cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
             scores = [silhouette_score(X, labels, metric=distance_metric) for labels in cluster_labels]
+        elif model == 'spectral':
+            cluster_labels = [spectral_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [silhouette_score(X, labels, metric=distance_metric) for labels in cluster_labels]
         elbow = scores.index(max(scores))
     elif metric == 'calinski-harabasz':
         from sklearn.metrics import calinski_harabasz_score
         if model == 'kmeans':
             cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [calinski_harabasz_score(X, labels) for labels in cluster_labels]
+        elif model == 'spectral':
+            cluster_labels = [spectral_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
             scores = [calinski_harabasz_score(X, labels) for labels in cluster_labels]
         elbow = scores.index(max(scores))
     elif metric == 'davies-bouldin':
@@ -609,25 +661,72 @@ def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric=
         if model == 'kmeans':
             cluster_labels = [k_means_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
             scores = [davies_bouldin_score(X, labels) for labels in cluster_labels]
+        elif model == 'spectral':
+            cluster_labels = [spectral_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
+            scores = [davies_bouldin_score(X, labels) for labels in cluster_labels]
         elbow = scores.index(min(scores))
-    fig, ax = plt.subplots(1,1)
-    ax.plot(n_clusters, scores, marker='o')
-    elbow_line = ax.axvline(n_clusters[elbow], ls='--', color='r', label=f'Elbow at k={n_clusters[elbow]},score={scores[elbow]}')
-    ax.grid(True)
-    ax.set_title(f"{metric} score elbow for {model} clustering")
-    ax.set_xlabel("k")
-    ax.set_ylabel(f"{metric} score")
-    ax.legend(handles=[elbow_line])
-    plt.show()
+    score_diff = np.sign(np.diff(np.sign(np.diff(scores))))
+    fig, ax = plt.subplots(2,1, figsize=(10,10))
+    score_line = ax[0].plot(n_clusters, scores, marker='o', label=f'{metric} line')
+    elbow_line = ax[0].axvline(n_clusters[elbow], ls='--', color='r', label=f'Elbow at k={n_clusters[elbow]},score={scores[elbow]}')
+    diff_line = ax[1].plot(n_clusters[:-2], score_diff, marker='o', ls='--', c=(0,1,0,0.2), label='differentiation line')
+    ax[0].grid(True)
+    ax[1].grid(True)
+    ax[0].set_title(f"{metric} score elbow for {model} clustering")
+    ax[0].set_xlabel("k")
+    ax[0].set_ylabel(f"{metric} score")
+    handles, labels = ax[0].get_legend_handles_labels()
+    ax[0].legend(handles, labels)
+    if show:
+        plt.show()
     return fig
 
-def elbow_on_clustering(path2db: str, threshold: float, model: str, metric: str):
+def elbow_on_clustering(X: np.ndarray, threshold: float, path2db: str, model='kmeans', metric='silhouette'):
+    """Plot elbow diagram with kmeans and spectral clustering, and with different thresholds.
+    Use this function instead of elbow_visualizer if want to save plot.
+
+    Args:
+        path2db (str): Path to database. 
+        threshold (int, tuple, list): Give a range of threshold to do filtering with. 
+        model (str): Name of cluster algorithm. Choices: 'silhouette', 'calinksi-harabasz', 'davies-bouldin'.
+    """
+    fig2save = elbow_visualizer(X, k=(2,10), model=model, metric=metric)
+    filename = f"elbow_on_{model}_2-10_metric_{metric}_thresh_{threshold}.png"
+    fig2save.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename))
+
+def elbow_plot_worker(path2db: str, threshold=(0.01, 0.71)):
+    """This function generates mupltiple elbow plots, with different clustering algorithms, score metrics and thresholds.
+
+    Args:
+        path2db (str): Path to database file. 
+        threshold (tuple, optional): Threshold range. Defaults to (0.01, 0.71).
+    """
+    tracks = preprocess_database_data_multiprocessed(path2db)
+    metrics = ['silhouette', 'calinski-harabasz', 'davies-bouldin']
+    models = ['kmeans', 'spectral']
+    thres = 0.01
+    while thres < threshold[1]:
+        filteredTracks = filter_out_false_positive_detections(tracks, thres) 
+        X = makeFeatureVectorsNx4(filteredTracks)
+        for model in models:
+            for metric in metrics:
+                print(thres, model, metric)
+                elbow_on_clustering(X, threshold=thres, path2db=path2db, model=model, metric=metric)
+        thres += 0.1
+
+def elbow_plotter(path2db: str, threshold: float, model: str, metric: str):
+    """Simply plots an elbow diagram with the given parameters.
+
+    Args:
+        path2db (str): Path to database file. 
+        threshold (float): threshold value for filtering algorithm 
+        model (str): clustering algorithm 
+        metric (str): scoring metric 
+    """
     tracks = preprocess_database_data_multiprocessed(path2db)
     filteredTracks = filter_out_false_positive_detections(tracks, threshold)
     X = makeFeatureVectorsNx4(filteredTracks)
-    fig2save = elbow_visualizer(X, k=(2,10), metric=metric)
-    filename = f"elbow_on_{model}_2-10_metric_{metric}_thresh_{threshold}.png"
-    fig2save.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename))
+    elbow_on_clustering(X, threshold=threshold, path2db=path2db, model=model, metric=metric)
 
 def elbow_on_kmeans(path2db: str, threshold: float):
     """Evaluate clustering results and create elbow diagram.
@@ -641,7 +740,8 @@ def elbow_on_kmeans(path2db: str, threshold: float):
     tracks = preprocess_database_data_multiprocessed(path2db)
     filteredTracks = filter_out_false_positive_detections(tracks, threshold)
     X = makeFeatureVectorsNx4(filteredTracks)
-    kelbow_visualizer(KMeans(), X, k=(2,10))
+    kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
+    kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -651,9 +751,11 @@ def main():
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("--threshold", type=float, default=0.01, help="When kmean and spectral clustering flag used, use this flag to give a threshold value to filter out false positive detections.")
-    #argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
+    argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
-    argparser.add_argument("--elbow_on_kmeans", default=False, action="store_true", help="Use this flag to draw elbow diagram, from kmeans clustering results.")
+    argparser.add_argument("--elbow_on_kmeans", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
+    argparser.add_argument("--elbow_on_spectral", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
+    argparser.add_argument("--plot_elbows", action='store_true', help="This function helps to plot all kinds of elbow diagrams and save them.")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
@@ -664,13 +766,18 @@ def main():
         coordinates2heatmap(args.database)
     if args.kmeans:
         # start cluster number is still hardcoded
-        kmeans_worker(args.database, args.threshold, (2, args.n_clusters+1))
-    #if args.spectral:
-    #    spectral_clustering_on_nx4(args.database, args.n_clusters, args.threshold)
+        #kmeans_worker(args.database, args.threshold, (2, args.n_clusters+1))
+        simple_kmeans_plotter(args.database, args.threshold, args.n_clusters)
+    if args.spectral:
+        simple_spectral_plotter(args.database, args.threshold, args.n_clusters)
     if args.affinity_on_enters_and_exits:
         affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
-        #elbow_on_clustering(args.database, args.threshold, model='kmeans', metric='davies-bouldin')
-        elbow_on_kmeans(args.database, args.threshold)
+        #elbow_on_kmeans(args.database, args.threshold)
+        elbow_simple_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans)
+    if args.elbow_on_spectral:
+        elbow_simple_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral)
+    if args.plot_elbows:
+        elbow_plot_worker(args.database)
 if __name__ == "__main__":
     main()
