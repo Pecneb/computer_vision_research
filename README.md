@@ -447,7 +447,9 @@ To begin with, all values for $r$ and $a$ are set to zero, and the calculation o
 
 17. Finding the optimal number of clusters is very important step to be able to build and train a model. There are many algorithms to evaluate results of clusterings. Also from the evaluation results, we have to tell, which evaluation score is the most optimal, for this, the elbow diagram will give the guidance to find it.
 
-18. To be able to run evaluation algorithm on kmeans clustering results, detections have to be assinged to object tracks. That is an easy task, when there are not many objects and detections in the database, but when 27000 objects and 300000 detections in there, things can go very bad, even if multiprocessing is involved, although I implemented multiprocessing into the algorithm, it wasnt worth it. The solution is to do preprocessing on the data, that means, doing the assignment in the SQL queries.
+18. To be able to run evaluation algorithm on kmeans clustering results, detections have to be assinged to object tracks. That is an easy task, when there are not many objects and detections in the database, but when 27000 objects and 300000 detections in there, things can go very bad, even if multiprocessing is involved, although I implemented multiprocessing into the algorithm, it wasnt worth it. The solution is to do preprocessing on the data, that means, doing the assignment in the SQL queries. This also can be done with multiprocessing. The new soltion to process data performs very good, it takes only 6 mins instead of 21 mins, on the largest database.
+
+19. To be able to mass produce elbow diagrams, new functions had to be implemented, that can create plots in a flexible way. With these plots, the optimal number of clusters can be chosen.
 
 ## References
 
