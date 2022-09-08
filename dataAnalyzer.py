@@ -496,15 +496,23 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
     if n_clusters > 1:
         for i in range(n_clusters):
+            trajectory_x = []
+            trajectory_y = []
+            for idx in range(len(featureVectors)):
+                if labels[idx]==i:
+                    for j in range(1,len(trackedObjects[idx].history)):
+                        trajectory_x.append(trackedObjects[idx].history[j].X)
+                        trajectory_y.append(1-trackedObjects[idx].history[j].Y)
+            axes[i].scatter(trajectory_x, trajectory_y, s=2)
             axes[i].set_xlim(0,1)
             axes[i].set_ylim(0,1)   
             axes[i].set_title(f"Axis of cluster number {i}")
             enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+            axes[i].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
             exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
             exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+            axes[i].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes[i].legend()
     else:
         axes.set_xlim(0,1)
@@ -512,11 +520,12 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
         axes.set_title(f"Axis of cluster number {0}")
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+        axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
         exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+        axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
         axes.legend()
+    plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
@@ -570,15 +579,23 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
     fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
     if n_clusters > 1:
         for i in range(n_clusters):
+            trajectory_x = []
+            trajectory_y = []
+            for idx in range(len(featureVectors)):
+                if labels[idx]==i:
+                    for j in range(1,len(trackedObjects[idx].history)):
+                        trajectory_x.append(trackedObjects[idx].history[j].X)
+                        trajectory_y.append(1-trackedObjects[idx].history[j].Y)
+            axes[i].scatter(trajectory_x, trajectory_y, s=2)
             axes[i].set_xlim(0,1)
             axes[i].set_ylim(0,1)   
             axes[i].set_title(f"Axis of cluster number {i}")
-            enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
-            enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
-            exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
-            exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+            enter_x = np.array([trackedObjects[idx].history[0].X for idx in range(len(featureVectors)) if labels[idx]==i])
+            enter_y = np.array([1-trackedObjects[idx].history[0].Y for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            exit_x = np.array([trackedObjects[idx].history[-1].X for idx in range(len(featureVectors)) if labels[idx]==i])
+            exit_y = np.array([1-trackedObjects[idx].history[-1].Y for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes[i].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes[i].legend()
     else:
         axes.set_xlim(0,1)
@@ -586,10 +603,10 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
         axes.set_title(f"Axis of cluster number {0}")
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(enter_x, enter_y, c='g', s=6, label=f"Enter points")
+        axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
         exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(exit_x, exit_y, c='r', s=6, label=f"Exit points")
+        axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
         axes.legend()
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
@@ -617,7 +634,6 @@ def checkDir(path2db):
         os.mkdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0]))
         print("Directory \"research_data/{}\" is created.".format(path2db.split('/')[-1].split('.')[0]))
 
-#TODO: implement own elbow diagram visualizer
 def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric='euclidean', show=False) -> plt.Figure:
     """Create elbow plot, to visualize what cluster number fits the best for the dataset.
 
@@ -666,18 +682,18 @@ def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric=
             cluster_labels = [spectral_on_featureVectors(X, n) for n in range(n_clusters[0], n_clusters[-1]+1)]
             scores = [davies_bouldin_score(X, labels) for labels in cluster_labels]
         elbow = scores.index(min(scores))
-    score_diff = np.sign(np.diff(np.sign(np.diff(scores))))
-    fig, ax = plt.subplots(2,1, figsize=(10,10))
-    score_line = ax[0].plot(n_clusters, scores, marker='o', label=f'{metric} line')
-    elbow_line = ax[0].axvline(n_clusters[elbow], ls='--', color='r', label=f'Elbow at k={n_clusters[elbow]},score={scores[elbow]}')
-    diff_line = ax[1].plot(n_clusters[:-2], score_diff, marker='o', ls='--', c=(0,1,0,0.2), label='differentiation line')
-    ax[0].grid(True)
-    ax[1].grid(True)
-    ax[0].set_title(f"{metric} score elbow for {model} clustering")
-    ax[0].set_xlabel("k")
-    ax[0].set_ylabel(f"{metric} score")
-    handles, labels = ax[0].get_legend_handles_labels()
-    ax[0].legend(handles, labels)
+    #score_diff = np.sign(np.diff(np.sign(np.diff(scores))))
+    fig, ax = plt.subplots(1,1, figsize=(15,10))
+    score_line = ax.plot(n_clusters, scores, marker='o', label=f'{metric} line')
+    elbow_line = ax.axvline(n_clusters[elbow], ls='--', color='r', label=f'Elbow at k={n_clusters[elbow]},score={scores[elbow]}')
+    #diff_line = ax[1].plot(n_clusters[:-2], score_diff, marker='o', ls='--', c=(0,1,0,0.2), label='differentiation line')
+    ax.grid(True)
+    #ax[1].grid(True)
+    ax.set_title(f"{metric} score elbow for {model} clustering")
+    ax.set_xlabel("k")
+    ax.set_ylabel(f"{metric} score")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
     if show:
         plt.show()
     return fig
@@ -691,7 +707,7 @@ def elbow_on_clustering(X: np.ndarray, threshold: float, path2db: str, model='km
         threshold (int, tuple, list): Give a range of threshold to do filtering with. 
         model (str): Name of cluster algorithm. Choices: 'silhouette', 'calinksi-harabasz', 'davies-bouldin'.
     """
-    fig2save = elbow_visualizer(X, k=(2,10), model=model, metric=metric)
+    fig2save = elbow_visualizer(X, k=(2,10), model=model, metric=metric, show=True)
     filename = f"elbow_on_{model}_2-10_metric_{metric}_thresh_{threshold}.png"
     fig2save.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename))
 
@@ -775,9 +791,9 @@ def main():
         affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
         #elbow_on_kmeans(args.database, args.threshold)
-        elbow_simple_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans)
+        elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans)
     if args.elbow_on_spectral:
-        elbow_simple_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral)
+        elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral)
     if args.plot_elbows:
         elbow_plot_worker(args.database)
 if __name__ == "__main__":
