@@ -152,6 +152,7 @@ def preprocess_database_data_multiprocessed(path2db: str):
     rawObjectData = databaseLoader.loadObjects(path2db)
     tracks = []
     with Pool(processes=None) as pool:
+        print("Preprocessing started.")
         start = time.time()
         results = pool.starmap_async(parseRawObject2TrackedObject, [[rawObj[0], path2db] for rawObj in rawObjectData])
         for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
@@ -196,7 +197,7 @@ def coordinates2heatmap(path2db):
     detections = detectionParser(databaseDetections) 
     X = np.array([det.X for det in detections])
     Y = np.array([det.Y for det in detections])
-    # converting Y coordinates, becouse in opencv, coordinates start from top to bottom, ex.: coordinate (0,0) is in top left corner, not bottom left
+    # converting Y coordinates, because in opencv, coordinates start from top to bottom, ex.: coordinate (0,0) is in top left corner, not bottom left
     Y = cvCoord2npCoord(Y) 
     fig, ax1 = plt.subplots(1,1)
     colormap = makeColormap(path2db)
