@@ -20,6 +20,7 @@
 import sqlite3
 from sqlite3 import Error
 import os
+from string import ascii_uppercase
 import numpy
 
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
@@ -107,7 +108,8 @@ def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, v
     Return:
         return x, y, w, h, vx, vy
     """
-    return x / img0.shape[1], y / img0.shape[0],  w / img0.shape[1], h / img0.shape[0], vx / img0.shape[1], vy / img0.shape[0], ax / img0.shape[1], ay / img0.shape[0]
+    aspect_ratio = img0.shape[1] / img0.shape[0]
+    return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0],  (w / img0.shape[1]) * aspect_ratio, h / img0.shape[0], (vx / img0.shape[1]) * aspect_ratio, vy / img0.shape[0], (ax / img0.shape[1]) * aspect_ratio, ay / img0.shape[0]
 
 def prediction2float(img0: numpy.ndarray, x: float, y: float):
     """Downscale prediction coordinates to floats.
@@ -117,7 +119,8 @@ def prediction2float(img0: numpy.ndarray, x: float, y: float):
         x (int): X coordinate
         y (int): Y coordinate
     """
-    return x / img0.shape[1], y / img0.shape[0] 
+    aspect_ratio = img0.shape[1] / img0.shape[0]
+    return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0] 
 
 def init_db(video_name: str):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
