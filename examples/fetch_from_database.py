@@ -1,10 +1,11 @@
 """
 Script to load detections from database into simple lists.
-Befire usage 'export PYTHONPATH="<path to computer_vision_research dir>", example for me 'export PYTHONPATH="/home/pecneb/gitclones/computer_vision_research/"'
+Befire usage 'export PYTHONPATH="<path to computer_vision_research dir>", 
+example 'export PYTHONPATH="$PYTHONPATH:/home/pecneb/gitclones/computer_vision_research/"'
 """
 import databaseLoader
 
-def getLists(path2db):
+def getDetections(path2db):
     retList = []
     # use databaseLoader module to fetch raw data from database
     objects = databaseLoader.loadObjects(path2db)
@@ -21,12 +22,15 @@ def getLists(path2db):
         retList.append(track)
     return retList
 
-def main():
-    dataset = getLists("research_data/0002_1_37min/0002_1_37min.db")
+def example_load_and_print_data():
+    dataset = getDetections("research_data/0002_1_37min/0002_1_37min.db")
     for data in dataset:
         print("Object ID: ", data[0])
         for det in data[1]:
             print(f"Framenumber: {det[0]} X: {det[1]} Y: {det[2]}")
+
+def main():
+    pass
 
 if __name__ == "__main__":
     main()
