@@ -371,14 +371,17 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             max_y = local_max_y
         if min_y > local_min_y:
             min_y = local_min_y 
+    print(f"\n Max X: {max_x}\n Min X: {min_x}\n Max Y: {max_y}\n Min Y: {min_y}\n")
+    print(f"\n Thresholds:\n Max X: {max_x-threshold}\n Min X: {min_x+threshold}\n Max Y: {max_y-threshold}\n Min Y: {min_y+threshold}\n")
     filteredTracks = []
     for obj in tqdm.tqdm(trackedObjects, desc="Filter out edge detections."):
-        if ((obj.history[0].X <= min_x*(1.0+threshold) or obj.history[0].X >= max_x*(1-threshold)) and
-            (obj.history[0].Y <= min_y*(1.0+threshold) or obj.history[0].Y >= max_y*(1-threshold)) and
-            (obj.history[-1].X <= min_x*(1.0+threshold) or obj.history[-1].X >= max_x*(1-threshold)) and
-            (obj.history[-1].Y <= min_y*(1.0+threshold) or obj.history[-1].Y >= max_y*(1-threshold))): 
+        if (((obj.history[0].X <= min_x+threshold or obj.history[0].X >= max_x-threshold) or 
+            (obj.history[0].Y <= min_y+threshold or obj.history[0].Y >= max_y-threshold)) and
+            ((obj.history[-1].X <= min_x+threshold or obj.history[-1].X >= max_x-threshold) or 
+            (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))): 
             filteredTracks.append(obj)
-    return filteredTracks
+    # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
+    return filter_out_false_positive_detections(filteredTracks, 0.3)
 
 
 def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
@@ -556,27 +559,14 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
             exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
             axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes.legend()
+            axes.grid(True)
             plt.show()
             # create filename
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
             fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
     else:
-        axes.set_xlim(0,2)
-        axes.set_ylim(0,2)   
-        axes.set_title(f"Axis of cluster number {0}")
-        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
-        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
-        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
-        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
-        axes.legend()
-        plt.show()
-        # create filename
-        filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
-        # save plot with filename into dir
-        fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+        print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
 def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
     """Just plots and saves one clustering.
@@ -652,27 +642,14 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
             exit_y = np.array([1-trackedObjects[idx].history[-1].Y for idx in range(len(featureVectors)) if labels[idx]==i])
             axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes.legend()
+            axes.grid(True)
             plt.show()
             # create filename
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
             fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
     else:
-        axes.set_xlim(0,2)
-        axes.set_ylim(0,2)   
-        axes.set_title(f"Axis of cluster number {0}")
-        enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
-        enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
-        exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==0])
-        exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
-        axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
-        axes.legend()
-        plt.show()
-        # create filename
-        filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
-        # save plot with filename into dir
-        fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+        print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
 def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
     """Create on spectral clustering plot with given parameters.
@@ -683,7 +660,7 @@ def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
         n_clusters (int): number of cluster 
     """
     tracks = preprocess_database_data_multiprocessed(path2db)
-    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    filteredTracks = filter_out_edge_detections(tracks, threshold)
     spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
 def checkDir(path2db):
