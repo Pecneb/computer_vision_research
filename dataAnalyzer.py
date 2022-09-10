@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+from threading import local
 import time
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
@@ -202,8 +203,8 @@ def coordinates2heatmap(path2db):
     fig, ax1 = plt.subplots(1,1)
     colormap = makeColormap(path2db)
     ax1.scatter(X, Y, np.ones_like(X), colormap)
-    ax1.set_xlim(0,1)
-    ax1.set_ylim(0,1)
+    ax1.set_xlim(0,2)
+    ax1.set_ylim(0,2)
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_heatmap"
     fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
@@ -286,7 +287,7 @@ def order2track(args: list):
     else:
         return False
 
-def findEnterAndExitPointsMultithreaded(path2db: str):
+def findEnterAndExitPointsMultiprocessed(path2db: str):
     """Extract only the first and last detections of tracked objects.
     This is a multithreaded implementation of function findEnterAndExitPoints(path2db: str)
 
@@ -294,7 +295,6 @@ def findEnterAndExitPointsMultithreaded(path2db: str):
         path2db (str): Path to database file. 
     """
     from multiprocessing import Pool
-    import concurrent.futures
     rawDetectionData = databaseLoader.loadDetections(path2db)
     detections = detectionParser(rawDetectionData)
     rawObjectData = databaseLoader.loadObjects(path2db)
@@ -310,7 +310,6 @@ def findEnterAndExitPointsMultithreaded(path2db: str):
                 enterDetections.append(result[0])
                 exitDetections.append(result[1])
     return enterDetections, exitDetections
-
 
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     """Calculate euclidean distance of 2D vectors.
@@ -345,6 +344,42 @@ def filter_out_false_positive_detections(trackedObjects: list, threshold: float)
             filteredTracks.append(obj)
     return filteredTracks
 
+def filter_out_edge_detections(trackedObjects: list, threshold: float):
+    """Filter out objects, that enter and exit detections coordinates are in the threshold value.
+
+    Args:
+        trackedObjects (list): list of object trackings 
+        threshold (float): objects only under this value will be returned 
+
+    Returns:
+        list: filtered list of tracks 
+    """
+    max_y = 0 
+    min_y = 9999 
+    max_x = 0
+    min_x = 9999
+    for obj in tqdm.tqdm(trackedObjects, desc="Looking for min max values."):
+        local_min_x = np.min([det.X for det in obj.history])
+        local_max_x = np.max([det.X for det in obj.history])
+        local_min_y = np.min([det.Y for det in obj.history])
+        local_max_y = np.max([det.Y for det in obj.history])
+        if max_x < local_max_x:
+            max_x = local_max_x
+        if min_x > local_min_x:
+            min_x = local_min_x
+        if max_y < local_max_y:
+            max_y = local_max_y
+        if min_y > local_min_y:
+            min_y = local_min_y 
+    filteredTracks = []
+    for obj in tqdm.tqdm(trackedObjects, desc="Filter out edge detections."):
+        if ((obj.history[0].X <= min_x*(1.0+threshold) or obj.history[0].X >= max_x*(1-threshold)) and
+            (obj.history[0].Y <= min_y*(1.0+threshold) or obj.history[0].Y >= max_y*(1-threshold)) and
+            (obj.history[-1].X <= min_x*(1.0+threshold) or obj.history[-1].X >= max_x*(1-threshold)) and
+            (obj.history[-1].Y <= min_y*(1.0+threshold) or obj.history[-1].Y >= max_y*(1-threshold))): 
+            filteredTracks.append(obj)
+    return filteredTracks
+
 
 def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
     """Create feature vectors from inputted detections.
@@ -373,6 +408,7 @@ def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
+# the function below is deprectated, do not use
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
     """Run affinity propagation clustering algorithm on list of feature vectors. 
 
@@ -384,8 +420,8 @@ def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
     cluster_center_indices_= af.cluster_centers_indices_
     labels_ = af.labels_ 
     return labels_, cluster_center_indices_
-    
 
+# the function below is deprecated, do not use
 def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float):
     """Run affinity propagation clustering on first and last detections of objects.
     This way, the enter and exit areas on a videa can be determined.
@@ -458,16 +494,16 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
         threshold (float): the threshold for the filtering algorithm 
     """
     filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
-    filteredEnterFeatures  = makeFeatureVectors(filteredEnterDets)
-    filteredExitFeatures = makeFeatureVectors(filteredExitDets)
+    filteredEnterFeatures  = makeFeatureVectors_Nx2(filteredEnterDets)
+    filteredExitFeatures = makeFeatureVectors_Nx2(filteredExitDets)
     colors = "bgrcmyk"
     labels_enter = k_means_on_featureVectors(filteredEnterFeatures, n_clusters)
     labels_exit = k_means_on_featureVectors(filteredExitFeatures, n_clusters)
     fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
-    axes[0].set_xlim(0,1)
-    axes[0].set_ylim(0,1)
-    axes[1].set_xlim(0,1)
-    axes[1].set_ylim(0,1)
+    axes[0].set_xlim(0,2)
+    axes[0].set_ylim(0,2)
+    axes[1].set_xlim(0,2)
+    axes[1].set_ylim(0,2)
     axes[0].set_title("Clusters of enter points")
     axes[1].set_title("Clusters of exit points")
     for i in range(n_clusters):
@@ -481,7 +517,6 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-#TODO: draw not only enter and exit points, but also trajectory between those points
 def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
     """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
 
@@ -494,30 +529,41 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     labels = k_means_on_featureVectors(featureVectors, n_clusters)
-    fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
+    # create directory path name, where the plots will be saved
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+    # check if dir exists
+    if not os.path.isdir(dirpath):
+        # make dir if not
+        os.mkdir(dirpath)
     if n_clusters > 1:
         for i in range(n_clusters):
+            fig, axes = plt.subplots(1,1,figsize=(10,10))
             trajectory_x = []
             trajectory_y = []
             for idx in range(len(featureVectors)):
                 if labels[idx]==i:
-                    for j in range(1,len(trackedObjects[idx].history)):
-                        trajectory_x.append(trackedObjects[idx].history[j].X)
-                        trajectory_y.append(1-trackedObjects[idx].history[j].Y)
-            axes[i].scatter(trajectory_x, trajectory_y, s=2)
-            axes[i].set_xlim(0,1)
-            axes[i].set_ylim(0,1)   
-            axes[i].set_title(f"Axis of cluster number {i}")
+                    for k in range(1,len(trackedObjects[idx].history)):
+                        trajectory_x.append(trackedObjects[idx].history[k].X)
+                        trajectory_y.append(1-trackedObjects[idx].history[k].Y)
+            axes.scatter(trajectory_x, trajectory_y, s=2)
+            axes.set_xlim(0,2)
+            axes.set_ylim(0,2)   
+            axes.set_title(f"Axis of cluster number {i}")
             enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
             exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
             exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
-            axes[i].legend()
+            axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+            axes.legend()
+            plt.show()
+            # create filename
+            filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+            # save plot with filename into dir
+            fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
     else:
-        axes.set_xlim(0,1)
-        axes.set_ylim(0,1)   
+        axes.set_xlim(0,2)
+        axes.set_ylim(0,2)   
         axes.set_title(f"Axis of cluster number {0}")
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
@@ -526,9 +572,11 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
         axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
         axes.legend()
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
-    fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
+        plt.show()
+        # create filename
+        filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+        # save plot with filename into dir
+        fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
 
 def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
     """Just plots and saves one clustering.
@@ -539,7 +587,7 @@ def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
         n_clusters (int): number of clusters 
     """
     tracks = preprocess_database_data_multiprocessed(path2db)
-    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    filteredTracks = filter_out_edge_detections(tracks, threshold)
     kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
 def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5)):
@@ -575,11 +623,17 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
     featureVectors = makeFeatureVectorsNx4(trackedObjects)
     print(f"Number of feature vectors: {len(featureVectors)}")
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    # create directory path name, where the plots will be saved
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+    # check if dir exists
+    if not os.path.isdir(dirpath):
+        # make dir if not
+        os.mkdir(dirpath)
     spec = SpectralClustering(n_clusters=n_clusters, n_jobs=-1).fit(featureVectors)
     labels = spec.labels_ 
-    fig, axes = plt.subplots(n_clusters,1, figsize=(10,10))
     if n_clusters > 1:
         for i in range(n_clusters):
+            fig, axes = plt.subplots(1,1, figsize=(10,10))
             trajectory_x = []
             trajectory_y = []
             for idx in range(len(featureVectors)):
@@ -587,20 +641,25 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
                     for j in range(1,len(trackedObjects[idx].history)):
                         trajectory_x.append(trackedObjects[idx].history[j].X)
                         trajectory_y.append(1-trackedObjects[idx].history[j].Y)
-            axes[i].scatter(trajectory_x, trajectory_y, s=2)
-            axes[i].set_xlim(0,1)
-            axes[i].set_ylim(0,1)   
-            axes[i].set_title(f"Axis of cluster number {i}")
+            axes.scatter(trajectory_x, trajectory_y, s=2)
+            axes.set_xlim(0,2)
+            axes.set_ylim(0,2)   
+            axes.set_title(f"Axis of cluster number {i}")
             enter_x = np.array([trackedObjects[idx].history[0].X for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-trackedObjects[idx].history[0].Y for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
             exit_x = np.array([trackedObjects[idx].history[-1].X for idx in range(len(featureVectors)) if labels[idx]==i])
             exit_y = np.array([1-trackedObjects[idx].history[-1].Y for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes[i].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
-            axes[i].legend()
+            axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+            axes.legend()
+            plt.show()
+            # create filename
+            filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+            # save plot with filename into dir
+            fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
     else:
-        axes.set_xlim(0,1)
-        axes.set_ylim(0,1)   
+        axes.set_xlim(0,2)
+        axes.set_ylim(0,2)   
         axes.set_title(f"Axis of cluster number {0}")
         enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==0])
         enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==0])
@@ -609,9 +668,11 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
         exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==0])
         axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
         axes.legend()
-    plt.show()
-    filename = f"{path2db.split('/')[-1].split('.')[0]}_spectral_on_nx4_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}.png"
-    fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
+        plt.show()
+        # create filename
+        filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+        # save plot with filename into dir
+        fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
 
 def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
     """Create on spectral clustering plot with given parameters.
