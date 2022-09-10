@@ -820,14 +820,16 @@ def main():
         printConfig(args.database)
     if args.heatmap:
         coordinates2heatmap(args.database)
-    if args.kmeans:
-        # start cluster number is still hardcoded
-        #kmeans_worker(args.database, args.threshold, (2, args.n_clusters+1))
+    if args.kmeans and args.threshold and args.n_clusters:
         simple_kmeans_plotter(args.database, args.threshold, args.n_clusters)
-    if args.spectral:
+    else:
+        argparser.print_help()
+    if args.spectral and args.threshold and args.n_clusters:
         simple_spectral_plotter(args.database, args.threshold, args.n_clusters)
-    if args.affinity_on_enters_and_exits:
-        affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
+    else:
+        argparser.print_help()
+    #if args.affinity_on_enters_and_exits:
+    #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
         #elbow_on_kmeans(args.database, args.threshold)
         elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans)
