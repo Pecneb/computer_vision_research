@@ -737,7 +737,7 @@ def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric=
         plt.show()
     return fig
 
-def elbow_on_clustering(X: np.ndarray, threshold: float, path2db: str, model='kmeans', metric='silhouette'):
+def elbow_on_clustering(X: np.ndarray, threshold: float, dirpath: str, model='kmeans', metric='silhouette', show=True):
     """Plot elbow diagram with kmeans and spectral clustering, and with different thresholds.
     Use this function instead of elbow_visualizer if want to save plot.
 
@@ -746,11 +746,11 @@ def elbow_on_clustering(X: np.ndarray, threshold: float, path2db: str, model='km
         threshold (int, tuple, list): Give a range of threshold to do filtering with. 
         model (str): Name of cluster algorithm. Choices: 'silhouette', 'calinksi-harabasz', 'davies-bouldin'.
     """
-    fig2save = elbow_visualizer(X, k=(2,10), model=model, metric=metric, show=True)
-    filename = f"elbow_on_{model}_2-10_metric_{metric}_thresh_{threshold}.png"
-    fig2save.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename))
+    fig2save = elbow_visualizer(X, k=(2,16), model=model, metric=metric, show=show)
+    filename = f"elbow_on_{model}_2-16_metric_{metric}_thresh_{threshold}.png"
+    fig2save.savefig(fname=os.path.join(dirpath, filename))
 
-def elbow_plot_worker(path2db: str, threshold=(0.01, 0.71)):
+def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7)):
     """This function generates mupltiple elbow plots, with different clustering algorithms, score metrics and thresholds.
 
     Args:
@@ -760,14 +760,37 @@ def elbow_plot_worker(path2db: str, threshold=(0.01, 0.71)):
     tracks = preprocess_database_data_multiprocessed(path2db)
     metrics = ['silhouette', 'calinski-harabasz', 'davies-bouldin']
     models = ['kmeans', 'spectral']
-    thres = 0.01
+    dirpaths = {} 
+    thres = threshold[0]
+    # craete directory for elbow diagrams
+    elbow_dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"elbow_diagrams")
+    # check if dir exists
+    if not os.path.isdir(elbow_dirpath):
+        # make dir if not
+        os.mkdir(elbow_dirpath)
+    for model in models:
+        # create directory for models  
+        model_dirpath= os.path.join(elbow_dirpath, f"{model}")
+        # check if dir exists
+        if not os.path.isdir(model_dirpath):
+            # make dir if not
+            os.mkdir(model_dirpath)
+        dirpaths[model] = {}
+        for metric in metrics:
+            # create directory for metrics 
+            dirpath = os.path.join(model_dirpath, f"{metric}")
+            # check if dir exists
+            if not os.path.isdir(dirpath):
+                # make dir if not
+                os.mkdir(dirpath)
+            dirpaths[model][metric] = dirpath
     while thres < threshold[1]:
         filteredTracks = filter_out_false_positive_detections(tracks, thres) 
         X = makeFeatureVectorsNx4(filteredTracks)
         for model in models:
             for metric in metrics:
                 print(thres, model, metric)
-                elbow_on_clustering(X, threshold=thres, path2db=path2db, model=model, metric=metric)
+                elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
 def elbow_plotter(path2db: str, threshold: float, model: str, metric: str):
@@ -782,7 +805,8 @@ def elbow_plotter(path2db: str, threshold: float, model: str, metric: str):
     tracks = preprocess_database_data_multiprocessed(path2db)
     filteredTracks = filter_out_false_positive_detections(tracks, threshold)
     X = makeFeatureVectorsNx4(filteredTracks)
-    elbow_on_clustering(X, threshold=threshold, path2db=path2db, model=model, metric=metric)
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0])
+    elbow_on_clustering(X, threshold=threshold, dirpath=dirpath, model=model, metric=metric)
 
 def elbow_on_kmeans(path2db: str, threshold: float):
     """Evaluate clustering results and create elbow diagram.
@@ -822,12 +846,8 @@ def main():
         coordinates2heatmap(args.database)
     if args.kmeans and args.threshold and args.n_clusters:
         simple_kmeans_plotter(args.database, args.threshold, args.n_clusters)
-    else:
-        argparser.print_help()
     if args.spectral and args.threshold and args.n_clusters:
         simple_spectral_plotter(args.database, args.threshold, args.n_clusters)
-    else:
-        argparser.print_help()
     #if args.affinity_on_enters_and_exits:
     #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
