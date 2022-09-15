@@ -139,7 +139,7 @@ def preprocess_database_data(path2db: str):
             trackedObjects.append(trackedObjectFactory(tmpDets))
     return trackedObjects
 
-def preprocess_database_data_multiprocessed(path2db: str):
+def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
     """Preprocessing database data (detections). Assigning detections to objects.
     This is the multoprocessed variant of the preprocess_database_data() func.
 
@@ -152,7 +152,7 @@ def preprocess_database_data_multiprocessed(path2db: str):
     from multiprocessing import Pool
     rawObjectData = databaseLoader.loadObjects(path2db)
     tracks = []
-    with Pool(processes=None) as pool:
+    with Pool(processes=n_jobs) as pool:
         print("Preprocessing started.")
         start = time.time()
         results = pool.starmap_async(parseRawObject2TrackedObject, [[rawObj[0], path2db] for rawObj in rawObjectData])
@@ -287,7 +287,7 @@ def order2track(args: list):
     else:
         return False
 
-def findEnterAndExitPointsMultiprocessed(path2db: str):
+def findEnterAndExitPointsMultiprocessed(path2db: str, n_jobs=None):
     """Extract only the first and last detections of tracked objects.
     This is a multithreaded implementation of function findEnterAndExitPoints(path2db: str)
 
@@ -301,7 +301,7 @@ def findEnterAndExitPointsMultiprocessed(path2db: str):
     enterDetections = []
     exitDetections = []
     iterable = [[detections, obj[0]] for obj in rawObjectData]
-    with Pool(processes=20) as executor:
+    with Pool(processes=n_jobs) as executor:
         start = time.time()
         results = executor.map(order2track, iterable) 
         print("Enter and Exit points with multiprocessing: %f"%(time.time()-start))
@@ -568,7 +568,7 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
     else:
         print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
-def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
+def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int, n_jobs=None):
     """Just plots and saves one clustering.
 
     Args:
@@ -576,11 +576,11 @@ def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int):
         threshold (float): threshold value to filtering algorithm 
         n_clusters (int): number of clusters 
     """
-    tracks = preprocess_database_data_multiprocessed(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, threshold)
     kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
-def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5)):
+def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5), n_jobs=None):
     """This function automates the task of running kmeans clustering on different cluster numbers.
 
     Args:
@@ -595,7 +595,7 @@ def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5)):
     if k[0] < 1 or k[1] < k[0]:
         print("Error: this is not how we use this program properly")
         return False
-    trackedObjects = preprocess_database_data_multiprocessed(path2db)
+    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
     for i in range(k[0], k[1]):
         for j in range(threshold[0], threshold[1], 0.1):
@@ -651,7 +651,7 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
     else:
         print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
-def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
+def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int, n_jobs=None):
     """Create on spectral clustering plot with given parameters.
 
     Args:
@@ -659,7 +659,7 @@ def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int):
         threshold (float): threshold value for filtering algorithm 
         n_clusters (int): number of cluster 
     """
-    tracks = preprocess_database_data_multiprocessed(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, threshold)
     spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
@@ -750,14 +750,14 @@ def elbow_on_clustering(X: np.ndarray, threshold: float, dirpath: str, model='km
     filename = f"elbow_on_{model}_2-16_metric_{metric}_thresh_{threshold}.png"
     fig2save.savefig(fname=os.path.join(dirpath, filename))
 
-def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7)):
+def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
     """This function generates mupltiple elbow plots, with different clustering algorithms, score metrics and thresholds.
 
     Args:
         path2db (str): Path to database file. 
         threshold (tuple, optional): Threshold range. Defaults to (0.01, 0.71).
     """
-    tracks = preprocess_database_data_multiprocessed(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     metrics = ['silhouette', 'calinski-harabasz', 'davies-bouldin']
     models = ['kmeans', 'spectral']
     dirpaths = {} 
@@ -793,7 +793,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7)):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def elbow_plotter(path2db: str, threshold: float, model: str, metric: str):
+def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_jobs=None):
     """Simply plots an elbow diagram with the given parameters.
 
     Args:
@@ -802,13 +802,13 @@ def elbow_plotter(path2db: str, threshold: float, model: str, metric: str):
         model (str): clustering algorithm 
         metric (str): scoring metric 
     """
-    tracks = preprocess_database_data_multiprocessed(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_false_positive_detections(tracks, threshold)
     X = makeFeatureVectorsNx4(filteredTracks)
     dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0])
     elbow_on_clustering(X, threshold=threshold, dirpath=dirpath, model=model, metric=metric)
 
-def elbow_on_kmeans(path2db: str, threshold: float):
+def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     """Evaluate clustering results and create elbow diagram.
 
     Args:
@@ -817,7 +817,7 @@ def elbow_on_kmeans(path2db: str, threshold: float):
     """
     from yellowbrick.cluster.elbow import kelbow_visualizer 
     from sklearn.cluster import KMeans
-    tracks = preprocess_database_data_multiprocessed(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_false_positive_detections(tracks, threshold)
     X = makeFeatureVectorsNx4(filteredTracks)
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
@@ -836,6 +836,7 @@ def main():
     argparser.add_argument("--elbow_on_kmeans", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--elbow_on_spectral", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--plot_elbows", action='store_true', help="This function helps to plot all kinds of elbow diagrams and save them.")
+    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
@@ -845,17 +846,17 @@ def main():
     if args.heatmap:
         coordinates2heatmap(args.database)
     if args.kmeans and args.threshold and args.n_clusters:
-        simple_kmeans_plotter(args.database, args.threshold, args.n_clusters)
+        simple_kmeans_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
     if args.spectral and args.threshold and args.n_clusters:
-        simple_spectral_plotter(args.database, args.threshold, args.n_clusters)
+        simple_spectral_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
     #if args.affinity_on_enters_and_exits:
     #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
         #elbow_on_kmeans(args.database, args.threshold)
-        elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans)
+        elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans, n_jobs=args.n_jobs)
     if args.elbow_on_spectral:
-        elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral)
+        elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
     if args.plot_elbows:
-        elbow_plot_worker(args.database)
+        elbow_plot_worker(args.database, n_jobs=args.n_jobs)
 if __name__ == "__main__":
     main()
