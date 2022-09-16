@@ -503,6 +503,14 @@ def spectral_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     spectral = SpectralClustering(n_clusters=n_clusters).fit(featureVectors)
     return spectral.labels_
 
+#TODO implement DBSCAN clustering
+def dbscan_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
+    pass
+
+#TODO implement OPTICS clustering
+def optics_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
+    pass
+
 def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     """Run kmeans clustering on filtered feature vectors.
 
@@ -612,6 +620,7 @@ def kmeans_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
@@ -698,12 +707,32 @@ def spectral_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
             filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, path2db, show=False)
             thres += 0.1
+
+#TODO: implement dbscan and optics clustering functions
+def dbscan_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
+    pass
+
+def simple_dbscan_plotter(path2db: str, threshold:float, n_clusters:int, n_jobs=None):
+    pass
+
+def dbscan_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
+    pass
+
+def optics_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
+    pass
+
+def simple_dbscan_plotter(path2db: str, threshold:float, n_clusters:int, n_jobs=None):
+    pass
+
+def dbscan_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
+    pass
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
