@@ -4,6 +4,19 @@ Befire usage 'export PYTHONPATH="<path to computer_vision_research dir>",
 example 'export PYTHONPATH="$PYTHONPATH:/home/pecneb/gitclones/computer_vision_research/"'
 """
 import databaseLoader
+import argparse
+
+def getArguments():
+    """Get command line arguments.
+    Extend this function with arguments.
+    Use 'argparser.add_argument(flagname, type, help, ...)
+
+    Returns:
+        _type_: _description_
+    """
+    argparser = argparse.ArgumentParser(prog="Script to fetch data from database in list format.") 
+    argparser.add_argument("-db", "--database", type=str, help="The path to the database file.")
+    return argparser.parse_args()
 
 def getDetections(path2db: str):
     """Simple dataset loader, that creates lists with the objID and the detections of the object.
