@@ -383,30 +383,45 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
     return filter_out_false_positive_detections(filteredTracks, 0.3)
 
-
-def makeFeatureVectors_Nx2(detections: list, ) -> np.ndarray:
-    """Create feature vectors from inputted detections.
+def filter_tracks(trackedObjects: list, label="car"):
+    """Only return objects with given label.
 
     Args:
-        detections (list): Any list that contains detecion objects. 
+        trackedObjects (list): list of tracked objects 
+        label (str, optional): label of object. Defaults to "car".
 
     Returns:
-        np.ndarray: numpy ndarray of shape ({length of detections}, 2) 
+        list: list of "label" objects 
     """
-    # create ndarray of ndarrays containing the x,y coordinated of detections
-    featureVectors = np.array([np.array([det.X, det.Y]) for det in detections])
-    return featureVectors
+    return [obj for obj in trackedObjects if obj.label==label]
+
+
+def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in different vectors. Only creating 2D vectors.
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = [] 
+    for obj in trackedObjects:
+        featureVectors.append(obj.history[0].X, obj.history[0].Y)
+        featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
+    return np.array(featureVectors)
 
 def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
-    """Create feature vectors from the two inputted detection lists.
-    The vector is created from the detections_a x,y and the detections_b x,y coordinates.
+    """Create 4D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [enterX, enterY, exitX, exitY]
 
     Args:
-        detections_a (list): detection list a 
-        detections_b (list): detection list b 
+        trackedObjects (list): list of tracked objects 
 
     Returns:
-        np.ndarray: 
+        np.ndarray: numpy array of feature vectors 
     """
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
@@ -520,7 +535,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
+def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
     """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -560,7 +575,8 @@ def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: f
             axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes.legend()
             axes.grid(True)
-            plt.show()
+            if show:
+                plt.show()
             # create filename
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
@@ -580,7 +596,7 @@ def simple_kmeans_plotter(path2db:str, threshold:float, n_clusters:int, n_jobs=N
     filteredTracks = filter_out_edge_detections(tracks, threshold)
     kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
 
-def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5), n_jobs=None):
+def kmeans_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
     """This function automates the task of running kmeans clustering on different cluster numbers.
 
     Args:
@@ -596,12 +612,14 @@ def kmeans_worker(path2db: str, threshold=(0.01, 0.71), k=(4,5), n_jobs=None):
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
-    for i in range(k[0], k[1]):
-        for j in range(threshold[0], threshold[1], 0.1):
-            kmeans_clustering_on_nx4(filteredTrackedObjects, i, j, path2db)
+    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+        thres = threshold[0]
+        while thres <= threshold[1]:
+            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            kmeans_clustering_on_nx4(filteredTrackedObjects, i, thres, path2db, show=False)
+            thres += 0.1
 
-def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str):
+def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
     """Run spectral clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -643,7 +661,8 @@ def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold:
             axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
             axes.legend()
             axes.grid(True)
-            plt.show()
+            if show:
+                plt.show()
             # create filename
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
@@ -662,6 +681,29 @@ def simple_spectral_plotter(path2db: str, threshold:float, n_clusters:int, n_job
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, threshold)
     spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, path2db)
+
+def spectral_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
+    """This function automates the task of running spectral clustering on different cluster numbers.
+
+    Args:
+        path2db (str): path to database file 
+        n_cluster_start (int): starting number cluster 
+        n_cluster_end (int): ending number cluster 
+        threshold (float): threshold for filtering algorithm 
+
+    Returns:
+        bool: returns false if some crazy person uses the program 
+    """
+    if k[0] < 1 or k[1] < k[0]:
+        print("Error: this is not how we use this program properly")
+        return False
+    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+        thres = threshold[0]
+        while thres <= threshold[1]:
+            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, path2db, show=False)
+            thres += 0.1
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -823,15 +865,25 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
+# TODO: implement feature extraction for classification
+def make_features_for_classification():
+    pass
+
+# TODO: implement classification on dataset
+def KNNClassification():
+    pass
+
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
     argparser.add_argument("-hm", "--heatmap", help="Use this flag if want to make a heatmap from the database data.", action="store_true", default=False)
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
+    argparser.add_argument("--kmeans_batch_plot", help="Run batch plotter on kmeans clustering.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
     argparser.add_argument("--threshold", type=float, default=0.01, help="When kmean and spectral clustering flag used, use this flag to give a threshold value to filter out false positive detections.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
+    argparser.add_argument("--spectral_batch_plot", help="Run batch plotter on spectral clustering.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
     argparser.add_argument("--elbow_on_kmeans", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--elbow_on_spectral", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
@@ -847,6 +899,10 @@ def main():
         coordinates2heatmap(args.database)
     if args.kmeans and args.threshold and args.n_clusters:
         simple_kmeans_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
+    if args.kmeans_batch_plot:
+        kmeans_worker(args.database, n_jobs=args.n_jobs)
+    if args.spectral_batch_plot:
+        spectral_worker(args.database, n_jobs=args.n_jobs)
     if args.spectral and args.threshold and args.n_clusters:
         simple_spectral_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
     #if args.affinity_on_enters_and_exits:
