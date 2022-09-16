@@ -111,6 +111,7 @@ Kalman filter calculates velocities, these velocities can be used as weight in t
 To make the predictions smarter, a learning algorithm have to be implemented, that trains on the detection and prediction history.  
 **NOTICE**: New idea, gather detections, that velocity vector points in the same direction.  
 **Feature extraction -> Classification**  
+**TODO**: DBSCAN, OPTICS
 
 #### Creating the perfect feature vector for clustering
 
@@ -121,6 +122,7 @@ To make the predictions smarter, a learning algorithm have to be implemented, th
 Not all feature vectors are good for us, there are many false positive detections, that are come from the inaccuracy of yolo. These false positives can be filtered out based on their euclidean distance. Although a threshold value have to be given. The enter and exit points, that distance is under this value, is not chosen as training data for the clustaring algorithm.  
 
 #### Clustering performance evaluation
+**TODO**: Parameterek
 
 There are several algorithms that can evaluate the results of our clustering. There are no ground thruth available to us, so only those evaluation algorithms are useful, that require none.  
 Scikit-Learn have a few of these: Silhouette Coefficient, Calinski-Harabasz Index, Davies-Bouldin Index. [Clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-performance-evaluation)
@@ -197,6 +199,12 @@ Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \ma
 * Davies, David L.; Bouldin, Donald W. (1979). [“A Cluster Separation Measure”](https://doi.org/10.1109/TPAMI.1979.4766909) IEEE Transactions on Pattern Analysis and Machine Intelligence. PAMI-1 (2): 224-227.
 * Halkidi, Maria; Batistakis, Yannis; Vazirgiannis, Michalis (2001). [“On Clustering Validation Techniques”](https://doi.org/10.1023/A:1012801612483) Journal of Intelligent Information Systems, 17(2-3), 107-145.
 * [Wikipedia entry for Davies-Bouldin index](https://en.wikipedia.org/wiki/Davies%E2%80%93Bouldin_index).
+
+### Classification
+
+KNN, SVM, NN models
+
+#### New feature vectors
 
 ## Documentation
 
@@ -418,7 +426,38 @@ Every object is stored in the objects table, objID as primary key, will help us 
     <figcaption align="center">k_means algorithm with 4 initial cluster</figcaption>
 </figure>
 
-13.  Using clustering on all detection data, seems to be pointsless, the algorithms cant discriminate different directions from each other. A better approach would be, creating feature vectors from trajectories, then run the clustering algorithms on the extracted features.  
+13.  Using clustering on all detection data, seems to be pointsless, the algorithms cant discriminate different directions from each other. A better approach would be, creating feature vectors from trajectories, then run the clustering algorithms on the extracted features. Here there are 2 functions, that extract feature vectors from detections and tracks. The first function that makes feature vectors containing only one coordinate hasnt been updated, because other function that extracts 4 dimension feature vectors (containing 2 coordinates) gave better results. 
+```python
+def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in different vectors. Only creating 2D vectors.
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = [] 
+    for obj in trackedObjects:
+        featureVectors.append(obj.history[0].X, obj.history[0].Y)
+        featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
+    return np.array(featureVectors)
+
+def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
+    """Create 4D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [enterX, enterY, exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+```
 
 14.  Slow loggin problem solved, big improvement in speed. Creation of shell scripts, which enables sqlite3's Write-Ahead Logging. 4x - 6x times speed improvement. Best solution to slow runtime is to implement a buffer, that stores all detections and predictions, then log them at the end before exiting.  
 
@@ -431,7 +470,7 @@ To begin with, all values for $r$ and $a$ are set to zero, and the calculation o
  
 <figure>
     <img src="research_data/0005_2_36min/0005_2_36min_affinity_propagation_featureVectors_n_clusters_18_threshold_0.4.png">
-    <figcaption align="center">Result of affinity propagation on video 0005_2_36min.mp4</figcaption>
+    <figcaption align="center">Result of affinity propagation on video 0005_2_36min.mp4 on 2D feature vectors</figcaption>
 <figure>
 
 1.  Kmeans and Spectral clustering give far better results with the filtered detections, than affinity propagation. Here are the results on the 0005_2_36min.mp4 video.
@@ -449,7 +488,56 @@ To begin with, all values for $r$ and $a$ are set to zero, and the calculation o
 
 18. To be able to run evaluation algorithm on kmeans clustering results, detections have to be assinged to object tracks. That is an easy task, when there are not many objects and detections in the database, but when 27000 objects and 300000 detections in there, things can go very bad, even if multiprocessing is involved, although I implemented multiprocessing into the algorithm, it wasnt worth it. The solution is to do preprocessing on the data, that means, doing the assignment in the SQL queries. This also can be done with multiprocessing. The new soltion to process data performs very good, it takes only 6 mins instead of 21 mins, on the largest database.
 
-19. To be able to mass produce elbow diagrams, new functions had to be implemented, that can create plots in a flexible way. With these plots, the optimal number of clusters can be chosen.
+19. To be able to mass produce elbow diagrams, new functions had to be implemented, that can create plots in a flexible way. With these plots, the optimal number of clusters can be chosen.  
+
+20. The results from the clustering are promising, but with a better filtering algorithm, it can be better. To decrease the number of bad detections, we can use only the detections, that are a certain distance from the edge detections.
+
+<figure>
+    <img src="research_data/">
+    <figcaption align="center">Result of spectral clustering on 0005_2_36min.mp4</figcaption>
+</figure>
+
+## Examples
+
+I wrote an example script, that have a function that can fetch database data (detections) and return them in a list[objID, list[frameNumber, x, y, width, height, vx, vy, ax, ay]]. The second function gives an example how to iterate through the returned list of detections.
+```python
+def getDetections(path2db: str):
+    """Simple dataset loader, that creates lists with the objID and the detections of the object.
+
+    Args:
+        path2db (str): Path to database file.
+
+    Returns:
+        list: structure of the list [id, detections], 
+        where detections is another list [frameNumber, x, y, width, height, vx, vy, ax, ay] 
+    """
+    retList = []
+    # use databaseLoader module to fetch raw data from database
+    objects = databaseLoader.loadObjects(path2db)
+    # iterate through logged objects
+    for obj in objects:
+        # load detections of obj
+        detections = databaseLoader.loadDetectionsOfObject(path2db, obj[0])
+        track = [obj[0], []]
+        # iterate through detections of obj to extrack data
+        for detection in detections:
+            track[1].append([detection[1], detection[3], detection[4], 
+                            detection[5], detection[6], detection[7], 
+                            detection[8], detection[9], detection[10]])
+        retList.append(track)
+    return retList
+
+def example_load_and_print_data():
+    """This example function shows, how to use getDetections() function, 
+       and how to iterate through the returned list.
+    """
+    dataset = getDetections("research_data/0002_1_37min/0002_1_37min.db")
+    for data in dataset:
+        print("Object ID: ", data[0])
+        for det in data[1]:
+            print(f"Framenumber: {det[0]} X: {det[1]} Y: {det[2]}")
+```
+The function can be also imported from another script file. The only argument it takes, is the path, to the database file.
 
 ## References
 
