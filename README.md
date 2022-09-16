@@ -26,19 +26,21 @@ The output have to be converted to a matrix of shape(number of detections, 3) wh
 
 ### Installation
 
-Download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
+The program was implemented and tested in a linux environment. The usage of anaconda is recommended, download it from here [Anaconda](https://www.anaconda.com/)  
 
-Create conda environment and add yolov7 to PYTHONPATH.
+All the dependecies can be found in the **requirements.txt** file.
+
+To be able to run yolov7, download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
+
+Create conda environment and add yolov7 to **PYTHONPATH**.
 
 ```shell
 conda create -n <insert name here> python=3.9
 conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
-export PYTHONPATH="${PYTHONPATH}:<PATH to YOLOV7 directory>"
+export PYTHONPATH="${PYTHONPATH}:$PWD/yolov7/"
 ```
 
-The setup of PYTHONPATH variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
-
-In case this is not working, I implemented a gpu memory freeing function, which is called when yolov7 is imported or yolov7 model is loaded.  
+The setup of **PYTHONPATH** variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
 
 ## Tracking of detected objects
 
