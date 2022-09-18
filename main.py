@@ -271,7 +271,7 @@ def main():
             fps = int(1/(time.time() - prev_time))
             # print FPS to stdout
             # print("FPS: {}".format(fps,))
-            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}", f"Buffersize: {len(buffer2log)}")
+            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
             # press 'p' to pause playing the video
             if cv.waitKey(1) == ord('p'):
                 # press 'r' to resume

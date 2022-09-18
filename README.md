@@ -42,6 +42,8 @@ export PYTHONPATH="${PYTHONPATH}:$PWD/yolov7/"
 
 The setup of **PYTHONPATH** variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
 
+If someone only want to use the dataAnalyzer.py script or just fetch data from database, then the gathered data can be donwloaded through [ipfs](https://ipfs.io/ipfs/QmbAzG8gTzLZ7iiuXYu8DN8ziuQRqj4PFw4QJFHNA3rWAF)
+
 ## Tracking of detected objects
 
 **Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  

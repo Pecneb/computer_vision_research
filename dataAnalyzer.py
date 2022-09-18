@@ -504,12 +504,39 @@ def spectral_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     return spectral.labels_
 
 #TODO implement DBSCAN clustering
-def dbscan_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
-    pass
+def dbscan_on_featureVectors(featureVectors: np.ndarray, max_d: float, min_samples: int, n_jobs: int):
+    """Run dbscan clustering algorithm on extracted feature vectors.
+
+    Args:
+        featureVectors (np.ndarray): A numpy array of extracted features to run the clustering on. 
+        max_d (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other. Defaults to 0.1.
+        min_samples(int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        n_jobs(int, optional): The number of parallel jobs to run.
+
+    Returns:
+        labels: Cluster labels for each point in the dataset given to fit(). Noisy samples are given the label -1.
+    """
+    from sklearn.cluster import DBSCAN
+    dbscan = DBSCAN(eps=max_d, min_samples=min_samples, n_jobs=n_jobs).fit(featureVectors)
+    return dbscan.labels_
 
 #TODO implement OPTICS clustering
-def optics_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
-    pass
+def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, max_eps: float, xi: float, min_cluster_size: float, n_jobs: int):
+    """Run optics clustering algorithm on extracted feature vectors.
+
+    Args:
+        featureVectors (np.ndarray): A numpy array of extracted features to run the clustering on.
+        min_samples (int, optional): The number of samples in a neighborhood for a point to be considered as a core point. Defaults to 10.
+        xi (float, optional): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. Defaults to 0.05.
+        min_cluster_size (float, optional): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Defaults to 0.05.
+        max_eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+
+    Returns:
+        labels: Cluster labels for each point in the dataset given to fit(). Noisy samples and points which are not included in a leaf cluster of cluster_hierarchy_ are labeled as -1.
+    """
+    from sklearn.cluster import OPTICS
+    optics = OPTICS(min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs).fit(featureVectors)
+    return optics.labels_
 
 def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     """Run kmeans clustering on filtered feature vectors.
@@ -715,24 +742,186 @@ def spectral_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, path2db, show=False)
             thres += 0.1
 
-#TODO: implement dbscan and optics clustering functions
-def dbscan_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
-    pass
+def dbscan_clustering_on_nx4(trackedObjects: list, max_d: float, min_samples: int, n_jobs: int, threshold: float, path2db: str, show=True):
+    """Run dbscan clustering on N x 4 (x,y,x,y) feature vectors.
 
-def simple_dbscan_plotter(path2db: str, threshold:float, n_clusters:int, n_jobs=None):
-    pass
+    Args:
+        trackedObjects (list): List of tracks. 
+        max_d (float, optional): The maximum distance between two samples for one to be considered as in the neighborhood of the other. Defaults to 0.1.
+        min_samples(int, optional): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        n_jobs(int, optional): The number of parallel jobs to run.
+        threshold (float): Threshold value for filtering algorithm. 
+        path2db (str): Path to database file. 
+        show (bool, optional): Boolean flag value to show plot or not. Defaults to True.
+    """
+    featureVectors = makeFeatureVectorsNx4(trackedObjects)
+    print(f"Number of feature vectors: {len(featureVectors)}")
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    labels = dbscan_on_featureVectors(featureVectors, max_d=max_d, min_samples=min_samples, n_jobs=n_jobs)
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    # create directory path name, where the plots will be saved
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"dbscan_on_nx4_max_d_{max_d}_min_samples_{min_samples}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+    # check if dir exists
+    if not os.path.isdir(dirpath):
+        # make dir if not
+        os.mkdir(dirpath)
+    if n_clusters > 1:
+        for i in range(n_clusters):
+            fig, axes = plt.subplots(1,1,figsize=(10,10))
+            trajectory_x = []
+            trajectory_y = []
+            for idx in range(len(featureVectors)):
+                if labels[idx]==i:
+                    for k in range(1,len(trackedObjects[idx].history)):
+                        trajectory_x.append(trackedObjects[idx].history[k].X)
+                        trajectory_y.append(1-trackedObjects[idx].history[k].Y)
+            axes.scatter(trajectory_x, trajectory_y, s=2)
+            axes.set_xlim(0,2)
+            axes.set_ylim(0,2)   
+            axes.set_title(f"Axis of cluster number {i}")
+            enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+            enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+            exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+            axes.legend()
+            axes.grid(True)
+            if show:
+                plt.show()
+            # create filename
+            filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+            # save plot with filename into dir
+            fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+    else:
+        print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
-def dbscan_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
-    pass
+def simple_dbscan_plotter(path2db: str, threshold:float, max_d: float, min_samples: int, n_jobs: int):
+    """Run dbscan on dataset.
 
-def optics_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, path2db: str, show=True):
-    pass
+    Args:
+        path2db (str): Path to database file. 
+        threshold (float): Threshold for filtering algorithm. 
+        max_d (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        min_samples (int): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        n_jobs (int): The number of parallel jobs to run.
+    """
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
+    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    dbscan_clustering_on_nx4(tracksFiltered, max_d, min_samples, n_jobs, min_samples)
 
-def simple_dbscan_plotter(path2db: str, threshold:float, n_clusters:int, n_jobs=None):
-    pass
+def dbscan_worker(path2db: str, max_d: float, min_samples: int, n_jobs: int, threshold=(0.1, 0.7), k=(2,16)):
+    """Run dbscan clustering on diffenrent threshold and n_cluster levels.
 
-def dbscan_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
-    pass
+    Args:
+        path2db (str): Path to database file. 
+        max_d (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        min_samples (int): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        n_jobs (int): The number of parallel jobs to run.
+        threshold (tuple, optional): Threshold for filtering algorithm. Defaults to (0.1, 0.7).
+        k (tuple, optional): n_cluster number. Defaults to (2,16).
+
+    Returns:
+        bool: Returns False of bad k parameters were given.
+    """
+    if k[0] < 1 or k[1] < k[0]:
+        print("Error: this is not how we use this program properly")
+        return False
+    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+        thres = threshold[0]
+        while thres <= threshold[1]:
+            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, max_d=max_d, min_samples=min_samples, show=False)
+            thres += 0.1
+
+def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, min_cluster_size: float, max_eps:float, threshold: float, path2db: str, n_jobs=16, show=True):
+    """Run optics clustering on N x 4 (x,y,x,y) feature vectors.
+
+    Args:
+        trackedObjects (list): List of tracks. 
+        min_samples (int): The number of samples in a neighborhood for a point to be considered as a core point. Also, up and down steep regions can`t have more than min_samples consecutive non-steep points.
+        xi (float): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.
+        min_cluster_size (float): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).
+        max_eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        threshold (float): Threshold value for filtering algorithm.
+        path2db (str): Path to database file. 
+        show (bool, optional): Boolean flag to show plot. Defaults to True.
+    """
+    featureVectors = makeFeatureVectorsNx4(trackedObjects)
+    print(f"Number of feature vectors: {len(featureVectors)}")
+    colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
+    labels = optics_on_featureVectors(featureVectors, min_samples, max_eps, xi, min_cluster_size, n_jobs)
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    # create directory path name, where the plots will be saved
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"optics_on_nx4_min_samples_{min_samples}_max_eps_{max_eps}_xi_{xi}_min_cluster_size_{min_cluster_size}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+    # check if dir exists
+    if not os.path.isdir(dirpath):
+        # make dir if not
+        os.mkdir(dirpath)
+    if n_clusters > 1:
+        for i in range(n_clusters):
+            fig, axes = plt.subplots(1,1,figsize=(10,10))
+            trajectory_x = []
+            trajectory_y = []
+            for idx in range(len(featureVectors)):
+                if labels[idx]==i:
+                    for k in range(1,len(trackedObjects[idx].history)):
+                        trajectory_x.append(trackedObjects[idx].history[k].X)
+                        trajectory_y.append(1-trackedObjects[idx].history[k].Y)
+            axes.scatter(trajectory_x, trajectory_y, s=2)
+            axes.set_xlim(0,2)
+            axes.set_ylim(0,2)   
+            axes.set_title(f"Axis of cluster number {i}")
+            enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
+            enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
+            exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
+            axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+            axes.legend()
+            axes.grid(True)
+            if show:
+                plt.show()
+            # create filename
+            filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
+            # save plot with filename into dir
+            fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+    else:
+        print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
+
+def simple_optics_plotter(path2db: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
+    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, max_eps, path2db)
+
+def optics_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size=0.05, max_eps=0.2, threshold=(0.1, 0.7), k=(2,16), n_jobs=16):
+    """Run dbscan clustering on diffenrent threshold and n_cluster levels.
+
+    Args:
+        path2db (str): Path to database file. 
+        min_samples (int): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        xi (float): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.
+        min_cluster_size (float): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).
+        n_jobs (int): The number of parallel jobs to run.
+        threshold (tuple, optional): Threshold for filtering algorithm. Defaults to (0.1, 0.7).
+        k (tuple, optional): n_cluster number. Defaults to (2,16).
+
+    Returns:
+        bool: Returns False of bad k parameters were given.
+    """
+    if k[0] < 1 or k[1] < k[0]:
+        print("Error: this is not how we use this program properly")
+        return False
+    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+        thres = threshold[0]
+        while thres <= threshold[1]:
+            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
+            thres += 0.1
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
@@ -909,15 +1098,22 @@ def main():
     argparser.add_argument("-c", "--config", help="Print configuration used for the video.", action="store_true", default=False)
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--kmeans_batch_plot", help="Run batch plotter on kmeans clustering.", action="store_true", default=False)
-    argparser.add_argument("--n_clusters", type=int, default=2, help="If kmeans, spectral is chosen, set number of clusters.")
-    argparser.add_argument("--threshold", type=float, default=0.01, help="When kmean and spectral clustering flag used, use this flag to give a threshold value to filter out false positive detections.")
+    argparser.add_argument("--n_clusters", type=int, default=2, help="KMEANS, SPECTRAL parameter: number of clusters to make.")
+    argparser.add_argument("--threshold", type=float, default=0.01, help="Threshold value for filtering algorithm that filters out the best detections.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--spectral_batch_plot", help="Run batch plotter on spectral clustering.", action="store_true", default=False)
-    argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
+    #argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
     argparser.add_argument("--elbow_on_kmeans", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--elbow_on_spectral", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--plot_elbows", action='store_true', help="This function helps to plot all kinds of elbow diagrams and save them.")
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+    argparser.add_argument("--dbscan_batch_plot", help="Run batch plotter on dbscan clustering.", default=False, action="store_true")
+    argparser.add_argument("--max_d", default=0.1, type=float, help="DBSCAN parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    #TODO:argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
+    #TODO:argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
+    #TODO:argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
+    #TODO:argparser.add_argument("--min_cluster_size", help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).", default=0.05)
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
@@ -934,6 +1130,10 @@ def main():
         spectral_worker(args.database, n_jobs=args.n_jobs)
     if args.spectral and args.threshold and args.n_clusters:
         simple_spectral_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
+    if args.dbscan_batch_plot:
+        dbscan_worker(args.database, max_d=args.max_d, min_samples=args.min_samples, n_jobs=args.n_jobs)
+    #TODO:if args.optics_batch_plot:
+    #    optics_worker(args.database, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     #if args.affinity_on_enters_and_exits:
     #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
