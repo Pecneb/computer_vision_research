@@ -47,15 +47,15 @@ def parseArgs():
     parser.add_argument("--k_trainingpoints", default=30, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
     parser.add_argument("--degree", default=2, type=int, help="Degree of polynomial features used for Polynom fitting.")
     parser.add_argument("--max_cosine_distance", type=float, default=10.0,
-                        help="remove detections with confidence below this value")
+                        help="Gating threshold for cosine distance metric (object appearance).")
     parser.add_argument("--nn_budget", type=float, default=100,
-                        help="remove detections with confidence below this value")
-    parser.add_argument("--min_detection_height", type=float, default=0,
-                        help="remove detections with confidence below this value")
-    parser.add_argument("--min_confidence", type=float, default=0.7,
-                        help="remove detections with confidence below this value")
-    parser.add_argument("--nms_max_overlap", type=float, default=1.0,
-                        help="remove detections with confidence below this value")
+                        help="Maximum size of the appearance descriptors gallery. If None, no budget is enforced.")
+    #parser.add_argument("--min_detection_height", type=float, default=0,
+    #                    help="Threshold on the detection bounding box height. Detections with height smaller than this value are disregarded")
+    #parser.add_argument("--min_confidence", type=float, default=0.7,
+    #                    help="Detection confidence threshold. Disregard all detections that have a confidence lower than this value.")
+    #parser.add_argument("--nms_max_overlap", type=float, default=1.0,
+    #                    help="Non-maxima suppression threshold: Maximum detection overlap.")
     parser.add_argument("-d", "--device", default='cuda', help="Choose device to run neuralnet. example: cpu, cuda, 0,1,2,3...")
     parser.add_argument("--yolov7", default=1, type=int, help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
     parser.add_argument("--resume", "-r", action="store_true", help="Use this flag if want to resume video from last session left off.")
