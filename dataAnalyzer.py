@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+from ast import Store
 from threading import local
 import time
 import databaseLoader
@@ -742,7 +743,7 @@ def spectral_worker(path2db: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, path2db, show=False)
             thres += 0.1
 
-def dbscan_clustering_on_nx4(trackedObjects: list, max_d: float, min_samples: int, n_jobs: int, threshold: float, path2db: str, show=True):
+def dbscan_clustering_on_nx4(trackedObjects: list, max_d: float, min_samples: int, n_jobs: int, threshold: float, path2db: str, show=True, shuffle=False):
     """Run dbscan clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -759,12 +760,22 @@ def dbscan_clustering_on_nx4(trackedObjects: list, max_d: float, min_samples: in
     colors = "bgrcmykbgrcmykbgrcmykbgrcmyk"
     labels = dbscan_on_featureVectors(featureVectors, max_d=max_d, min_samples=min_samples, n_jobs=n_jobs)
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    # create directory path name, where the plots will be saved
-    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"dbscan_on_nx4_max_d_{max_d}_min_samples_{min_samples}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
-    # check if dir exists
-    if not os.path.isdir(dirpath):
-        # make dir if not
-        os.mkdir(dirpath)
+    if shuffle: # if shuffle flag was used, create a shuffle dir to place results in shuffle dir, to be able to compare shuffled and non shuffled results
+        if not os.path.isdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], "shuffled")):
+            os.mkdir(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], "shuffled"))
+        # create directory path name, where the plots will be saved
+        dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], "shuffled", f"dbscan_on_nx4_max_d_{max_d}_min_samples_{min_samples}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+        # check if dir exists
+        if not os.path.isdir(dirpath):
+            # make dir if not
+            os.mkdir(dirpath)
+    else:
+        # create directory path name, where the plots will be saved
+        dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"dbscan_on_nx4_max_d_{max_d}_min_samples_{min_samples}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+        # check if dir exists
+        if not os.path.isdir(dirpath):
+            # make dir if not
+            os.mkdir(dirpath)
     if n_clusters > 1:
         for i in range(n_clusters):
             fig, axes = plt.subplots(1,1,figsize=(10,10))
@@ -810,7 +821,26 @@ def simple_dbscan_plotter(path2db: str, threshold:float, max_d: float, min_sampl
     tracksFiltered = filter_out_edge_detections(tracks, threshold)
     dbscan_clustering_on_nx4(tracksFiltered, max_d, min_samples, n_jobs, min_samples)
 
-def dbscan_worker(path2db: str, max_d: float, min_samples: int, n_jobs: int, threshold=(0.1, 0.7), k=(2,16)):
+def shuffle_data(trackedObjects: list) -> list:
+    rng = np.random.default_rng()
+    for i in range(len(trackedObjects)):
+        randIDX = int(len(trackedObjects) * rng.random())
+        tmpObj = trackedObjects[i]
+        trackedObjects[i] = trackedObjects[randIDX]
+        trackedObjects[randIDX] = tmpObj
+    
+def test_shuffle(path2db: str):
+    origObjects = preprocess_database_data_multiprocessed(path2db=path2db, n_jobs=16)
+    objectsToShuffle = origObjects.copy()
+    shuffle_data(objectsToShuffle)
+    changed = 0
+    for i in range(len(origObjects)):
+        if origObjects[i].objID != objectsToShuffle[i].objID:
+            changed += 1
+    print(f"Entropy = {changed/len(origObjects)}")
+
+
+def dbscan_worker(path2db: str, max_d: float, min_samples: int, n_jobs: int, threshold=(0.1, 0.7), k=(2,16), shuffle=False):
     """Run dbscan clustering on diffenrent threshold and n_cluster levels.
 
     Args:
@@ -829,11 +859,16 @@ def dbscan_worker(path2db: str, max_d: float, min_samples: int, n_jobs: int, thr
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    if shuffle: # shuffle data to get different results
+        shuffle_data(trackedObjects)
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
             filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
-            dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, max_d=max_d, min_samples=min_samples, show=False)
+            if shuffle:
+                dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, max_d=max_d, min_samples=min_samples, show=False, shuffle=True)
+            else:
+                dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, max_d=max_d, min_samples=min_samples, show=False, shuffle=False)
             thres += 0.1
 
 def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, min_cluster_size: float, max_eps:float, threshold: float, path2db: str, n_jobs=16, show=True):
@@ -1110,10 +1145,12 @@ def main():
     argparser.add_argument("--dbscan_batch_plot", help="Run batch plotter on dbscan clustering.", default=False, action="store_true")
     argparser.add_argument("--max_d", default=0.1, type=float, help="DBSCAN parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
     argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    argparser.add_argument("--shuffle_dataset", default=False, action="store_true", help="DBSCAN parameter: Shuffle dataset for slightly different clustering results.")
     argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
     argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).", default=0.05)
+    #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
     if args.database is not None:
@@ -1131,7 +1168,7 @@ def main():
     if args.spectral and args.threshold and args.n_clusters:
         simple_spectral_plotter(args.database, args.threshold, args.n_clusters, args.n_jobs)
     if args.dbscan_batch_plot:
-        dbscan_worker(args.database, max_d=args.max_d, min_samples=args.min_samples, n_jobs=args.n_jobs)
+        dbscan_worker(args.database, max_d=args.max_d, min_samples=args.min_samples, n_jobs=args.n_jobs, shuffle=args.shuffle_dataset)
     if args.optics_batch_plot:
         optics_worker(args.database, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     #if args.affinity_on_enters_and_exits:
@@ -1143,5 +1180,8 @@ def main():
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
     if args.plot_elbows:
         elbow_plot_worker(args.database, n_jobs=args.n_jobs)
+    #if args.test_shuffle:
+    #   test_shuffle(args.database)
+
 if __name__ == "__main__":
     main()
