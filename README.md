@@ -207,9 +207,11 @@ Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \ma
 
 ### Classification
 
-KNN, SVM, NN models
+KNN(KNearestNeighbours), RNN(RadiusNearestNeighbours), SVM(SupportVectorMachines), NN models
 
 #### New feature vectors
+
+Create feature vectors for Classification. A feature vector could be the start middle and end detection.
 
 ## Documentation
 
