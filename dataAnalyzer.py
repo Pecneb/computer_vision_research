@@ -372,8 +372,8 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             max_y = local_max_y
         if min_y > local_min_y:
             min_y = local_min_y 
-    print(f"\n Max X: {max_x}\n Min X: {min_x}\n Max Y: {max_y}\n Min Y: {min_y}\n")
-    print(f"\n Thresholds:\n Max X: {max_x-threshold}\n Min X: {min_x+threshold}\n Max Y: {max_y-threshold}\n Min Y: {min_y+threshold}\n")
+    #print(f"\n Max X: {max_x}\n Min X: {min_x}\n Max Y: {max_y}\n Min Y: {min_y}\n")
+    #print(f"\n Thresholds:\n Max X: {max_x-threshold}\n Min X: {min_x+threshold}\n Max Y: {max_y-threshold}\n Min Y: {min_y+threshold}\n")
     filteredTracks = []
     for obj in tqdm.tqdm(trackedObjects, desc="Filter out edge detections."):
         if (((obj.history[0].X <= min_x+threshold or obj.history[0].X >= max_x-threshold) or 
@@ -987,7 +987,7 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
     labels = cluster_optics_dbscan_on_featurevectors(featureVectors, min_samples, xi, min_cluster_size, eps, n_jobs)
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     # create directory path name, where the plots will be saved
-    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"optics_on_nx4_min_samples_{min_samples}_eps_{eps}_xi_{xi}_min_cluster_size_{min_cluster_size}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
+    dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0], f"opticsdbscan_on_nx4_min_samples_{min_samples}_eps_{eps}_xi_{xi}_min_cluster_size_{min_cluster_size}_n_cluster_{n_clusters}_threshold_{threshold}_dets_{len(featureVectors)}")
     # check if dir exists
     if not os.path.isdir(dirpath):
         # make dir if not
@@ -1049,12 +1049,17 @@ def optics_dbscan_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    progress = 1
+    thres_interval = 0.1
+    max_progress = k[1] * int(threshold[1] / thres_interval)
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
             filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
             cluster_optics_dbscan_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, eps=eps, show=False)
-            thres += 0.1
+            thres += thres_interval 
+            print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
+            progress += 1
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.
