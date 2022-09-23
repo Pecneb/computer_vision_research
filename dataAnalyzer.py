@@ -960,9 +960,9 @@ def optics_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size=0.05, 
             optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
             thres += 0.1
 
-def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_samples: int, xi: float, min_cluster_size: float, eps:float):
+def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_samples: int, xi: float, min_cluster_size: float, eps:float, n_jobs=-1):
     from sklearn.cluster import OPTICS, cluster_optics_dbscan
-    clust = OPTICS(min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size).fit(featureVectors)
+    clust = OPTICS(min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs).fit(featureVectors)
     labels = cluster_optics_dbscan(reachability=clust.reachability_,
                                     core_distances=clust.core_distances_, 
                                     ordering=clust.ordering_, eps=eps)
