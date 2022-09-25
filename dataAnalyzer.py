@@ -953,12 +953,17 @@ def optics_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size=0.05, 
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    progress = 1
+    thres_interval = 0.1
+    max_progress = k[1] * int(threshold[1] / thres_interval)
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
             filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
             optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
-            thres += 0.1
+            thres += thres_interval 
+            print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
+            progress += 1
 
 def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_samples: int, xi: float, min_cluster_size: float, eps:float, n_jobs=-1):
     from sklearn.cluster import OPTICS, cluster_optics_dbscan
