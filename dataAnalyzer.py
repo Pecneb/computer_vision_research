@@ -21,6 +21,8 @@ import argparse
 from ast import Store
 from threading import local
 import time
+from tracemalloc import Snapshot
+from turtle import title
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
@@ -504,7 +506,6 @@ def spectral_on_featureVectors(featureVectors: np.ndarray, n_clusters: int):
     spectral = SpectralClustering(n_clusters=n_clusters).fit(featureVectors)
     return spectral.labels_
 
-#TODO implement DBSCAN clustering
 def dbscan_on_featureVectors(featureVectors: np.ndarray, eps: float, min_samples: int, n_jobs: int):
     """Run dbscan clustering algorithm on extracted feature vectors.
 
@@ -521,7 +522,6 @@ def dbscan_on_featureVectors(featureVectors: np.ndarray, eps: float, min_samples
     dbscan = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs).fit(featureVectors)
     return dbscan.labels_
 
-#TODO implement OPTICS clustering
 def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, max_eps: float, xi: float, min_cluster_size: float, n_jobs: int):
     """Run optics clustering algorithm on extracted feature vectors.
 
@@ -924,6 +924,8 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
             fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+        
+        return labels
     else:
         print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
 
@@ -966,6 +968,19 @@ def optics_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size=0.05, 
             progress += 1
 
 def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_samples: int, xi: float, min_cluster_size: float, eps:float, n_jobs=-1):
+    """Run clustering with optics, then dbscan using the results of the optics clustering.
+
+    Args:
+        featureVectors (np.ndarray): Numpy array of feature vectors, value of a feature vector can vary. 
+        min_samples (int): The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+        xi (float): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.
+        min_cluster_size (float): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).
+        eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        n_jobs (int, optional): Number of processes to run simultaniously. Defaults to -1.
+
+    Returns:
+        list: list of labels
+    """
     from sklearn.cluster import OPTICS, cluster_optics_dbscan
     clust = OPTICS(min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs).fit(featureVectors)
     labels = cluster_optics_dbscan(reachability=clust.reachability_,
@@ -1226,13 +1241,89 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
-# TODO: implement feature extraction for classification
-def make_features_for_classification():
-    pass
+def make_features_for_classification(trackedObjects: list, k: int, labels: np.ndarray) -> np.ndarray:
+    """Make feature vectors for classification algorithm
 
-# TODO: implement classification on dataset
-def KNNClassification():
-    pass
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray: featurevectors and the new labels to fit the featurevectors 
+    """
+    featureVectors = []
+    newLabels = []
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, len(trackedObjects[j].history)-step, step):
+                #featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
+                featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
+                                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
+                newLabels.append(labels[j])
+    return np.array(featureVectors), np.array(newLabels)
+
+def RNClassification(trackedObjects: list, path2db: str, n_neighbours=20 , min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
+    """Run classification to create model
+
+    Args:
+        trackedObjects (list): Tracked objects.
+        path2db (str): Path to database file. 
+        n_neighbours (int, optional): Number of neighbors required for each sample, to belong in a class. Defaults to 20.
+        min_samples (int, optional): Parameter of optics clustering. A cluster to be a cluster must have atleast this many samples. Defaults to 20.
+        max_eps (float, optional): Parameter of optics clustering, . Defaults to 0.2.
+        xi (float, optional): _description_. Defaults to 0.1.
+        min_cluster_size (float, optional): _description_. Defaults to 0.0625.
+        n_jobs (int, optional): _description_. Defaults to 18.
+    """
+    from sklearn import neighbors
+    from sklearn.inspection import DecisionBoundaryDisplay
+    #labels = optics_clustering_on_nx4(trackedObjects, min_samples, xi, min_cluster_size, max_eps, 0.4, path2db, n_jobs, show=True)
+    featuresForCluster = makeFeatureVectorsNx4(trackedObjects)
+    labels = optics_on_featureVectors(featuresForCluster, min_samples, max_eps, xi, min_cluster_size, n_jobs)
+    featuresForClass, labelsForClass = make_features_for_classification(trackedObjects, 6, labels)
+    #print(featuresForClass.shape)
+    #print(labelsForClass.shape)
+
+    x = featuresForClass[labelsForClass > -1]
+    #x1 = x[:, :2]
+    #x2 = x[:, 2:4]
+    #x3 = x[:, 4:]
+    # Creating input vector for classification, the euclidean distance of starting and middle points is the first feature and the euclidean distance of the middle and ending points is the second feature
+    #X = np.array([np.array([((ent[0]-mid[0])**2+(ent[1]-mid[1])**2)**0.5, ((mid[0]-end[0])**2+(mid[1]-end[1])**2)**0.5]) for ent, mid, end in zip(x1, x2, x3)])
+    target = labelsForClass[labelsForClass> -1]
+    y = target
+    X = x
+    #print(X.shape)
+    #print(y.shape)
+
+    for weights in ["uniform", "distance"]:
+        clf = neighbors.KNeighborsClassifier(n_neighbours, weights=weights)
+        clf.fit(X, y)
+
+        fig, ax = plt.subplots()
+        DecisionBoundaryDisplay.from_estimator(
+            clf,
+            X,
+            ax=ax,
+            response_method="predict",
+            plot_method="contourf",
+            xlabel="X coordinates",
+            ylabel="Y coordinates",
+            shading="auto",
+
+        )
+        ax.scatter(X[:, 0], X[:, 1], c=y, edgecolors="k")
+        ax.set_title(weights)
+    plt.show()
+
+def Classification(path2db: str, n_neighbours=20, min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    filteredTracks = filter_out_edge_detections(tracks, 0.4)
+    filteredTracks = filter_tracks(filteredTracks)
+    RNClassification(filteredTracks, path2db, n_neighbours, min_samples, max_eps, xi, min_cluster_size, n_jobs)
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1257,8 +1348,10 @@ def main():
     argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
     argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
-    argparser.add_argument("--min_cluster_size", help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).", default=0.05)
+    argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).", default=0.05)
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
+    argparser.add_argument("--classification", help="Train model with classification.", action="store_true", default=False)
+    argparser.add_argument("--n_neighbours", help="Number of neighbours for clustering.", type=int)
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1291,6 +1384,8 @@ def main():
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
     if args.plot_elbows:
         elbow_plot_worker(args.database, n_jobs=args.n_jobs)
+    if args.classification and args.n_neighbours:
+        Classification(args.database, args.n_neighbours, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 
