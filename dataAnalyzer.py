@@ -924,10 +924,9 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
             filename = f"{path2db.split('/')[-1].split('.')[0]}_n_cluster_{i}.png"
             # save plot with filename into dir
             fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
-        
-        return labels
     else:
         print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
+    return labels
 
 def simple_optics_plotter(path2db: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
@@ -1241,7 +1240,7 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
-def make_features_for_classification(trackedObjects: list, k: int, labels: np.ndarray) -> np.ndarray:
+def make_features_for_classification(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -1265,7 +1264,7 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def RNClassification(trackedObjects: list, path2db: str, n_neighbours=20 , min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
+def RNClassification(trackedObjects: list, path2db: str, n_neighbours=20 , min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18, threshold=0.4):
     """Run classification to create model
 
     Args:
@@ -1281,12 +1280,14 @@ def RNClassification(trackedObjects: list, path2db: str, n_neighbours=20 , min_s
     from sklearn import neighbors
     from sklearn.inspection import DecisionBoundaryDisplay
     #labels = optics_clustering_on_nx4(trackedObjects, min_samples, xi, min_cluster_size, max_eps, 0.4, path2db, n_jobs, show=True)
-    featuresForCluster = makeFeatureVectorsNx4(trackedObjects)
-    labels = optics_on_featureVectors(featuresForCluster, min_samples, max_eps, xi, min_cluster_size, n_jobs)
+    #featuresForCluster = makeFeatureVectorsNx4(trackedObjects)
+    # TODO if optics_clustering_on_nx4 used here, the labels return value is a NoneType, but not always 
+    labels = optics_clustering_on_nx4(trackedObjects, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, threshold=threshold, path2db=path2db)
+    print(labels)
     featuresForClass, labelsForClass = make_features_for_classification(trackedObjects, 6, labels)
     #print(featuresForClass.shape)
     #print(labelsForClass.shape)
-
+    
     x = featuresForClass[labelsForClass > -1]
     #x1 = x[:, :2]
     #x2 = x[:, 2:4]
