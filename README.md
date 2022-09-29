@@ -507,7 +507,7 @@ To begin with, all values for $r$ and $a$ are set to zero, and the calculation o
 
 24. As can be read above, DBSCAN can yield different results, when the dataset is shuffled, so I wrote a simple dataset shuffling function. The results are saved in the shuffled dir.
 
-25. Optics had been giving the best results so far.
+25. Optics had been giving the best results so far. An example command that gave me a good result: `python3 dataAnalyzer.py -db research_data/0001_2_308min/0001_2_308min.db --classification --min_samples 10 --max_eps 0.1 --xi 0.15 --n_neighbours 15`
 
 Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, min_cluster_size = 0.05 and filtering algorithm with threshold = 0.4
 ![Cluster number 0](research_data/0001_2_308min/optics_on_nx4_min_samples_20_max_eps_0.2_xi_0.1_min_cluster_size_0.05_n_cluster_7_threshold_0.4_dets_5477/0001_2_308min_n_cluster_0.png)
