@@ -12,7 +12,7 @@ def getArguments():
     Use 'argparser.add_argument(flagname, type, help, ...)
 
     Returns:
-        _type_: _description_
+        args: Command line arguments class 
     """
     argparser = argparse.ArgumentParser(prog="Script to fetch data from database in list format.") 
     argparser.add_argument("-db", "--database", type=str, help="The path to the database file.")
