@@ -18,11 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
-from ast import Store
-from threading import local
 import time
-from tracemalloc import Snapshot
-from turtle import title
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
@@ -1259,9 +1255,9 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
         if step > 0:
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
-                #featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
-                featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
-                                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
+                #featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
+                #                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
@@ -1298,7 +1294,7 @@ def RNClassification(trackedObjects: list, path2db: str, n_neighbours: int , min
     target = labelsForClass[labelsForClass> -1]
     y = target
     X = x
-    #print(X.shape)
+    print(X.shape)
     #print(y.shape)
 
     for weights in ["uniform", "distance"]:
@@ -1306,7 +1302,7 @@ def RNClassification(trackedObjects: list, path2db: str, n_neighbours: int , min
         clf.fit(X, y)
 
         fig, ax = plt.subplots()
-        DecisionBoundaryDisplay.from_estimator(
+        """DecisionBoundaryDisplay.from_estimator(
             clf,
             X,
             ax=ax,
@@ -1316,8 +1312,9 @@ def RNClassification(trackedObjects: list, path2db: str, n_neighbours: int , min
             ylabel="Y coordinates",
             shading="auto",
 
-        )
-        ax.scatter(X[:, 0], X[:, 1], c=y, edgecolors="k")
+        )"""
+        xx, yy = np.meshgrid(X[:,0], X[:,1])
+        ax.scatter(X[:, 0], X[:, 1], c=y, edgecolors="k", s=10)
         ax.set_title(weights)
     plt.show()
 
