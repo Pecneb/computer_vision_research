@@ -19,12 +19,15 @@
 """
 import argparse
 import time
+import joblib
+import matplotlib
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import tqdm
+from sklearn.base import ClassifierMixin
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -1261,7 +1264,7 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def RNClassification(trackedObjects: list, path2db: str, n_neighbours: int , min_samples: int, max_eps: float, xi: float, min_cluster_size: float, n_jobs=19, threshold=0.4):
+def KNNClassification_depracated(trackedObjects: list, path2db: str, n_neighbours: int , min_samples: int, max_eps: float, xi: float, min_cluster_size: float, n_jobs=19, threshold=0.4):
     """Run classification to create model
 
     Args:
@@ -1278,51 +1281,119 @@ def RNClassification(trackedObjects: list, path2db: str, n_neighbours: int , min
     from sklearn.inspection import DecisionBoundaryDisplay
     #labels = optics_clustering_on_nx4(trackedObjects, min_samples, xi, min_cluster_size, max_eps, 0.4, path2db, n_jobs, show=True)
     #featuresForCluster = makeFeatureVectorsNx4(trackedObjects)
-    # TODO if optics_clustering_on_nx4 used here, the labels return value is a NoneType, but not always 
     labels = optics_clustering_on_nx4(trackedObjects, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, threshold=threshold, path2db=path2db)
-    print(labels)
     featuresForClass, labelsForClass = make_features_for_classification(trackedObjects, 6, labels)
     #print(featuresForClass.shape)
     #print(labelsForClass.shape)
     
-    x = featuresForClass[labelsForClass > -1]
+    X = featuresForClass[labelsForClass > -1]
     #x1 = x[:, :2]
     #x2 = x[:, 2:4]
     #x3 = x[:, 4:]
     # Creating input vector for classification, the euclidean distance of starting and middle points is the first feature and the euclidean distance of the middle and ending points is the second feature
     #X = np.array([np.array([((ent[0]-mid[0])**2+(ent[1]-mid[1])**2)**0.5, ((mid[0]-end[0])**2+(mid[1]-end[1])**2)**0.5]) for ent, mid, end in zip(x1, x2, x3)])
-    target = labelsForClass[labelsForClass> -1]
-    y = target
-    X = x
-    print(X.shape)
-    #print(y.shape)
+    y = labelsForClass[labelsForClass > -1]
 
     for weights in ["uniform", "distance"]:
         clf = neighbors.KNeighborsClassifier(n_neighbours, weights=weights)
         clf.fit(X, y)
-
         fig, ax = plt.subplots()
-        """DecisionBoundaryDisplay.from_estimator(
-            clf,
-            X,
-            ax=ax,
-            response_method="predict",
-            plot_method="contourf",
-            xlabel="X coordinates",
-            ylabel="Y coordinates",
-            shading="auto",
-
-        )"""
-        xx, yy = np.meshgrid(X[:,0], X[:,1])
         ax.scatter(X[:, 0], X[:, 1], c=y, edgecolors="k", s=10)
         ax.set_title(weights)
     plt.show()
 
-def RNNClassificationWorker(path2db: str, n_neighbours=20, min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
+def KNNClassificationWorker(path2db: str, n_neighbours=20, min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, 0.4)
     filteredTracks = filter_tracks(filteredTracks)
-    RNClassification(filteredTracks, path2db, n_neighbours, min_samples, max_eps, xi, min_cluster_size, n_jobs)
+    KNNClassification_depracated(filteredTracks, path2db, n_neighbours, min_samples, max_eps, xi, min_cluster_size, n_jobs)
+
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): _description_
+        min_samples (int, optional): _description_. Defaults to 10.
+        max_eps (float, optional): _description_. Defaults to 0.1.
+        xi (float, optional): _description_. Defaults to 0.15.
+        min_cluster_size (int, optional): _description_. Defaults to 10.
+        n_jobs (int, optional): _description_. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: Return X and y train and test dataset 
+    """
+    thres = 0.5
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
+    filteredTracks = filter_tracks(filteredTracks)
+    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
+    X, y = make_features_for_classification(filteredTracks, 6, labels)
+    X = X[y > -1]
+    y = y[y > -1]
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+    return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
+
+def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
+    from sklearn.neighbors import KNeighborsClassifier
+    classifier = KNeighborsClassifier(n_neighbors=n_neighbours, weights='distance').fit(X, y)
+    return classifier
+
+def SGDClassification(X: np.ndarray, y: np.ndarray):
+    from sklearn.linear_model import SGDClassifier
+    classifier = SGDClassifier().fit(X, y)
+    return classifier
+
+def Classification(classifier: str, path2db: str, **argv):
+    import matplotlib as mpl
+    X_train, y_train, _, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    fig, ax = plt.subplots()
+    model = None
+    if classifier == 'KNN':
+        model = KNNClassification(X_train, y_train, 15)
+    elif classifier == 'SGD':
+        model = SGDClassification(X_train, y_train)
+    else:
+        print(f"Error: bad classifier {classifier}")
+    xx, yy= np.meshgrid(np.arange(0, 2, 0.1), np.arange(0, 2, 0.1))
+    X_visualize = np.zeros(shape=(xx.shape[0]*xx.shape[1],6))
+    counter = 0
+    for i in range(0,xx.shape[0]):
+        for j in range(0,xx.shape[1]):
+            X_visualize[counter,0] = xx[j,i]
+            X_visualize[counter,1] = yy[j,i]
+            X_visualize[counter,2] = xx[j,i]
+            X_visualize[counter,3] = yy[j,i]
+            X_visualize[counter,4] = xx[j,i]
+            X_visualize[counter,5] = yy[j,i]
+            counter += 1
+    y_visualize = model.predict(X_visualize)
+    ax.pcolormesh(xx,yy,y_visualize.reshape(xx.shape))
+    ax.set_ylim(0,2)
+    ax.set_xlim(0,2)
+    plt.show()
+    if not os.path.isdir(os.path.join(os.path.curdir, "models")):
+        os.mkdir(os.path.join(os.path.curdir, "models"))
+    savepath = os.path.join("models")
+    filename = os.path.join(savepath, f"model_{classifier}.joblib")
+    if model is not None:
+        joblib.dump(model, filename)
+    else:
+        print("Error: model is None, model was not saved.")
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1349,8 +1420,8 @@ def main():
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
-    argparser.add_argument("--RNNClassification", help="Train model with classification.", action="store_true", default=False)
-    argparser.add_argument("--n_neighbours", help="Number of neighbours for clustering.", type=int)
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD'])
+    argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1389,11 +1460,8 @@ def main():
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
     if args.plot_elbows:
         elbow_plot_worker(args.database, n_jobs=args.n_jobs)
-    if args.RNNClassification and args.n_neighbours:
-        if args.min_cluster_size:
-            RNNClassificationWorker(args.database, args.n_neighbours, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs)
-        else:
-            RNNClassificationWorker(args.database, args.n_neighbours, args.min_samples, args.max_eps, args.xi, args.min_samples, args.n_jobs)
+    if args.Classification:
+        Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 

@@ -207,13 +207,22 @@ Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \ma
 
 ### Classification
 
+Propability Calibration
+
 KNN(KNearestNeighbours), RNN(RadiusNearestNeighbours), SVM(SupportVectorMachines), NN models
+Voting Classifier, Naive Bayes, Gaussian Process Classification (GPC), Stochastic Gradient Descent
 
 #### New feature vectors
 
 Create feature vectors for Classification. A feature vector could be the start middle and end detection.
 
 The KNN Classifier only accepts N x 2 dimension feature vectors, so a feature vector can be created from the euclidean distance of the enter and middle detection as the first feature, and euclidean distance of the middle and end detection as the second feature.
+
+Scikit-FeatureSelection
+
+## Save Scikit model
+
+https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
 ## Documentation
 
@@ -518,47 +527,10 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 ![Cluster number 5](research_data/0001_2_308min/optics_on_nx4_min_samples_20_max_eps_0.2_xi_0.1_min_cluster_size_0.05_n_cluster_7_threshold_0.4_dets_5477/0001_2_308min_n_cluster_5.png)
 ![Cluster number 6](research_data/0001_2_308min/optics_on_nx4_min_samples_20_max_eps_0.2_xi_0.1_min_cluster_size_0.05_n_cluster_7_threshold_0.4_dets_5477/0001_2_308min_n_cluster_6.png)
 
+26. The results of the clustering are the classes used in classification. There are many classification algorithm, ex.: [KNN](https://scikit-learn.org/stable/modules/neighbors.html#nearest-neighbors-classification), [GaussianNB](https://scikit-learn.org/stable/modules/naive_bayes.html#gaussian-naive-bayes), [StochasticGradientDescent](https://scikit-learn.org/stable/modules/sgd.html#classification), etc... [Neural Network Models](https://scikit-learn.org/stable/modules/neural_networks_supervised.html#classification) also can be used for classification.
+
 ## Examples
 
-I wrote an example script, that have a function that can fetch database data (detections) and return them in a list[objID, list[frameNumber, x, y, width, height, vx, vy, ax, ay]]. The second function gives an example how to iterate through the returned list of detections.
-```python
-def getDetections(path2db: str):
-    """Simple dataset loader, that creates lists with the objID and the detections of the object.
-
-    Args:
-        path2db (str): Path to database file.
-
-    Returns:
-        list: structure of the list [id, detections], 
-        where detections is another list [frameNumber, x, y, width, height, vx, vy, ax, ay] 
-    """
-    retList = []
-    # use databaseLoader module to fetch raw data from database
-    objects = databaseLoader.loadObjects(path2db)
-    # iterate through logged objects
-    for obj in objects:
-        # load detections of obj
-        detections = databaseLoader.loadDetectionsOfObject(path2db, obj[0])
-        track = [obj[0], []]
-        # iterate through detections of obj to extrack data
-        for detection in detections:
-            track[1].append([detection[1], detection[3], detection[4], 
-                            detection[5], detection[6], detection[7], 
-                            detection[8], detection[9], detection[10]])
-        retList.append(track)
-    return retList
-
-def example_load_and_print_data():
-    """This example function shows, how to use getDetections() function, 
-       and how to iterate through the returned list.
-    """
-    dataset = getDetections("research_data/0002_1_37min/0002_1_37min.db")
-    for data in dataset:
-        print("Object ID: ", data[0])
-        for det in data[1]:
-            print(f"Framenumber: {det[0]} X: {det[1]} Y: {det[2]}")
-```
-The function can be also imported from another script file. The only argument it takes, is the path, to the database file.
 
 ## References
 
