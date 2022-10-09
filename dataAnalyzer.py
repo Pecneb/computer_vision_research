@@ -1264,50 +1264,6 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def KNNClassification_depracated(trackedObjects: list, path2db: str, n_neighbours: int , min_samples: int, max_eps: float, xi: float, min_cluster_size: float, n_jobs=19, threshold=0.4):
-    """Run classification to create model
-
-    Args:
-        trackedObjects (list): Tracked objects.
-        path2db (str): Path to database file. 
-        n_neighbours (int, optional): Number of neighbors required for each sample, to belong in a class. Defaults to 20.
-        min_samples (int, optional): Parameter of optics clustering. A cluster to be a cluster must have atleast this many samples. Defaults to 20.
-        max_eps (float, optional): Parameter of optics clustering, . Defaults to 0.2.
-        xi (float, optional): _description_. Defaults to 0.1.
-        min_cluster_size (float, optional): _description_. Defaults to 0.0625.
-        n_jobs (int, optional): _description_. Defaults to 18.
-    """
-    from sklearn import neighbors
-    from sklearn.inspection import DecisionBoundaryDisplay
-    #labels = optics_clustering_on_nx4(trackedObjects, min_samples, xi, min_cluster_size, max_eps, 0.4, path2db, n_jobs, show=True)
-    #featuresForCluster = makeFeatureVectorsNx4(trackedObjects)
-    labels = optics_clustering_on_nx4(trackedObjects, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, threshold=threshold, path2db=path2db)
-    featuresForClass, labelsForClass = make_features_for_classification(trackedObjects, 6, labels)
-    #print(featuresForClass.shape)
-    #print(labelsForClass.shape)
-    
-    X = featuresForClass[labelsForClass > -1]
-    #x1 = x[:, :2]
-    #x2 = x[:, 2:4]
-    #x3 = x[:, 4:]
-    # Creating input vector for classification, the euclidean distance of starting and middle points is the first feature and the euclidean distance of the middle and ending points is the second feature
-    #X = np.array([np.array([((ent[0]-mid[0])**2+(ent[1]-mid[1])**2)**0.5, ((mid[0]-end[0])**2+(mid[1]-end[1])**2)**0.5]) for ent, mid, end in zip(x1, x2, x3)])
-    y = labelsForClass[labelsForClass > -1]
-
-    for weights in ["uniform", "distance"]:
-        clf = neighbors.KNeighborsClassifier(n_neighbours, weights=weights)
-        clf.fit(X, y)
-        fig, ax = plt.subplots()
-        ax.scatter(X[:, 0], X[:, 1], c=y, edgecolors="k", s=10)
-        ax.set_title(weights)
-    plt.show()
-
-def KNNClassificationWorker(path2db: str, n_neighbours=20, min_samples=20, max_eps=0.2, xi=0.1, min_cluster_size=0.0625, n_jobs=18):
-    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, 0.4)
-    filteredTracks = filter_tracks(filteredTracks)
-    KNNClassification_depracated(filteredTracks, path2db, n_neighbours, min_samples, max_eps, xi, min_cluster_size, n_jobs)
-
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
@@ -1345,6 +1301,16 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
+    """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+        n_neighbours (int): Number of neighbours to belong in a class.
+
+    Returns:
+        sklearn classifier: KNN model
+    """
     from sklearn.neighbors import KNeighborsClassifier
     classifier = KNeighborsClassifier(n_neighbors=n_neighbours, weights='distance').fit(X, y)
     return classifier
@@ -1352,6 +1318,21 @@ def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
 def SGDClassification(X: np.ndarray, y: np.ndarray):
     from sklearn.linear_model import SGDClassifier
     classifier = SGDClassifier().fit(X, y)
+    return classifier
+
+def GPClassification(X: np.ndarray, y: np.ndarray):
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    classifier = GaussianProcessClassifier().fit(X, y)
+    return classifier
+
+def GNBClassification(X: np.ndarray, y: np.ndarray):
+    from sklearn.naive_bayes import GaussianNB
+    classifier = GaussianNB().fit(X, y)
+    return classifier
+
+def MLPClassification(X: np.ndarray, y: np.ndarray):
+    from sklearn.neural_network import MLPClassifier
+    classifier = MLPClassifier().fit(X,y)
     return classifier
 
 def Classification(classifier: str, path2db: str, **argv):
@@ -1364,12 +1345,18 @@ def Classification(classifier: str, path2db: str, **argv):
     fig, ax = plt.subplots()
     model = None
     if classifier == 'KNN':
-        model = KNNClassification(X_train, y_train, 15)
+        model = KNNClassification(X_train, y_train, 25)
     elif classifier == 'SGD':
         model = SGDClassification(X_train, y_train)
+    elif classifier == 'GP':
+        model = GPClassification(X_train, y_train)
+    elif classifier == 'GNB':
+        model = GNBClassification(X_train, y_train)
+    elif classifier == 'MLP':
+        model = MLPClassification(X_train, y_train)
     else:
         print(f"Error: bad classifier {classifier}")
-    xx, yy= np.meshgrid(np.arange(0, 2, 0.1), np.arange(0, 2, 0.1))
+    xx, yy= np.meshgrid(np.arange(0, 2, 0.005), np.arange(0, 2, 0.005))
     X_visualize = np.zeros(shape=(xx.shape[0]*xx.shape[1],6))
     counter = 0
     for i in range(0,xx.shape[0]):
@@ -1383,6 +1370,7 @@ def Classification(classifier: str, path2db: str, **argv):
             counter += 1
     y_visualize = model.predict(X_visualize)
     ax.pcolormesh(xx,yy,y_visualize.reshape(xx.shape))
+    ax.scatter(X_train[:, 0], 1-X_train[:, 1], c=y_train, edgecolors='k')
     ax.set_ylim(0,2)
     ax.set_xlim(0,2)
     plt.show()
@@ -1420,7 +1408,7 @@ def main():
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD'])
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
