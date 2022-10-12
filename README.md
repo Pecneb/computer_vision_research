@@ -529,6 +529,34 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 
 26. The results of the clustering are the classes used in classification. There are many classification algorithm, ex.: [KNN](https://scikit-learn.org/stable/modules/neighbors.html#nearest-neighbors-classification), [GaussianNB](https://scikit-learn.org/stable/modules/naive_bayes.html#gaussian-naive-bayes), [StochasticGradientDescent](https://scikit-learn.org/stable/modules/sgd.html#classification), etc... [Neural Network Models](https://scikit-learn.org/stable/modules/neural_networks_supervised.html#classification) also can be used for classification.
 
+### Classification Results
+
+#### 0002_2_308min.mp4
+
+`python3 dataAnalyzer.py -db research_data/0002_2_308min/0002_2_308min.db --min_samples 10 --max_eps 0.1 --xi 0.15 --min_cluster_size 10 --ClassificationWorker`
+
+| Classification | Accuracy - non calibrated | Accuracy - calibrated |
+|----------------|---------------------------|-----------------------|
+| KNN            | 71.4286 %                 |                       |
+| SGD            | 26.5873 %                 |                       |
+| GP             | 31.3492 %                 |                       |
+| GNB            | 21.2301 %                 |                       |
+| MLP            | 39.8809 %                 |                       |
+| Voting         | 44.0476 %                 |                       |
+
+#### 0001_2_308min.mp4
+
+`python3 dataAnalyzer.py -db research_data/0001_2_308min/0001_2_308min.db --min_samples 10 --max_eps 0.2 --xi 0.15 --min_cluster_size 10 --ClassificationWorker`
+
+| Classification | Accuracy - non calibrated | Accuracy - calibrated |
+|----------------|---------------------------|-----------------------|
+| KNN            | 77.0967 %                 |                       |
+| SGD            | 50.3227 %                 |                       |
+| GP             | 58.3870 %                 |                       |
+| GNB            | 54.1935 %                 |                       |
+| MLP            | 67.7419 %                 |                       |
+| Voting         | 68.3871 %                 |                       |
+
 ## Examples
 
 

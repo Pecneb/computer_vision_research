@@ -1335,9 +1335,25 @@ def MLPClassification(X: np.ndarray, y: np.ndarray):
     classifier = MLPClassifier().fit(X,y)
     return classifier
 
+def VotingClassification(X: np.ndarray, y: np.ndarray):
+    from sklearn.ensemble import VotingClassifier
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    clf1 = KNeighborsClassifier(n_neighbors=15, weights='distance')
+    clf2 = SGDClassifier()
+    clf3 = GaussianProcessClassifier()
+    clf4 = GaussianNB()
+    clf5 = MLPClassifier()
+    classifier = VotingClassifier(
+        estimators=[('knn', clf1), ('sgd', clf2), ('gp', clf3), ('gnb', clf4), ('mlp', clf5)]
+    ).fit(X, y)
+    return classifier
+
 def Classification(classifier: str, path2db: str, **argv):
-    import matplotlib as mpl
-    X_train, y_train, _, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1345,7 +1361,7 @@ def Classification(classifier: str, path2db: str, **argv):
     fig, ax = plt.subplots()
     model = None
     if classifier == 'KNN':
-        model = KNNClassification(X_train, y_train, 25)
+        model = KNNClassification(X_train, y_train, 15)
     elif classifier == 'SGD':
         model = SGDClassification(X_train, y_train)
     elif classifier == 'GP':
@@ -1354,8 +1370,12 @@ def Classification(classifier: str, path2db: str, **argv):
         model = GNBClassification(X_train, y_train)
     elif classifier == 'MLP':
         model = MLPClassification(X_train, y_train)
+    elif classifier == 'VOTE':
+        model = VotingClassification(X_train, y_train)
     else:
         print(f"Error: bad classifier {classifier}")
+        return False
+    ValidateClassification(model, X_valid, y_valid)
     xx, yy= np.meshgrid(np.arange(0, 2, 0.005), np.arange(0, 2, 0.005))
     X_visualize = np.zeros(shape=(xx.shape[0]*xx.shape[1],6))
     counter = 0
@@ -1374,14 +1394,55 @@ def Classification(classifier: str, path2db: str, **argv):
     ax.set_ylim(0,2)
     ax.set_xlim(0,2)
     plt.show()
-    if not os.path.isdir(os.path.join(os.path.curdir, "models")):
-        os.mkdir(os.path.join(os.path.curdir, "models"))
-    savepath = os.path.join("models")
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
+        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
     filename = os.path.join(savepath, f"model_{classifier}.joblib")
     if model is not None:
         joblib.dump(model, filename)
     else:
         print("Error: model is None, model was not saved.")
+
+def ClassificationWorker(path2db: str, **argv):
+    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    print("KNN")
+    model = KNNClassification(X_train, y_train, 15)
+    ValidateClassification(model, X_valid, y_valid)
+    print("SGD")
+    model = SGDClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid) 
+    print("GP")
+    model = GPClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
+    print("GNB")
+    model = GNBClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
+    print("MLP")
+    model = MLPClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
+    print("VOTE")
+    model = VotingClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
+
+def ValidateClassification(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray):
+    if type(clfmodel) is str:
+        model = joblib.load(clfmodel)
+    else:
+        model = clfmodel
+    y_predict = model.predict(X_valid)
+    hit = 0
+    miss = 0
+    assert len(y_predict) == len(y_valid)
+    for y_pred, y_val in zip(y_predict, y_valid):
+        if y_pred == y_val:
+            hit += 1
+        else:
+            miss += 1
+    print(f"Accuracy of the fitted model: hit: {hit}, miss: {miss}, accuracy in percentage: {(hit/len(y_predict))*100}")
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1408,8 +1469,9 @@ def main():
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP'])
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
+    argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1450,6 +1512,8 @@ def main():
         elbow_plot_worker(args.database, n_jobs=args.n_jobs)
     if args.Classification:
         Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    if args.ClassificationWorker:
+        ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 
