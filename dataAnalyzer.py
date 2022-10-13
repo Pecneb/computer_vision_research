@@ -1316,26 +1316,71 @@ def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     return classifier
 
 def SGDClassification(X: np.ndarray, y: np.ndarray):
+    """Run Stochastic Gradient Descent Classification on samples X and labels y.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: SGD model 
+    """
     from sklearn.linear_model import SGDClassifier
     classifier = SGDClassifier().fit(X, y)
     return classifier
 
 def GPClassification(X: np.ndarray, y: np.ndarray):
+    """Run Gaussian Process Classification on samples X and labels y.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: GP model 
+    """
     from sklearn.gaussian_process import GaussianProcessClassifier
     classifier = GaussianProcessClassifier().fit(X, y)
     return classifier
 
 def GNBClassification(X: np.ndarray, y: np.ndarray):
+    """Run Gaussian Naive Bayes Classification on samples X and labels y.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: GNB model 
+    """
     from sklearn.naive_bayes import GaussianNB
     classifier = GaussianNB().fit(X, y)
     return classifier
 
 def MLPClassification(X: np.ndarray, y: np.ndarray):
+    """Run Multi Layer Perceptron Classification on samples X and labels y.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: MLPC model 
+    """
     from sklearn.neural_network import MLPClassifier
     classifier = MLPClassifier().fit(X,y)
     return classifier
 
 def VotingClassification(X: np.ndarray, y: np.ndarray):
+    """Run Voting Classification on samples X and labels y.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: Voting model 
+    """
     from sklearn.ensemble import VotingClassifier
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
@@ -1353,6 +1398,15 @@ def VotingClassification(X: np.ndarray, y: np.ndarray):
     return classifier
 
 def Classification(classifier: str, path2db: str, **argv):
+    """Run classification on database data.
+
+    Args:
+        classifier (str): Type of the classifier. 
+        path2db (str): Path to database file. 
+
+    Returns:
+        bool: Returns false if bad classifier was given. 
+    """
     X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
@@ -1404,6 +1458,11 @@ def Classification(classifier: str, path2db: str, **argv):
         print("Error: model is None, model was not saved.")
 
 def ClassificationWorker(path2db: str, **argv):
+    """Run all of the classification methods implemented.
+
+    Args:
+        path2db (str): Path to database file. 
+    """
     X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
@@ -1429,20 +1488,156 @@ def ClassificationWorker(path2db: str, **argv):
     ValidateClassification(model, X_valid, y_valid)
 
 def ValidateClassification(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray):
+    """Validate fitted classification model.
+
+    Args:
+        clfmodel (str, model): Can be a path to model file or model. 
+        X_valid (np.ndarray): Test dataset. 
+        y_valid (np.ndarray): Test dataset's labeling. 
+    """
     if type(clfmodel) is str:
         model = joblib.load(clfmodel)
     else:
         model = clfmodel
     y_predict = model.predict(X_valid)
-    hit = 0
-    miss = 0
     assert len(y_predict) == len(y_valid)
-    for y_pred, y_val in zip(y_predict, y_valid):
-        if y_pred == y_val:
-            hit += 1
+    print(f"Number of mislabeled points out of a total {X_valid.shape[0]} points : {(y_valid != y_predict).sum()} \nAccuracy: {(1-((y_valid != y_predict).sum() / X_valid.shape[0])) * 100} %")
+
+def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): _description_
+        min_samples (int, optional): _description_. Defaults to 10.
+        max_eps (float, optional): _description_. Defaults to 0.1.
+        xi (float, optional): _description_. Defaults to 0.15.
+        min_cluster_size (int, optional): _description_. Defaults to 10.
+        n_jobs (int, optional): _description_. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: Return X and y train and test dataset 
+    """
+    thres = 0.5
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
+    filteredTracks = filter_tracks(filteredTracks)
+    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
+    X, y = make_features_for_classification(filteredTracks, 6, labels)
+    X = X[y > -1]
+    y = y[y > -1]
+    X_train = []
+    y_train = []
+    X_calib = []
+    y_calib = []
+    X_test = []
+    y_test = []
+    first_third_limit = int(len(X) * 0.4) 
+    second_third_limit = 2*first_third_limit
+    for i in range(len(X)):
+        if i > second_third_limit-1:
+            X_test.append(X[i])
+            y_test.append(y[i])
+        elif i > first_third_limit-1 and i < second_third_limit-1: 
+            X_calib.append(X[i])
+            y_calib.append(y[i])
         else:
-            miss += 1
-    print(f"Accuracy of the fitted model: hit: {hit}, miss: {miss}, accuracy in percentage: {(hit/len(y_predict))*100}")
+            X_train.append(X[i])
+            y_train.append(y[i])
+    return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
+
+def CalibratedClassification(classifier: str, path2db: str, **argv):
+    """Run classification on database data.
+
+    Args:
+        classifier (str): Type of the classifier. 
+        path2db (str): Path to database file. 
+
+    Returns:
+        bool: Returns false if bad classifier was given. 
+    """
+    from sklearn.calibration import CalibratedClassifierCV
+    X_train, y_train, X_calib, y_calib, X_valid, y_valid = data_preprocessing_for_calibrated_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    fig, ax = plt.subplots()
+    model = None
+    if classifier == 'KNN':
+        model = KNNClassification(X_train, y_train, 15)
+    elif classifier == 'SGD':
+        model = SGDClassification(X_train, y_train)
+    elif classifier == 'GP':
+        model = GPClassification(X_train, y_train)
+    elif classifier == 'GNB':
+        model = GNBClassification(X_train, y_train)
+    elif classifier == 'MLP':
+        model = MLPClassification(X_train, y_train)
+    elif classifier == 'VOTE':
+        model = VotingClassification(X_train, y_train)
+    else:
+        print(f"Error: bad classifier {classifier}")
+        return False
+    model_calibrated = CalibratedClassifierCV(model, method="sigmoid", cv="prefit")
+    model_calibrated.fit(X_calib, y_calib)
+    ValidateClassification(model_calibrated, X_valid, y_valid)
+    xx, yy= np.meshgrid(np.arange(0, 2, 0.005), np.arange(0, 2, 0.005))
+    X_visualize = np.zeros(shape=(xx.shape[0]*xx.shape[1],6))
+    counter = 0
+    for i in range(0,xx.shape[0]):
+        for j in range(0,xx.shape[1]):
+            X_visualize[counter,0] = xx[j,i]
+            X_visualize[counter,1] = yy[j,i]
+            X_visualize[counter,2] = xx[j,i]
+            X_visualize[counter,3] = yy[j,i]
+            X_visualize[counter,4] = xx[j,i]
+            X_visualize[counter,5] = yy[j,i]
+            counter += 1
+    y_visualize = model.predict(X_visualize)
+    ax.pcolormesh(xx,yy,y_visualize.reshape(xx.shape))
+    ax.scatter(X_train[:, 0], 1-X_train[:, 1], c=y_train, edgecolors='k')
+    ax.set_ylim(0,2)
+    ax.set_xlim(0,2)
+    plt.show()
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
+        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    filename = os.path.join(savepath, f"calibrated_model_{classifier}.joblib")
+    if model is not None:
+        joblib.dump(model, filename)
+    else:
+        print("Error: model is None, model was not saved.")
+
+def CalibratedClassificationWorker(path2db: str, **argv):
+    """Run all of the classification methods implemented.
+
+    Args:
+        path2db (str): Path to database file. 
+    """
+    from sklearn.calibration import CalibratedClassifierCV
+    X_train, y_train, X_calib, y_calib, X_valid, y_valid = data_preprocessing_for_calibrated_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    knn = KNNClassification(X_train, y_train, 15)
+    sgd = SGDClassification(X_train, y_train)
+    gp = GPClassification(X_train, y_train)
+    gnb = GNBClassification(X_train, y_train)
+    mlp = MLPClassification(X_train, y_train)
+    #vote = VotingClassification(X_train, y_train)
+    models = {
+        'KNN' : knn,
+        'SGD' : sgd,
+        'GP' : gp,
+        'GNB' : gnb,
+        'MLP' : mlp,
+    }
+    for cls in models:
+        print(cls)
+        calibrated = CalibratedClassifierCV(models[cls], method="sigmoid", cv="prefit", n_jobs=18).fit(X_calib, y_calib)
+        ValidateClassification(calibrated, X_valid, y_valid)
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1470,8 +1665,10 @@ def main():
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
     argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
+    argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
+    argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1514,6 +1711,10 @@ def main():
         Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.ClassificationWorker:
         ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    if args.CalibratedClassification:
+        CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    if args.CalibratedClassificationWorker:
+        CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 

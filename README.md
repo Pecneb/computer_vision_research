@@ -537,12 +537,12 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 
 | Classification | Accuracy - non calibrated | Accuracy - calibrated |
 |----------------|---------------------------|-----------------------|
-| KNN            | 71.4286 %                 |                       |
-| SGD            | 26.5873 %                 |                       |
-| GP             | 31.3492 %                 |                       |
-| GNB            | 21.2301 %                 |                       |
-| MLP            | 39.8809 %                 |                       |
-| Voting         | 44.0476 %                 |                       |
+| KNN            | 70.6185 %                 | 46.0154 %             |
+| SGD            | 39.1752 %                 | 25.1928 %             |
+| GP             | 42.2680 %                 | 31.1053 %             |
+| GNB            | 27.3195 %                 | 28.7917 %             |
+| MLP            | 50.2577 %                 | 30.3341 %             |
+| Voting         | 47.9381 %                 |                       |
 
 #### 0001_2_308min.mp4
 
@@ -550,11 +550,11 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 
 | Classification | Accuracy - non calibrated | Accuracy - calibrated |
 |----------------|---------------------------|-----------------------|
-| KNN            | 77.0967 %                 |                       |
-| SGD            | 50.3227 %                 |                       |
-| GP             | 58.3870 %                 |                       |
-| GNB            | 54.1935 %                 |                       |
-| MLP            | 67.7419 %                 |                       |
+| KNN            | 77.0967 %                 | 72.1934 %             |
+| SGD            | 50.3227 %                 | 62.6943 %             |
+| GP             | 58.3870 %                 | 64.0759 %             |
+| GNB            | 54.1935 %                 | 62.5215 %             |
+| MLP            | 67.7419 %                 | 66.1485 %             |
 | Voting         | 68.3871 %                 |                       |
 
 ## Examples
