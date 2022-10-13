@@ -212,6 +212,8 @@ Propability Calibration
 KNN(KNearestNeighbours), RNN(RadiusNearestNeighbours), SVM(SupportVectorMachines), NN models
 Voting Classifier, Naive Bayes, Gaussian Process Classification (GPC), Stochastic Gradient Descent
 
+[Tuning the hyperparameters of an estimator](https://scikit-learn.org/stable/modules/grid_search.html#searching-for-optimal-parameters-with-successive-halving)
+
 #### New feature vectors
 
 Create feature vectors for Classification. A feature vector could be the start middle and end detection.
