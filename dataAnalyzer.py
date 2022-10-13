@@ -18,6 +18,7 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+from concurrent.futures import process
 import time
 import joblib
 import matplotlib
@@ -27,7 +28,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import tqdm
-from sklearn.base import ClassifierMixin
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -383,7 +383,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))): 
             filteredTracks.append(obj)
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
-    return filter_out_false_positive_detections(filteredTracks, 0.3)
+    return filter_out_false_positive_detections(filteredTracks, 0.4)
 
 def filter_tracks(trackedObjects: list, label="car"):
     """Only return objects with given label.
