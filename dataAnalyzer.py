@@ -18,10 +18,9 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
-from concurrent.futures import process
 import time
 import joblib
-import matplotlib
+from sklearn.neighbors import KNeighborsClassifier
 import databaseLoader
 from dataManagementClasses import Detection, TrackedObject
 import numpy as np
@@ -1397,6 +1396,20 @@ def VotingClassification(X: np.ndarray, y: np.ndarray):
     ).fit(X, y)
     return classifier
 
+def SVMClassficitaion(X: np.ndarray, y: np.ndarray):
+    """Run Support Vector Machine classification with RBF kernel.
+
+    Args:
+        X (np.ndarray): Dataset
+        y (np.ndarray): labels
+
+    Returns:
+        skelarn classifier: SVM model
+    """
+    from sklearn.svm import SVC
+    classifier = SVC().fit(X, y)
+    return classifier
+
 def Classification(classifier: str, path2db: str, **argv):
     """Run classification on database data.
 
@@ -1426,6 +1439,8 @@ def Classification(classifier: str, path2db: str, **argv):
         model = MLPClassification(X_train, y_train)
     elif classifier == 'VOTE':
         model = VotingClassification(X_train, y_train)
+    elif classifier == 'SVM':
+        model = SVMClassficitaion(X_train, y_train)
     else:
         print(f"Error: bad classifier {classifier}")
         return False
@@ -1616,28 +1631,62 @@ def CalibratedClassificationWorker(path2db: str, **argv):
         path2db (str): Path to database file. 
     """
     from sklearn.calibration import CalibratedClassifierCV
-    X_train, y_train, X_calib, y_calib, X_valid, y_valid = data_preprocessing_for_calibrated_classifier(path2db, min_samples=argv['min_samples'], 
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'])
-    knn = KNNClassification(X_train, y_train, 15)
-    sgd = SGDClassification(X_train, y_train)
-    gp = GPClassification(X_train, y_train)
-    gnb = GNBClassification(X_train, y_train)
-    mlp = MLPClassification(X_train, y_train)
     #vote = VotingClassification(X_train, y_train)
     models = {
-        'KNN' : knn,
-        'SGD' : sgd,
-        'GP' : gp,
-        'GNB' : gnb,
-        'MLP' : mlp,
+        'KNN' : KNeighborsClassifier(n_neighbors=15),
+        'SGD' : SGDClassifier(),
+        'GP' : GaussianProcessClassifier(n_jobs=argv['n_jobs']),
+        'GNB' : GaussianNB(),
+        'MLP' : MLPClassifier()
     }
     for cls in models:
         print(cls)
-        calibrated = CalibratedClassifierCV(models[cls], method="sigmoid", cv="prefit", n_jobs=18).fit(X_calib, y_calib)
+        calibrated = CalibratedClassifierCV(models[cls], method="sigmoid", n_jobs=18).fit(X_train, y_train)
         ValidateClassification(calibrated, X_valid, y_valid)
+
+def BinaryClassificationWorker(path2db: str, **argv):
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    from classifier import BinaryClassifier
+    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    models = {
+        'KNN' : KNeighborsClassifier,
+        'GP' : GaussianProcessClassifier,
+        'GNB' : GaussianNB,
+        'MLP' : MLPClassifier
+    }
+    for clr in models:
+        binaryModel = BinaryClassifier(X_train, y_train)
+        if clr == 'KNN':
+            binaryModel.init_models(models[clr], n_neighbors=15)
+        if clr == 'MLP':
+            binaryModel.init_models(models[clr], max_iter=1000)
+        else:
+            binaryModel.init_models(models[clr])
+        binaryModel.fit()
+        acc = binaryModel.validate(X_valid, y_valid, 0.5)
+        print(f"{clr} accuracy: {acc*100} %")
+
+# TODO talk about predict_proba method of sklearn classifiers 
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1664,11 +1713,12 @@ def main():
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM'])
     argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
     argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
+    argparser.add_argument("--BinaryClassificationWorker", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1715,6 +1765,8 @@ def main():
         CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    if args.BinaryClassificationWorker:
+        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 
