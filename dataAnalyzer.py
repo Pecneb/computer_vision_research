@@ -1263,6 +1263,20 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
+def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
+    featureVectors = []
+    newLabels = []
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                #featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
+                #                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
+                newLabels.append(labels[j])
+    return np.array(featureVectors), np.array(newLabels)
+
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
@@ -1283,7 +1297,8 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
-    X, y = make_features_for_classification(filteredTracks, 6, labels)
+    #X, y = make_features_for_classification(filteredTracks, 6, labels)
+    X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
@@ -1500,6 +1515,9 @@ def ClassificationWorker(path2db: str, **argv):
     ValidateClassification(model, X_valid, y_valid)
     print("VOTE")
     model = VotingClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
+    print("SVM")
+    model = SVMClassficitaion(X_train, y_train)
     ValidateClassification(model, X_valid, y_valid)
 
 def ValidateClassification(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray):

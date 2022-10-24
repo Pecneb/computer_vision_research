@@ -537,29 +537,29 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 
 `python3 dataAnalyzer.py -db research_data/0002_2_308min/0002_2_308min.db --min_samples 10 --max_eps 0.1 --xi 0.15 --min_cluster_size 10 --ClassificationWorker`
 
-| Classification | Accuracy - non calibrated | Accuracy - calibrated | Accuracy - five fold method | Binary - threshold 0.5    |
+| Classification | Accuracy - non calibrated | Accuracy - calibrated | Accuracy - five fold method | Accuracy - FeatureVectorShape (enter, enter_vel, middle, exit, exit_vel)    |
 |----------------|---------------------------|-----------------------|-----------------------------|---------------------------|
-| KNN            | 70.6185 %                 | 46.0154 %             | 62.6898 %                   |                  |
-| SGD            | 39.1752 %                 | 25.1928 %             | 38.8286 %                   |                           |
-| GP             | 42.2680 %                 | 31.1053 %             | 39.6963 %                   |                  |
-| GNB            | 27.3195 %                 | 28.7917 %             | 30.3687 %                   |                  |
-| MLP            | 50.2577 %                 | 30.3341 %             | 43.3839 %                   |                  |
-| Voting         | 47.9381 %                 |                       |                             |                           |
+| KNN            | 70.6185 %                 | 46.0154 %             | 62.6898 %                   | 70.3608 %                 |
+| SGD            | 39.1752 %                 | 25.1928 %             | 38.8286 %                   | 42.7835 %                 |
+| GP             | 42.2680 %                 | 31.1053 %             | 39.6963 %                   | 42.5257 %                 |
+| GNB            | 27.3195 %                 | 28.7917 %             | 30.3687 %                   | 37.3711 %                 |
+| MLP            | 50.2577 %                 | 30.3341 %             | 43.3839 %                   | 53.8659 %                 |
+| Voting         | 47.9381 %                 |                       |                             | 60.0515 %                 |
 | SVM            | 55.0976 %                 |                       |                             |                           |
 
 #### 0001_2_308min.mp4
 
 `python3 dataAnalyzer.py -db research_data/0001_2_308min/0001_2_308min.db --min_samples 10 --max_eps 0.2 --xi 0.15 --min_cluster_size 10 --ClassificationWorker`
 
-| Classification | Accuracy - non calibrated | Accuracy - calibrated | Accuracy - five fold method | Binary - threshold 0.5   |
+| Classification | Accuracy - non calibrated | Accuracy - calibrated | Accuracy - five fold method | Accuracy - FeatureVectorShape (enter, enter_vel, middle, exit, exit_vel)   |
 |----------------|---------------------------|-----------------------|-----------------------------|--------------------------|
-| KNN            | 77.0967 %                 | 72.1934 %             |                             |                 |
-| SGD            | 50.3227 %                 | 62.6943 %             |                             |                          |
-| GP             | 58.3870 %                 | 64.0759 %             |                             |                 |
-| GNB            | 54.1935 %                 | 62.5215 %             |                             |                 |
-| MLP            | 67.7419 %                 | 66.1485 %             |                             |                 |
-| Voting         | 68.3871 %                 |                       |                             |                          |
-| SVM            | 49.1758 %                 |                       |                             |                          |
+| KNN            | 77.0967 %                 | 72.1934 %             |                             | 80.2768 %                |
+| SGD            | 50.3227 %                 | 62.6943 %             |                             | 62.4567 %                |
+| GP             | 58.3870 %                 | 64.0759 %             |                             | 62.2837 %                |
+| GNB            | 54.1935 %                 | 62.5215 %             |                             | 69.7231 %                |
+| MLP            | 67.7419 %                 | 66.1485 %             |                             | 73.7024 %                |
+| Voting         | 68.3871 %                 |                       |                             | 72.6643 %                |
+| SVM            | 49.1758 %                 |                       |                             | 68.5121 %                |
 
 ## Examples
 

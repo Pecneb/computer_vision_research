@@ -1,7 +1,7 @@
 import numpy
 from sklearn.base import ClassifierMixin
 
-class BinaryClassifier(ClassifierMixin):
+class BinaryClassifier(object):
     """Base Binary Classifier
 
     Attributes:
@@ -96,5 +96,6 @@ class BinaryClassifier(ClassifierMixin):
         ft = 0
         for i in range(y_test.shape[0]):
             if predict_proba_results[i, y_test[i]] >= threshold:
-                
-        return (hit / y_test.shape[0])
+                pass
+        #TODO
+        return None
