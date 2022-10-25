@@ -210,7 +210,7 @@ Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \ma
 Propability Calibration
 
 KNN(KNearestNeighbours), RNN(RadiusNearestNeighbours), SVM(SupportVectorMachines), NN models
-Voting Classifier, Naive Bayes, Gaussian Process Classification (GPC), Stochastic Gradient Descent
+Voting Classifier, Naive Bayes, Gaussian Process Classification (GPC), Stochastic Gradient Descent (Try out `log_loss` and `modified_huber`, those loss functions enable multi class classification as "one vs. all" classifier, it is implemented as combining binary classifiers together)
 
 [Tuning the hyperparameters of an estimator](https://scikit-learn.org/stable/modules/grid_search.html#searching-for-optimal-parameters-with-successive-halving)
 
