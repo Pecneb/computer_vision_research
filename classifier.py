@@ -95,7 +95,17 @@ class BinaryClassifier(object):
         ff = 0
         ft = 0
         for i in range(y_test.shape[0]):
-            if predict_proba_results[i, y_test[i]] >= threshold:
-                pass
-        #TODO
-        return None
+            for j in range(len(predict_proba_results[i])): 
+                if y_test[i] == j:
+                    if predict_proba_results[i, j] >= threshold:
+                        tt += 1
+                    else:
+                        tf += 1
+                if y_test[i] != j:
+                    if predict_proba_results[i, j] >= threshold:
+                        ft += 1
+                    else:
+                        ff += 1
+        acc = 0.0
+        #TODO: calculate accuracy
+        return 
