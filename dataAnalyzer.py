@@ -1303,8 +1303,8 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
-    X, y = make_features_for_classification(filteredTracks, 6, labels)
-    #X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
+    #X, y = make_features_for_classification(filteredTracks, 6, labels)
+    X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
