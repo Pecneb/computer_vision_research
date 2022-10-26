@@ -1690,19 +1690,22 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'KNN' : KNeighborsClassifier,
         'GP' : GaussianProcessClassifier,
         'GNB' : GaussianNB,
-        'MLP' : MLPClassifier
+        'MLP' : MLPClassifier,
+        'SGD' : SGDClassifier
     }
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train)
         if clr == 'KNN':
             binaryModel.init_models(models[clr], n_neighbors=15)
         if clr == 'MLP':
-            binaryModel.init_models(models[clr], max_iter=1000)
+            binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
+        if clr == 'SGD':
+            binaryModel.init_models(models[clr], loss="modified_huber")
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
-        acc = binaryModel.validate(X_valid, y_valid, 0.5)
-        print(f"{clr} accuracy: {acc*100} %")
+        sens = binaryModel.validate(X_valid, y_valid, 0.5)
+        print(f"{clr} sensitivity: {sens}")
 
 # TODO talk about predict_proba method of sklearn classifiers 
 

@@ -95,17 +95,17 @@ class BinaryClassifier(object):
         tn = 0 # True negative --> predicting false and it is really false
         fp = 0 # False positive (type I error) --> predicting true, although it is false 
         for i, _y_test in enumerate(y_test):
-            for j, predicted_result in enumerate(j, predict_proba_results[i]): 
-                if _y_test == j: # if j is at the right test class label
-                    if predicted_result >= threshold: # see if our prediction is right
-                        tp += 1 # then increment the true positive counter by one
-                    else: # if the predicted result is not equal to or above threshold, then it is a bad prediction
-                        fn += 1 # then increment the false positive (type I error) counter by one
-                if _y_test != j: # if j is not at the right class label
-                    if predicted_result >= threshold: # then, can check if our prediction is equal to or above the threshold
-                        fp += 1 # if eqial or above, then it is a false negative (type II error), so fn is incremented by one
-                    else: # if the prediction is correct
-                        tn += 1 # increment true positive by one
+            for j, predicted_result in enumerate(predict_proba_results[i]): 
+                if _y_test == j:
+                    if predicted_result >= threshold:
+                        tp += 1
+                    else:
+                        fn += 1
+                if _y_test != j:
+                    if predicted_result < threshold:
+                        tn += 1
+                    else:
+                        fp += 1
         sensitivity = tp / (tp + fn)
         #TODO: partially done, only calculationg sensitivity
         return sensitivity
