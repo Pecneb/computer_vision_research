@@ -27,6 +27,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import tqdm
+import pandas as pd
+# disable sklearn warning
+def warn(*arg, **args):
+    pass
+import warnings
+warnings.warn = warn
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -1297,8 +1303,8 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
-    #X, y = make_features_for_classification(filteredTracks, 6, labels)
-    X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
+    X, y = make_features_for_classification(filteredTracks, 6, labels)
+    #X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
@@ -1340,7 +1346,7 @@ def SGDClassification(X: np.ndarray, y: np.ndarray):
         skelarn classifier: SGD model 
     """
     from sklearn.linear_model import SGDClassifier
-    classifier = SGDClassifier().fit(X, y)
+    classifier = SGDClassifier(loss="modified_huber").fit(X, y)
     return classifier
 
 def GPClassification(X: np.ndarray, y: np.ndarray):
@@ -1382,7 +1388,7 @@ def MLPClassification(X: np.ndarray, y: np.ndarray):
         skelarn classifier: MLPC model 
     """
     from sklearn.neural_network import MLPClassifier
-    classifier = MLPClassifier().fit(X,y)
+    classifier = MLPClassifier(max_iter=1000).fit(X,y)
     return classifier
 
 def VotingClassification(X: np.ndarray, y: np.ndarray):
@@ -1478,14 +1484,7 @@ def Classification(classifier: str, path2db: str, **argv):
     ax.set_ylim(0,2)
     ax.set_xlim(0,2)
     plt.show()
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
-        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    filename = os.path.join(savepath, f"model_{classifier}.joblib")
-    if model is not None:
-        joblib.dump(model, filename)
-    else:
-        print("Error: model is None, model was not saved.")
+    save_model(path2db, str("model_"+classifier), model)
 
 def ClassificationWorker(path2db: str, **argv):
     """Run all of the classification methods implemented.
@@ -1633,14 +1632,7 @@ def CalibratedClassification(classifier: str, path2db: str, **argv):
     ax.set_ylim(0,2)
     ax.set_xlim(0,2)
     plt.show()
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
-        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    filename = os.path.join(savepath, f"calibrated_model_{classifier}.joblib")
-    if model is not None:
-        joblib.dump(model, filename)
-    else:
-        print("Error: model is None, model was not saved.")
+    save_model(path2db, str("calibrated_model_"+classifier), model_calibrated)
 
 def CalibratedClassificationWorker(path2db: str, **argv):
     """Run all of the classification methods implemented.
@@ -1691,21 +1683,78 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'GP' : GaussianProcessClassifier,
         'GNB' : GaussianNB,
         'MLP' : MLPClassifier,
-        'SGD' : SGDClassifier
+        'SGD' : SGDClassifier,
+        'SVM' : SVC
     }
+    table = pd.DataFrame()
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train)
         if clr == 'KNN':
             binaryModel.init_models(models[clr], n_neighbors=15)
-        if clr == 'MLP':
+        elif clr == 'MLP':
             binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
-        if clr == 'SGD':
+        elif clr == 'SGD':
             binaryModel.init_models(models[clr], loss="modified_huber")
+        elif clr == 'SVM':
+            binaryModel.init_models(models[clr], kernel='rbf', probability=True)
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
-        sens = binaryModel.validate(X_valid, y_valid, 0.5)
-        print(f"{clr} sensitivity: {sens}")
+        accuracy_vector = binaryModel.validate(X_valid, y_valid, 0.5)
+        table[clr] = accuracy_vector # add col to pandas dataframe
+        save_model(path2db, str("binary_"+clr), binaryModel) 
+    print(table.to_markdown()) # print out pandas dataframe in markdown table format.
+
+def BinaryClassification(classifier: str, path2db: str, **argv):
+    from classifier import BinaryClassifier
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'])
+    table = pd.DataFrame()
+    binaryModel = BinaryClassifier(X_train, y_train)
+    if classifier == 'KNN':
+        binaryModel.init_models(KNeighborsClassifier, n_neighbors=15)
+    if classifier == 'MLP':
+        binaryModel.init_models(MLPClassifier, max_iter=1000, solver="sgd")
+    if classifier == 'SGD':
+        binaryModel.init_models(SGDClassifier, loss="modified_huber")
+    if classifier == 'GP':
+        binaryModel.init_models(GaussianProcessClassifier)
+    if classifier == 'GNB':
+        binaryModel.init_models(GaussianNB)
+    if classifier == 'SVM':
+        binaryModel.init_models(SVC, kernel='rbf', probability=True)
+    binaryModel.fit()
+    accuracy_vector = binaryModel.validate(X_valid, y_valid, 0.5)
+    table[classifier] = accuracy_vector # add col to pandas dataframe
+    save_model(path2db, str("binary_"+classifier), binaryModel) 
+    print(table.to_markdown()) # print out pandas dataframe in markdown table format.
+
+def save_model(path2db: str, classifier_type: str, model):
+    """Save model to research_data dir.
+
+    Args:
+        path2db (str): Path to database file. 
+        classifier_type (str): Classifier name. 
+        model (Model): The model itself. 
+    """
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
+        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    filename = os.path.join(savepath, f"{classifier_type}.joblib")
+    if model is not None:
+        joblib.dump(model, filename)
+    else:
+        print("Error: model is None, model was not saved.")
+            
 
 # TODO talk about predict_proba method of sklearn classifiers 
 
@@ -1740,6 +1789,7 @@ def main():
     argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
     argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
     argparser.add_argument("--BinaryClassificationWorker", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
+    argparser.add_argument("--BinaryClassification", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1788,6 +1838,8 @@ def main():
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassificationWorker:
         BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    if args.BinaryClassification:
+        BinaryClassification(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
     #   test_shuffle(args.database)
 

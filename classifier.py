@@ -18,6 +18,7 @@ class BinaryClassifier(object):
     label_mtx_: numpy.ndarray
     models_: list
     class_proba_: numpy.ndarray
+
     
     def __init__(self, X: numpy.ndarray, y: numpy.ndarray):
         """Constructor of base BinaryClassifier that takes 2 arguments.
@@ -83,29 +84,32 @@ class BinaryClassifier(object):
     #TODO validation on each class
     def validate(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
         """Validate trained models.
-
         Args:
             X_test (numpy.ndarray): Validation dataset of shape( n_samples, n_features ). 
             y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
             threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
         predict_proba_results = self.predict_proba(X_test)
-        tp = 0 # True positive --> predicting true and it is really true 
-        fn = 0 # False negative (type II error) --> predicting false, although its true 
-        tn = 0 # True negative --> predicting false and it is really false
-        fp = 0 # False positive (type I error) --> predicting true, although it is false 
-        for i, _y_test in enumerate(y_test):
-            for j, predicted_result in enumerate(predict_proba_results[i]): 
+        accuracy_vector = []
+        for j in self.class_labels_[0]: 
+            tp = 0 # True positive --> predicting true and it is really true 
+            fn = 0 # False negative (type II error) --> predicting false, although its true 
+            tn = 0 # True negative --> predicting false and it is really false
+            fp = 0 # False positive (type I error) --> predicting true, although it is false
+            for i, _y_test in enumerate(y_test):
                 if _y_test == j:
-                    if predicted_result >= threshold:
+                    if predict_proba_results[i, j]>= threshold:
                         tp += 1
                     else:
                         fn += 1
-                if _y_test != j:
-                    if predicted_result < threshold:
+                else: 
+                    if predict_proba_results[i, j]< threshold:
                         tn += 1
                     else:
                         fp += 1
-        sensitivity = tp / (tp + fn)
-        #TODO: partially done, only calculationg sensitivity
-        return sensitivity
+            tp = tp/len(y_test)
+            tn = tn/len(y_test)
+            fn = fn/len(y_test)
+            fp = fp/len(y_test) 
+            accuracy_vector.append(tp+tn)
+        return accuracy_vector 
