@@ -90,22 +90,22 @@ class BinaryClassifier(object):
             threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
         predict_proba_results = self.predict_proba(X_test)
-        tt = 0
-        tf = 0
-        ff = 0
-        ft = 0
-        for i in range(y_test.shape[0]):
-            for j in range(len(predict_proba_results[i])): 
-                if y_test[i] == j:
-                    if predict_proba_results[i, j] >= threshold:
-                        tt += 1
-                    else:
-                        tf += 1
-                if y_test[i] != j:
-                    if predict_proba_results[i, j] >= threshold:
-                        ft += 1
-                    else:
-                        ff += 1
-        acc = 0.0
-        #TODO: calculate accuracy
-        return 
+        tp = 0 # True positive --> predicting true and it is really true 
+        fn = 0 # False negative (type II error) --> predicting false, although its true 
+        tn = 0 # True negative --> predicting false and it is really false
+        fp = 0 # False positive (type I error) --> predicting true, although it is false 
+        for i, _y_test in enumerate(y_test):
+            for j, predicted_result in enumerate(j, predict_proba_results[i]): 
+                if _y_test == j: # if j is at the right test class label
+                    if predicted_result >= threshold: # see if our prediction is right
+                        tp += 1 # then increment the true positive counter by one
+                    else: # if the predicted result is not equal to or above threshold, then it is a bad prediction
+                        fn += 1 # then increment the false positive (type I error) counter by one
+                if _y_test != j: # if j is not at the right class label
+                    if predicted_result >= threshold: # then, can check if our prediction is equal to or above the threshold
+                        fp += 1 # if eqial or above, then it is a false negative (type II error), so fn is incremented by one
+                    else: # if the prediction is correct
+                        tn += 1 # increment true positive by one
+        sensitivity = tp / (tp + fn)
+        #TODO: partially done, only calculationg sensitivity
+        return sensitivity
