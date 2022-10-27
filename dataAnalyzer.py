@@ -1687,6 +1687,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'SVM' : SVC
     }
     table = pd.DataFrame()
+    avgs = pd.DataFrame()
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train)
         if clr == 'KNN':
@@ -1704,6 +1705,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
         table[clr] = accuracy_vector # add col to pandas dataframe
         save_model(path2db, str("binary_"+clr), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
+    print(table.aggregate(np.average).to_markdown())
 
 def BinaryClassification(classifier: str, path2db: str, **argv):
     from classifier import BinaryClassifier
@@ -1733,7 +1735,7 @@ def BinaryClassification(classifier: str, path2db: str, **argv):
     if classifier == 'SVM':
         binaryModel.init_models(SVC, kernel='rbf', probability=True)
     binaryModel.fit()
-    accuracy_vector = binaryModel.validate(X_valid, y_valid, 0.5)
+    accuracy_vector = binaryModel.validate(X_valid, y_valid, 0.8)
     table[classifier] = accuracy_vector # add col to pandas dataframe
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
