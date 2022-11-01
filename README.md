@@ -256,6 +256,7 @@ Write predict_proba() output to Excel file with Pandas...
 ## 55 | Save all data to joblib file with trained classifier.
 
 
+
 ## Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
