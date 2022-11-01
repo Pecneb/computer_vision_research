@@ -226,6 +226,35 @@ Scikit-FeatureSelection
 
 https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
+## 8 | Threshold 4-6 Bence 
+## 8 | Balanced accuracy Bence
+## 21 | Monitor time in trajectory... Bence
+
+```python
+def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
+    #TODO add time vector
+    return featureVectors, labels, timeVector
+```
+
+## 21 | Build feature vectors from second half of trajectories. Bence 
+## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron
+
+Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
+
+## 21 | Count predictions under threshold probability value.
+
+Write predict_proba() output to Excel file with Pandas...
+
+## 34 | Close probability values???
+
+## Visualisation of predictions.
+
+### 55 | V_0.1
+
+### 89 | V_1.0
+
+## 55 | Save all data to joblib file with trained classifier.
+
 ## Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
@@ -546,6 +575,7 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 | MLP            | 50.2577 %                 | 30.3341 %             | 43.3839 %                   | 53.8659 %                 |
 | Voting         | 47.9381 %                 |                       |                             | 60.0515 %                 |
 | SVM            | 55.0976 %                 |                       |                             | 49.4845 %                 |
+| DT             |                           |                       |                             | 69.9300 %                 |
 
 #### 0001_2_308min.mp4
 
@@ -560,6 +590,7 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 | MLP            | 67.7419 %                 | 66.1485 %             |                             | 73.7024 %                |
 | Voting         | 68.3871 %                 |                       |                             | 72.6643 %                |
 | SVM            | 49.1758 %                 |                       |                             | 68.5121 %                |
+| DT             |                           |                       |                             |                          | 
 
 #### Binary classifier results
 

@@ -1431,6 +1431,17 @@ def SVMClassficitaion(X: np.ndarray, y: np.ndarray):
     classifier = SVC().fit(X, y)
     return classifier
 
+def DTClassification(X: np.ndarray, y: np.ndarray):
+    """Run decision tree classification.
+
+    Args:
+        X (np.ndarray): Dataset 
+        y (np.ndarray): labels
+    """
+    from sklearn.tree import DecisionTreeClassifier
+    classifier = DecisionTreeClassifier().fit(X, y)
+    return classifier
+
 def Classification(classifier: str, path2db: str, **argv):
     """Run classification on database data.
 
@@ -1462,11 +1473,13 @@ def Classification(classifier: str, path2db: str, **argv):
         model = VotingClassification(X_train, y_train)
     elif classifier == 'SVM':
         model = SVMClassficitaion(X_train, y_train)
+    elif classifier == 'DT':
+        model = DTClassification(X_train, y_train)
     else:
         print(f"Error: bad classifier {classifier}")
         return False
     ValidateClassification(model, X_valid, y_valid)
-    xx, yy= np.meshgrid(np.arange(0, 2, 0.005), np.arange(0, 2, 0.005))
+    """xx, yy= np.meshgrid(np.arange(0, 2, 0.005), np.arange(0, 2, 0.005))
     X_visualize = np.zeros(shape=(xx.shape[0]*xx.shape[1],6))
     counter = 0
     for i in range(0,xx.shape[0]):
@@ -1483,7 +1496,7 @@ def Classification(classifier: str, path2db: str, **argv):
     ax.scatter(X_train[:, 0], 1-X_train[:, 1], c=y_train, edgecolors='k')
     ax.set_ylim(0,2)
     ax.set_xlim(0,2)
-    plt.show()
+    plt.show()"""
     save_model(path2db, str("model_"+classifier), model)
 
 def ClassificationWorker(path2db: str, **argv):
@@ -1518,6 +1531,9 @@ def ClassificationWorker(path2db: str, **argv):
     print("SVM")
     model = SVMClassficitaion(X_train, y_train)
     ValidateClassification(model, X_valid, y_valid)
+    print("DT")
+    model = DTClassification(X_train, y_train)
+    ValidateClassification(model, X_valid, y_valid)
 
 def ValidateClassification(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray):
     """Validate fitted classification model.
@@ -1535,6 +1551,38 @@ def ValidateClassification(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray):
     assert len(y_predict) == len(y_valid)
     print(f"Number of mislabeled points out of a total {X_valid.shape[0]} points : {(y_valid != y_predict).sum()} \nAccuracy: {(1-((y_valid != y_predict).sum() / X_valid.shape[0])) * 100} %")
 
+def ValidateClassification_Probability(clfmodel, X_valid: np.ndarray, y_valid: np.ndarray, threshold: np.float64):
+    """Calculate accuracy of classification model using the predict_proba method of the classifier.
+
+    Args:
+        clfmodel (str, model): Can be a path to model file or model. 
+        X_valid (np.ndarray): Test dataset. 
+        y_valid (np.ndarray):  Test dataset's labeling.
+    """
+    if type(clfmodel) is str:
+        model = joblib.load(clfmodel)
+    else:
+        model = clfmodel
+    y_predict_proba = model.predict_proba(X_valid)
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    for i, y_proba_vec in enumerate(y_predict_proba):
+        for j, y_proba in enumerate(y_proba_vec):
+            if j == y_valid[i]:
+                if y_proba >= threshold:
+                    tp += 1 
+                else:
+                    fn += 1
+            else:
+                if y_proba < threshold:
+                    tn += 1
+                else:
+                    fp +=1
+    #TODO
+    return True 
+                
 def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
@@ -1673,6 +1721,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
     from classifier import BinaryClassifier
+    from sklearn.tree import DecisionTreeClassifier
     X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
@@ -1684,10 +1733,12 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'GNB' : GaussianNB,
         'MLP' : MLPClassifier,
         'SGD' : SGDClassifier,
-        'SVM' : SVC
+        'SVM' : SVC,
+        "DT" : DecisionTreeClassifier
     }
     table = pd.DataFrame()
     avgs = pd.DataFrame()
+    table2 = pd.DataFrame()
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train)
         if clr == 'KNN':
@@ -1701,11 +1752,15 @@ def BinaryClassificationWorker(path2db: str, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
-        accuracy_vector = binaryModel.validate(X_valid, y_valid, 0.5)
+        accuracy_vector, balanced, proba = binaryModel.validate(X_valid, y_valid, 0.5)
         table[clr] = accuracy_vector # add col to pandas dataframe
+        table2[clr] = balanced 
         save_model(path2db, str("binary_"+clr), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
     print(table.aggregate(np.average).to_markdown())
+    print(table2.to_markdown())
+    print(table2.aggregate(np.average).to_markdown())
+    
 
 def BinaryClassification(classifier: str, path2db: str, **argv):
     from classifier import BinaryClassifier
@@ -1785,7 +1840,7 @@ def main():
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
     argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM'])
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
     argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")

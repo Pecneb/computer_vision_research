@@ -1,5 +1,6 @@
 import numpy
 from sklearn.base import ClassifierMixin
+from sklearn.metrics import balanced_accuracy_score
 
 class BinaryClassifier(object):
     """Base Binary Classifier
@@ -91,6 +92,7 @@ class BinaryClassifier(object):
         """
         predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []
+        balanced_accuracy = []
         for j in self.class_labels_[0]: 
             tp = 0 # True positive --> predicting true and it is really true 
             fn = 0 # False negative (type II error) --> predicting false, although its true 
@@ -107,9 +109,19 @@ class BinaryClassifier(object):
                         tn += 1
                     else:
                         fp += 1
+            if tp + fn == 0:
+                sens = 0
+            else:
+                sens = tp/(tp+fn)
+            if (tn + fp) == 0:
+                spec = 0
+            else:
+                spec = tn/(tn+fp)
+            balanc = (sens + spec) / 2
             tp = tp/len(y_test)
             tn = tn/len(y_test)
             fn = fn/len(y_test)
             fp = fp/len(y_test) 
             accuracy_vector.append(tp+tn)
-        return accuracy_vector 
+            balanced_accuracy.append(balanc)
+        return accuracy_vector, balanced_accuracy, predict_proba_results
