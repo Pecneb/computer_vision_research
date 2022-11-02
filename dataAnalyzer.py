@@ -1318,7 +1318,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
         else:
             X_train.append(X[i])
             y_train.append(y[i])
-    return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test)
+    return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test), filteredTracks
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
@@ -1452,7 +1452,7 @@ def Classification(classifier: str, path2db: str, **argv):
     Returns:
         bool: Returns false if bad classifier was given. 
     """
-    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1505,7 +1505,7 @@ def ClassificationWorker(path2db: str, **argv):
     Args:
         path2db (str): Path to database file. 
     """
-    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1695,7 +1695,7 @@ def CalibratedClassificationWorker(path2db: str, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1722,7 +1722,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
     from sklearn.svm import SVC
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
-    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1736,11 +1736,9 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'SVM' : SVC,
         "DT" : DecisionTreeClassifier
     }
-    table = pd.DataFrame()
-    avgs = pd.DataFrame()
     table2 = pd.DataFrame()
     for clr in models:
-        binaryModel = BinaryClassifier(X_train, y_train)
+        binaryModel = BinaryClassifier(X_train, y_train, tracks)
         if clr == 'KNN':
             binaryModel.init_models(models[clr], n_neighbors=15)
         elif clr == 'MLP':
@@ -1752,12 +1750,9 @@ def BinaryClassificationWorker(path2db: str, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
-        accuracy_vector, balanced, proba = binaryModel.validate(X_valid, y_valid, 0.5)
-        table[clr] = accuracy_vector # add col to pandas dataframe
+        balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         table2[clr] = balanced 
         save_model(path2db, str("binary_"+clr), binaryModel) 
-    print(table.to_markdown()) # print out pandas dataframe in markdown table format.
-    print(table.aggregate(np.average).to_markdown())
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
     
@@ -1770,13 +1765,13 @@ def BinaryClassification(classifier: str, path2db: str, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    X_train, y_train, X_valid, y_valid = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'])
     table = pd.DataFrame()
-    binaryModel = BinaryClassifier(X_train, y_train)
+    binaryModel = BinaryClassifier(X_train, y_train, tracks)
     if classifier == 'KNN':
         binaryModel.init_models(KNeighborsClassifier, n_neighbors=15)
     if classifier == 'MLP':
@@ -1823,7 +1818,7 @@ def main():
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--kmeans_batch_plot", help="Run batch plotter on kmeans clustering.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="KMEANS, SPECTRAL parameter: number of clusters to make.")
-    argparser.add_argument("--threshold", type=float, default=0.01, help="Threshold value for filtering algorithm that filters out the best detections.")
+    argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that filters out the best detections.")
     argparser.add_argument("--spectral", help="Use spectral flag to run spectral clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--spectral_batch_plot", help="Run batch plotter on spectral clustering.", action="store_true", default=False)
     argparser.add_argument("--affinity_on_enters_and_exits", help="Use this flag to run affinity propagation clustering on extracted feature vectors.", default=False, action="store_true")
@@ -1894,7 +1889,7 @@ def main():
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassificationWorker:
-        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
     if args.BinaryClassification:
         BinaryClassification(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
