@@ -255,6 +255,10 @@ Write predict_proba() output to Excel file with Pandas...
 
 ## 55 | Save all data to joblib file with trained classifier.
 
+## GPU Accelarated pandas and scikit-learn.
+
+[cuML](https://github.com/rapidsai/cuml)
+[cuDF](https://github.com/rapidsai/cudf)
 
 ## Documentation
 

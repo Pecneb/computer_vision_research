@@ -1264,12 +1264,20 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
                 featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
-                #featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
-                #                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
 def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray: featureVectors, labels 
+    """
     featureVectors = []
     newLabels = []
     for j in range(len(trackedObjects)):
@@ -1278,10 +1286,56 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
                 featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
-                #featureVectors.append(np.array([((trackedObjects[j].history[i].X-trackedObjects[j].history[i+midstep].X)**2+(trackedObjects[j].history[i].Y-trackedObjects[j].history[i+midstep].Y)**2)**0.5,
-                #                                    ((trackedObjects[j].history[i+midstep].X-trackedObjects[j].history[i+step].X)**2+(trackedObjects[j].history[i+midstep].Y-trackedObjects[j].history[i+step].Y)**2)**0.5]))
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
+
+def make_features_for_classification_velocity_time(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray, np.ndarray: featureVectors, labels, timeOfFeatureVectors
+    """
+    featureVectors = []
+    newLabels = []
+    time = []
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                newLabels.append(labels[j])
+                time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
+    return np.array(featureVectors), np.array(newLabels), np.array(time)
+
+def make_features_for_classification_velocity_time_second_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray, np.ndarray: featureVectors, labels, timeOfFeatureVectors
+    """
+    featureVectors = []
+    newLabels = []
+    time = []
+    for j in range(len(trackedObjects)):
+        step = (len(trackedObjects[j].history)//2)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(len(trackedObjects[j].history)//2, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                newLabels.append(labels[j])
+                time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
+    return np.array(featureVectors), np.array(newLabels), np.array(time)
 
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
     """Preprocess database data for classification.
@@ -1304,21 +1358,25 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
-    X, y = make_features_for_classification_velocity(filteredTracks, 6, labels)
+    X, y, time = make_features_for_classification_velocity_time(filteredTracks, 12, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
     y_train = []
     X_test = []
     y_test = []
+    time_test = []
+    time_train = []
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
             y_test.append(y[i])
+            time_test.append(time[i])
         else:
             X_train.append(X[i])
             y_train.append(y[i])
-    return np.array(X_train), np.array(y_train), np.array(X_test), np.array(y_test), filteredTracks
+            time_train.append(time[i])
+    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(X_test), np.array(y_test), np.array(time_test), filteredTracks
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
@@ -1452,7 +1510,7 @@ def Classification(classifier: str, path2db: str, **argv):
     Returns:
         bool: Returns false if bad classifier was given. 
     """
-    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, _, X_valid, y_valid, _, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1505,7 +1563,7 @@ def ClassificationWorker(path2db: str, **argv):
     Args:
         path2db (str): Path to database file. 
     """
-    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, _, X_valid, y_valid, _, _= data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1695,7 +1753,7 @@ def CalibratedClassificationWorker(path2db: str, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    X_train, y_train, X_valid, y_valid, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, _, X_valid, y_valid, _, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -1722,7 +1780,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
     from sklearn.svm import SVC
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
-    X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+    X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
