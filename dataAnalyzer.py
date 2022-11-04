@@ -1337,7 +1337,7 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
                 time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
     return np.array(featureVectors), np.array(newLabels), np.array(time)
 
-def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -1358,7 +1358,10 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
-    X, y, time = make_features_for_classification_velocity_time(filteredTracks, 12, labels)
+    if from_half:
+        X, y, time = make_features_for_classification_velocity_time_second_half(filteredTracks, 12, labels)
+    else:
+        X, y, time = make_features_for_classification_velocity_time(filteredTracks, 12, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
@@ -1784,7 +1787,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
-                                                            n_jobs=argv['n_jobs'])
+                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
     models = {
         'KNN' : KNeighborsClassifier,
         'GP' : GaussianProcessClassifier,
@@ -1900,6 +1903,7 @@ def main():
     argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
     argparser.add_argument("--BinaryClassificationWorker", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
     argparser.add_argument("--BinaryClassification", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
+    argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
@@ -1947,7 +1951,7 @@ def main():
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassificationWorker:
-        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
+        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
     if args.BinaryClassification:
         BinaryClassification(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     #if args.test_shuffle:
