@@ -13,6 +13,7 @@ class BinaryClassifier(object):
         models (sklearn Classification models): Sklearn Classifiers fitted as binary Classifiers.
         class_proba_ (numpy.ndarray): Array of probabilities of the predictions made by the binary classifiers. Each i-th element in the array corresponds to the class number i. This array holds the most recent prediction's probabilities.
     """
+    trackData: list 
     X: numpy.ndarray
     y: numpy.ndarray
     class_labels_: numpy.ndarray
@@ -21,7 +22,7 @@ class BinaryClassifier(object):
     class_proba_: numpy.ndarray
 
     
-    def __init__(self, X: numpy.ndarray, y: numpy.ndarray):
+    def __init__(self, X: numpy.ndarray, y: numpy.ndarray, trackData):
         """Constructor of base BinaryClassifier that takes 2 arguments.
 
         Args:
@@ -30,6 +31,7 @@ class BinaryClassifier(object):
         """
         self.X = X
         self.y = y
+        self.trackData = trackData
         self.__make_class_labels_()
         self.__make_label_mtx_()
     
@@ -124,4 +126,4 @@ class BinaryClassifier(object):
             fp = fp/len(y_test) 
             accuracy_vector.append(tp+tn)
             balanced_accuracy.append(balanc)
-        return accuracy_vector, balanced_accuracy, predict_proba_results
+        return balanced_accuracy
