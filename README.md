@@ -943,7 +943,6 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
 
 ## Examples
 
-
 ## References
 
 ### Darknet-YOLO
@@ -995,3 +994,4 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
   organization={IEEE},  
   doi={10.1109/WACV.2018.00087}  
 }  
+
