@@ -1788,6 +1788,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+
     models = {
         'KNN' : KNeighborsClassifier,
         'GP' : GaussianProcessClassifier,
@@ -1797,7 +1798,14 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'SVM' : SVC,
         "DT" : DecisionTreeClassifier
     }
+
     table2 = pd.DataFrame()
+    probability_over_time = pd.DataFrame()
+
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables")):
+            os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train, tracks)
         if clr == 'KNN':
@@ -1811,8 +1819,20 @@ def BinaryClassificationWorker(path2db: str, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
+
         balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         table2[clr] = balanced 
+
+        probabilities = binaryModel.predict_proba(X_valid)
+        for i in range(probabilities.shape[1]):
+            probability_over_time[f"Class {i}"] = probabilities[:, i]
+        probability_over_time["Time_Enter"] = time_test[:, 0]
+        probability_over_time["Time_Mid"] = time_test[:, 1]
+        probability_over_time["Time_Exit"] = time_test[:, 2]
+        filename = os.path.join(savepath, f"{clr}.xlsx")
+        with pd.ExcelWriter(filename) as writer:
+            probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
+
         save_model(path2db, str("binary_"+clr), binaryModel) 
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
@@ -1867,9 +1887,6 @@ def save_model(path2db: str, classifier_type: str, model):
         joblib.dump(model, filename)
     else:
         print("Error: model is None, model was not saved.")
-            
-
-# TODO talk about predict_proba method of sklearn classifiers 
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
