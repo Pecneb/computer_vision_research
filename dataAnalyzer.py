@@ -1888,6 +1888,17 @@ def save_model(path2db: str, classifier_type: str, model):
     else:
         print("Error: model is None, model was not saved.")
 
+def load_model(path2model: str):
+    """Load classifier model.
+
+    Args:
+        path2model (str): Path to model. 
+
+    Returns:
+        BinaryClassifier: Trained binary classifier model. 
+    """
+    return joblib.load(path2model)
+
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
@@ -1921,6 +1932,7 @@ def main():
     argparser.add_argument("--BinaryClassificationWorker", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
     argparser.add_argument("--BinaryClassification", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
+    argparser.add_argument("--model", help="Load classifier.", type=str)
     #argparser.add_argument("--test_shuffle", action="store_true")
     #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
     args = argparser.parse_args()
