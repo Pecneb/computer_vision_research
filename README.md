@@ -245,7 +245,7 @@ Implement predict() method for BinaryClassifier class with np.max() and implemen
 
 Write predict_proba() output to Excel file with Pandas...
 
-## 34 | Close probability values???
+## 34 | Close probability values??? / Investigate cases when there is no solid prediction, e.g. probability vector has 2 or more identical or close values. 
 
 ## Visualisation of predictions.
 

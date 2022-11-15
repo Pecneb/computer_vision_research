@@ -1963,6 +1963,33 @@ def BinaryClassification(path2model: str, threshold: float):
             under_threshold += 1
     print(under_threshold)
 
+def investigateRenitent(path2model: str):
+    """Filter out renitent predictions, that cant predict which class the detections is really in.
+
+    Args:
+        path2model (str): Path to model. 
+    """
+    model = load_model(path2model)
+    _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
+    probas = model.predict_proba(X_test)
+
+    renitent_vector = []
+
+    for i, proba_vector in enumerate(probas):
+        unsure_counter = 0
+        max = np.max(proba_vector)
+        for j, p in enumerate(proba_vector):
+            if p == max:
+                unsure_counter += 1
+        if unsure_counter >= 2:
+            renitent_vector.append(X_test[i])
+            print(proba_vector)
+
+    renitent_vector = np.array(renitent_vector) 
+    fig, ax = plt.subplots()
+    ax.scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5)
+    plt.show()
+    print(len(renitent_vector))
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1999,8 +2026,7 @@ def main():
     argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
     argparser.add_argument("--model", help="Load classifier.", type=str)
     argparser.add_argument("--BinaryClassification", help="Run classification with trained model. Use --model flag to give the path to the trained model.", action="store_true", default=False)
-    #argparser.add_argument("--test_shuffle", action="store_true")
-    #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
+    argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -2028,10 +2054,7 @@ def main():
             optics_dbscan_worker(args.database, args.min_samples, args.xi, args.min_cluster_size, args.eps, n_jobs=args.n_jobs)
         else:
             optics_dbscan_worker(args.database, args.min_samples, args.xi, args.min_samples, args.eps, n_jobs=args.n_jobs)
-    #if args.affinity_on_enters_and_exits:
-    #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
-        #elbow_on_kmeans(args.database, args.threshold)
         elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans, n_jobs=args.n_jobs)
     if args.elbow_on_spectral:
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
@@ -2054,8 +2077,8 @@ def main():
             BinaryClassification(args.model, args.threshold)
         else:
             argparser.print_usage()
-    #if args.test_shuffle:
-    #   test_shuffle(args.database)
+    if args.plot_renitent_features:
+        investigateRenitent(args.model)
 
 if __name__ == "__main__":
     main()
