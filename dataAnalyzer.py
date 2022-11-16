@@ -1969,6 +1969,7 @@ def investigateRenitent(path2model: str):
     Args:
         path2model (str): Path to model. 
     """
+    start = time.time()
     model = load_model(path2model)
     _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
     probas = model.predict_proba(X_test)
@@ -1983,13 +1984,15 @@ def investigateRenitent(path2model: str):
                 unsure_counter += 1
         if unsure_counter >= 2:
             renitent_vector.append(X_test[i])
-            print(proba_vector)
-
+    print(f"Processing time: {time.time()-start}")
     renitent_vector = np.array(renitent_vector) 
     fig, ax = plt.subplots()
-    ax.scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5)
+    ax.scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
+    ax.scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
+    ax.scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
     plt.show()
-    print(len(renitent_vector))
+    print(f"Solid predictions: {len(probas)-len(renitent_vector)}")
+    print(f"Unsure predictions: {len(renitent_vector)}")
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
