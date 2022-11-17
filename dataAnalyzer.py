@@ -1974,6 +1974,7 @@ def investigateRenitent(path2model: str):
     _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
     probas = model.predict_proba(X_test)
 
+    sure_vector = []
     renitent_vector = []
 
     for i, proba_vector in enumerate(probas):
@@ -1984,13 +1985,27 @@ def investigateRenitent(path2model: str):
                 unsure_counter += 1
         if unsure_counter >= 2:
             renitent_vector.append(X_test[i])
+        else:
+            sure_vector.append(X_test[i])
     print(f"Processing time: {time.time()-start}")
+  
     renitent_vector = np.array(renitent_vector) 
-    fig, ax = plt.subplots()
-    ax.scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
-    ax.scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
-    ax.scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
+    sure_vector = np.array(sure_vector)
+  
+    fig, ax = plt.subplots(1,2, figsize=(20,10))
+  
+    ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
+    ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
+    ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
+    ax[0].set_title(f"Renitent predictions {len(renitent_vector)}")
+  
+    ax[1].scatter(sure_vector[:, 0], 1 - sure_vector[:, 1], s=2.5, c='g')
+    ax[1].scatter(sure_vector[:, 4], 1 - sure_vector[:, 5], s=2.5)
+    ax[1].scatter(sure_vector[:, 6], 1 - sure_vector[:, 7], s=2.5, c='r')
+    ax[1].set_title(f"Sure predictions {len(probas)-len(renitent_vector)}")
+  
     plt.show()
+  
     print(f"Solid predictions: {len(probas)-len(renitent_vector)}")
     print(f"Unsure predictions: {len(renitent_vector)}")
 
