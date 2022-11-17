@@ -1820,7 +1820,8 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
             binaryModel.init_models(models[clr])
         binaryModel.fit()
 
-        balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
+        balanced = binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'])
+        # balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         table2[clr] = balanced 
 
         probabilities = binaryModel.predict_proba(X_valid)
