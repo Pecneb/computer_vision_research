@@ -1,16 +1,61 @@
-numpy
-pytorch
-torchvision
-torchaduio
-cudatoolkit
-cudnn
-opencv
-matplotlib
-scipy
-scikit-learn
-pandas
-pyyaml
-seaborn
-tqdm
-GPUtil
-numba
+py           0.7.0
+certifi            2022.9.24
+cffi               1.15.1
+charset-normalizer 2.1.1
+colorama           0.4.5
+cryptography       37.0.4
+cycler             0.11.0
+et-xmlfile         1.0.1
+fonttools          4.37.3
+GPUtil             1.4.0
+idna               3.4
+Jinja2             3.1.2
+joblib             1.2.0
+kiwisolver         1.4.4
+llvmlite           0.38.1
+MarkupSafe         2.1.1
+matplotlib         3.5.2
+munkres            1.1.4
+numba              0.55.2
+numpy              1.22.4
+opencv-python      4.6.0
+openpyxl           3.0.10
+packaging          21.3
+pandas             1.4.3
+patsy              0.5.2
+Pillow             9.2.0
+pip                22.2.2
+ply                3.11
+pycparser          2.21
+pynndescent        0.5.7
+pyOpenSSL          22.0.0
+pyparsing          3.0.9
+PyQt5              5.15.7
+PyQt5-sip          12.11.0
+PySocks            1.7.1
+python-dateutil    2.8.2
+pytz               2022.2.1
+PyYAML             6.0
+requests           2.28.1
+scikit-learn       1.1.2
+scipy              1.8.1
+seaborn            0.11.2
+setuptools         65.3.0
+sip                6.6.2
+six                1.16.0
+statsmodels        0.13.2
+tabulate           0.9.0
+threadpoolctl      3.1.0
+toml               0.10.2
+torch              1.12.0.post202
+torchaudio         0.12.0
+torchvision        0.13.0a0+8069656
+tornado            6.2
+tqdm               4.64.0
+typing_extensions  4.3.0
+umap-learn         0.5.3
+unicodedata2       14.0.0
+urllib3            1.26.11
+wheel              0.37.1
+yellowbrick        1.5
+
