@@ -1774,7 +1774,7 @@ def CalibratedClassificationWorker(path2db: str, **argv):
         calibrated = CalibratedClassifierCV(models[cls], method="sigmoid", n_jobs=18).fit(X_train, y_train)
         ValidateClassification(calibrated, X_valid, y_valid)
 
-def BinaryClassificationWorker(path2db: str, **argv):
+def BinaryClassificationWorkerTrain(path2db: str, **argv):
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
@@ -1788,6 +1788,7 @@ def BinaryClassificationWorker(path2db: str, **argv):
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+
     models = {
         'KNN' : KNeighborsClassifier,
         'GP' : GaussianProcessClassifier,
@@ -1797,7 +1798,14 @@ def BinaryClassificationWorker(path2db: str, **argv):
         'SVM' : SVC,
         "DT" : DecisionTreeClassifier
     }
+
     table2 = pd.DataFrame()
+    probability_over_time = pd.DataFrame()
+
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables")):
+            os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train, tracks)
         if clr == 'KNN':
@@ -1811,14 +1819,26 @@ def BinaryClassificationWorker(path2db: str, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
+
         balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         table2[clr] = balanced 
+
+        probabilities = binaryModel.predict_proba(X_valid)
+        for i in range(probabilities.shape[1]):
+            probability_over_time[f"Class {i}"] = probabilities[:, i]
+        probability_over_time["Time_Enter"] = time_test[:, 0]
+        probability_over_time["Time_Mid"] = time_test[:, 1]
+        probability_over_time["Time_Exit"] = time_test[:, 2]
+        filename = os.path.join(savepath, f"{clr}.xlsx")
+        with pd.ExcelWriter(filename) as writer:
+            probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
+
         save_model(path2db, str("binary_"+clr), binaryModel) 
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
     
 
-def BinaryClassification(classifier: str, path2db: str, **argv):
+def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     from classifier import BinaryClassifier
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
@@ -1851,6 +1871,8 @@ def BinaryClassification(classifier: str, path2db: str, **argv):
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
 
+
+from classifier import BinaryClassifier
 def save_model(path2db: str, classifier_type: str, model):
     """Save model to research_data dir.
 
@@ -1867,9 +1889,110 @@ def save_model(path2db: str, classifier_type: str, model):
         joblib.dump(model, filename)
     else:
         print("Error: model is None, model was not saved.")
-            
 
-# TODO talk about predict_proba method of sklearn classifiers 
+def load_model(path2model: str) -> BinaryClassifier:
+    """Load classifier model.
+
+    Args:
+        path2model (str): Path to model. 
+
+    Returns:
+        BinaryClassifier: Trained binary classifier model. 
+    """
+    return joblib.load(path2model)
+
+def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): _description_
+        min_samples (int, optional): _description_. Defaults to 10.
+        max_eps (float, optional): _description_. Defaults to 0.1.
+        xi (float, optional): _description_. Defaults to 0.15.
+        min_cluster_size (int, optional): _description_. Defaults to 10.
+        n_jobs (int, optional): _description_. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: Return X and y train and test dataset 
+    """
+    thres = 0.5
+    featureVectors = makeFeatureVectorsNx4(model.trackData)
+    labels = cluster_optics_dbscan_on_featurevectors(featureVectors, min_samples, xi, min_cluster_size, max_eps, n_jobs) 
+    #X, y = make_features_for_classification(filteredTracks, 6, labels)
+    if from_half:
+        X, y, time = make_features_for_classification_velocity_time_second_half(model.trackData, 12, labels)
+    else:
+        X, y, time = make_features_for_classification_velocity_time(model.trackData, 12, labels)
+    X = X[y > -1]
+    y = y[y > -1]
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    time_test = []
+    time_train = []
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+            time_test.append(time[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+            time_train.append(time[i])
+    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(X_test), np.array(y_test), np.array(time_test)
+
+def BinaryClassification(path2model: str, threshold: float):
+    """Run binary classification with trained model.
+    Temporarily this function only counts the predictions under the threshold.
+
+    Args:
+        path2model (str): Path to model.
+    """
+    model = load_model(path2model)
+    _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
+    probabilities = model.predict_proba(X_test)
+    under_threshold = 0
+    for prob in probabilities:
+        under = True 
+        for p in prob:
+            if p > threshold:
+                under = False
+        if under:
+            under_threshold += 1
+    print(under_threshold)
+
+def investigateRenitent(path2model: str):
+    """Filter out renitent predictions, that cant predict which class the detections is really in.
+
+    Args:
+        path2model (str): Path to model. 
+    """
+    start = time.time()
+    model = load_model(path2model)
+    _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
+    probas = model.predict_proba(X_test)
+
+    renitent_vector = []
+
+    for i, proba_vector in enumerate(probas):
+        unsure_counter = 0
+        max = np.max(proba_vector)
+        for j, p in enumerate(proba_vector):
+            if p == max:
+                unsure_counter += 1
+        if unsure_counter >= 2:
+            renitent_vector.append(X_test[i])
+    print(f"Processing time: {time.time()-start}")
+    renitent_vector = np.array(renitent_vector) 
+    fig, ax = plt.subplots()
+    ax.scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
+    ax.scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
+    ax.scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
+    plt.show()
+    print(f"Solid predictions: {len(probas)-len(renitent_vector)}")
+    print(f"Unsure predictions: {len(renitent_vector)}")
 
 def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1901,11 +2024,12 @@ def main():
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
     argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
     argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
-    argparser.add_argument("--BinaryClassificationWorker", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
-    argparser.add_argument("--BinaryClassification", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
+    argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
+    argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
-    #argparser.add_argument("--test_shuffle", action="store_true")
-    #argparser.add_argument("--filter_enter_and_exit", help="Use this flag when want to visualize objects that enter and exit point distance were lower than the given threshold. Threshold must be between 0 and 1.", default="0.01", type=float)
+    argparser.add_argument("--model", help="Load classifier.", type=str)
+    argparser.add_argument("--BinaryClassification", help="Run classification with trained model. Use --model flag to give the path to the trained model.", action="store_true", default=False)
+    argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -1933,10 +2057,7 @@ def main():
             optics_dbscan_worker(args.database, args.min_samples, args.xi, args.min_cluster_size, args.eps, n_jobs=args.n_jobs)
         else:
             optics_dbscan_worker(args.database, args.min_samples, args.xi, args.min_samples, args.eps, n_jobs=args.n_jobs)
-    #if args.affinity_on_enters_and_exits:
-    #    affinityPropagation_on_enter_and_exit_points(args.database, args.threshold)
     if args.elbow_on_kmeans:
-        #elbow_on_kmeans(args.database, args.threshold)
         elbow_plotter(args.database, args.threshold, model='kmeans', metric=args.elbow_on_kmeans, n_jobs=args.n_jobs)
     if args.elbow_on_spectral:
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
@@ -1950,12 +2071,17 @@ def main():
         CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.BinaryClassificationWorker:
-        BinaryClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
+    if args.BinaryClassificationWorkerTrain:
+        BinaryClassificationWorkerTrain(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
+    if args.BinaryClassificationTrain:
+        BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassification:
-        BinaryClassification(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    #if args.test_shuffle:
-    #   test_shuffle(args.database)
+        if args.model:
+            BinaryClassification(args.model, args.threshold)
+        else:
+            argparser.print_usage()
+    if args.plot_renitent_features:
+        investigateRenitent(args.model)
 
 if __name__ == "__main__":
     main()
