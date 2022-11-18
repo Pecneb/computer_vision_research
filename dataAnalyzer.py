@@ -1838,15 +1838,14 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
         filename = os.path.join(savepath, f"{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
-
         save_model(path2db, str("binary_"+clr), binaryModel) 
+
     print("Top picks")
     print(table.to_markdown())
     print("Threshold")
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
     
-
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     from classifier import BinaryClassifier
     from sklearn.neighbors import KNeighborsClassifier
@@ -1952,25 +1951,56 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
             time_train.append(time[i])
     return np.array(X_train), np.array(y_train), np.array(time_train), np.array(X_test), np.array(y_test), np.array(time_test)
 
-def BinaryClassification(path2model: str, threshold: float):
-    """Run binary classification with trained model.
-    Temporarily this function only counts the predictions under the threshold.
+# TODO somehow the accuracies are not the same when calculating with the BinaryClassificationWorderTrain() function. Investigate this bug.
+def validate_models(path2models: str, **argv):
+    """Validate trained classifiers.
 
     Args:
-        path2model (str): Path to model.
+        path2models (str): Path to parent directory containing models.
     """
-    model = load_model(path2model)
-    _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
-    probabilities = model.predict_proba(X_test)
-    under_threshold = 0
-    for prob in probabilities:
-        under = True 
-        for p in prob:
-            if p > threshold:
-                under = False
-        if under:
-            under_threshold += 1
-    print(under_threshold)
+    import datetime
+    filenames = os.listdir(path2models)
+    models = []
+    classifier_names = []
+    for n in filenames:
+        if n.startswith("binary") and n.endswith(".joblib"):
+            models.append(load_model(os.path.join(path2models, n)))
+            classifier_names.append(n.split("_")[1].split(".")[0])
+
+    table = pd.DataFrame()
+    table2 = pd.DataFrame()
+    probability_over_time = pd.DataFrame()
+
+    
+    if not os.path.isdir(os.path.join(*path2models.split("/")[:-1], "tables")):
+        os.mkdir(os.path.join(*path2models.split("/")[:-1], "tables"))
+    savepath = os.path.join(os.path.join(*path2models.split("/")[:-1], "tables"))
+
+    _, _, _, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(models[0], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+
+    for clr, m in zip(classifier_names, models):
+        balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
+        balanced_threshold = m.validate(X_valid, y_valid, argv['threshold'])
+
+        table.loc[0, clr] = balanced_toppicks 
+        table2[clr] = balanced_threshold
+
+        probabilities = m.predict_proba(X_valid)
+        for i in range(probabilities.shape[1]):
+            probability_over_time[f"Class {i}"] = probabilities[:, i]
+        probability_over_time["Time_Enter"] = time_valid[:, 0]
+        probability_over_time["Time_Mid"] = time_valid[:, 1]
+        probability_over_time["Time_Exit"] = time_valid[:, 2]
+
+        filename = os.path.join(savepath, f"{datetime.date.today()}_{clr}.xlsx")
+        with pd.ExcelWriter(filename) as writer:
+            probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
+
+    print("Top picks")
+    print(table.to_markdown())
+    print("Threshold")
+    print(table2.to_markdown())
+    print(table2.aggregate(np.average).to_markdown())
 
 def investigateRenitent(path2model: str):
     """Filter out renitent predictions, that cant predict which class the detections is really in.
@@ -1990,7 +2020,7 @@ def investigateRenitent(path2model: str):
         unsure_counter = 0
         max = np.max(proba_vector)
         for j, p in enumerate(proba_vector):
-            if p == max:
+            if p <= ( max + max * 0.1 ) and p >= ( max - max * 0.1):
                 unsure_counter += 1
         if unsure_counter >= 2:
             renitent_vector.append(X_test[i])
@@ -2002,12 +2032,13 @@ def investigateRenitent(path2model: str):
     sure_vector = np.array(sure_vector)
   
     fig, ax = plt.subplots(1,2, figsize=(20,10))
-  
-    ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
-    ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
-    ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
-    ax[0].set_title(f"Renitent predictions {len(renitent_vector)}")
-  
+    
+    if len(renitent_vector) > 0:
+        ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
+        ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
+        ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
+        ax[0].set_title(f"Renitent predictions {len(renitent_vector)}")
+
     ax[1].scatter(sure_vector[:, 0], 1 - sure_vector[:, 1], s=2.5, c='g')
     ax[1].scatter(sure_vector[:, 4], 1 - sure_vector[:, 5], s=2.5)
     ax[1].scatter(sure_vector[:, 6], 1 - sure_vector[:, 7], s=2.5, c='r')
@@ -2039,9 +2070,9 @@ def main():
     argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
     argparser.add_argument("--shuffle_dataset", default=False, action="store_true", help="DBSCAN parameter: Shuffle dataset for slightly different clustering results.")
     argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=np.inf)
-    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.05)
-    argparser.add_argument("--min_cluster_size", type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
+    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
+    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.15)
+    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
     argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
     argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
@@ -2052,7 +2083,7 @@ def main():
     argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
     argparser.add_argument("--model", help="Load classifier.", type=str)
-    argparser.add_argument("--BinaryClassification", help="Run classification with trained model. Use --model flag to give the path to the trained model.", action="store_true", default=False)
+    argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.", action="store_true", default=False)
     argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
@@ -2099,13 +2130,10 @@ def main():
         BinaryClassificationWorkerTrain(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
     if args.BinaryClassificationTrain:
         BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.BinaryClassification:
-        if args.model:
-            BinaryClassification(args.model, args.threshold)
-        else:
-            argparser.print_usage()
     if args.plot_renitent_features:
         investigateRenitent(args.model)
+    if args.validate_classifiers and args.threshold:
+        validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
 
 if __name__ == "__main__":
     main()
