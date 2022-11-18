@@ -83,6 +83,30 @@ class BinaryClassifier(object):
         for clr, mdl in zip(self.class_labels_[0], self.models_):
             self.class_proba_[:, clr] = mdl.predict_proba(X)[:, 1]
         return self.class_proba_
+
+    def predict(self, X: numpy.ndarray,  threshold: numpy.float32, top:int=1):
+        """Return predicted top labels of dataset  X
+
+        Args:
+            X (numpy.ndarray): Feature vector of shape( n_samples, n_features ) for prediction. 
+            top (int): Number tof classes with the highest probability
+
+        Returns:
+            numpy.ndarray: lists of prediction result class labels, lenght=top
+        """
+        if top > len(self.class_labels_[0]):
+            print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+        self.class_proba_ = self.predict_proba(X=X)
+        prediction_result = numpy.argsort(self.class_proba_)
+        top_pred_res = numpy.zeros(prediction_result.shape)
+        for i, sor in enumerate(prediction_result):
+            for oszlop in sor:
+                if self.class_proba_[i,oszlop] < threshold:
+                    top_pred_res[i,oszlop] = -1
+                else:
+                    top_pred_res[i,oszlop] = prediction_result[i,oszlop]
+        return top_pred_res[:,-top:]
+
     
     #TODO validation on each class
     def validate(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
@@ -127,3 +151,30 @@ class BinaryClassifier(object):
             accuracy_vector.append(tp+tn)
             balanced_accuracy.append(balanc)
         return balanced_accuracy
+
+    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
+        """Validate trained models.
+        Args:
+            X_test (numpy.ndarray): Validation dataset of shape( n_samples, n_features ). 
+            y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
+            threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
+        """
+        predict_results = self.predict(X_test, threshold=threshold, top=3)
+        # print(predict_results)
+        # print(predict_results.shape)
+        accuracy_vector = []
+        balanced_accuracy = []
+        tp = 0 # True positive --> predicting true and it is really true 
+        fn = 0 # False negative (type II error) --> predicting false, although its true 
+        tn = 0 # True negative --> predicting false and it is really false
+        fp = 0 # False positive (type I error) --> predicting true, although it is false
+        for i, _y_test in enumerate(y_test):
+            # print(_y_test in predict_results[i])
+            if _y_test in predict_results[i]:
+                tp += 1
+            else:
+                fp +=1
+        print(tp, len(y_test))
+        map_ = tp/len(y_test)
+        print(map_)
+        return map_

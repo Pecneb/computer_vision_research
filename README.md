@@ -262,6 +262,7 @@ Write predict_proba() output to Excel file with Pandas...
 [cuML](https://github.com/rapidsai/cuml)
 [cuDF](https://github.com/rapidsai/cudf)
 
+
 ## Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
@@ -944,7 +945,6 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
 
 ## Examples
 
-
 ## References
 
 ### Darknet-YOLO
@@ -996,3 +996,4 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
   organization={IEEE},  
   doi={10.1109/WACV.2018.00087}  
 }  
+
