@@ -257,6 +257,8 @@ Write predict_proba() output to Excel file with Pandas...
 
 ## Draw Decision Tree results
 
+## Experiment with Decision Tree parameters, mainly with the tree depth.
+
 ## GPU Accelarated pandas and scikit-learn.
 
 [cuML](https://github.com/rapidsai/cuml)
