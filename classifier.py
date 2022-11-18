@@ -97,15 +97,18 @@ class BinaryClassifier(object):
         if top > len(self.class_labels_[0]):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
         self.class_proba_ = self.predict_proba(X=X)
+        #print(self.class_proba_.shape)
         prediction_result = numpy.argsort(self.class_proba_)
         top_pred_res = numpy.zeros(prediction_result.shape)
-        for i, sor in enumerate(prediction_result):
+        """for i, sor in enumerate(prediction_result):
             for oszlop in sor:
                 if self.class_proba_[i,oszlop] < threshold:
                     top_pred_res[i,oszlop] = -1
                 else:
                     top_pred_res[i,oszlop] = prediction_result[i,oszlop]
-        return top_pred_res[:,-top:]
+        """
+        return prediction_result[:,-top:]
+        #return top_pred_res[:,-top:]
 
     
     #TODO validation on each class
@@ -159,9 +162,9 @@ class BinaryClassifier(object):
             y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
             threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
-        predict_results = self.predict(X_test, threshold=threshold, top=3)
-        # print(predict_results)
-        # print(predict_results.shape)
+        predict_results = self.predict(X_test, threshold=threshold, top=1)
+        #print(predict_results)
+        #print(predict_results.shape)
         accuracy_vector = []
         balanced_accuracy = []
         tp = 0 # True positive --> predicting true and it is really true 
@@ -174,7 +177,7 @@ class BinaryClassifier(object):
                 tp += 1
             else:
                 fp +=1
-        print(tp, len(y_test))
+        #print(tp, len(y_test))
         map_ = tp/len(y_test)
-        print(map_)
+        #print(map_)
         return map_

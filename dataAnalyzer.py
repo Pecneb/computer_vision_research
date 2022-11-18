@@ -1796,9 +1796,10 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
         'MLP' : MLPClassifier,
         'SGD' : SGDClassifier,
         'SVM' : SVC,
-        "DT" : DecisionTreeClassifier
+        'DT' : DecisionTreeClassifier
     }
 
+    table = pd.DataFrame()
     table2 = pd.DataFrame()
     probability_over_time = pd.DataFrame()
 
@@ -1816,13 +1817,17 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
             binaryModel.init_models(models[clr], loss="modified_huber")
         elif clr == 'SVM':
             binaryModel.init_models(models[clr], kernel='rbf', probability=True)
+        elif clr == 'DT':
+            binaryModel.init_models(models[clr], max_depth=10)
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
 
-        balanced = binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'])
-        # balanced = binaryModel.validate(X_valid, y_valid, argv['threshold'])
-        table2[clr] = balanced 
+        balanced_toppicks = binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'])
+        balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
+
+        table.loc[0, clr] = balanced_toppicks 
+        table2[clr] = balanced_threshold
 
         probabilities = binaryModel.predict_proba(X_valid)
         for i in range(probabilities.shape[1]):
@@ -1835,6 +1840,9 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
 
         save_model(path2db, str("binary_"+clr), binaryModel) 
+    print("Top picks")
+    print(table.to_markdown())
+    print("Threshold")
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
     
