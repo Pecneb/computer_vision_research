@@ -480,7 +480,41 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
 
-# TODO somehow the accuracies are not the same when calculating with the BinaryClassificationWorderTrain() function. Investigate this bug.
+def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_eps: float, xi: float, min_cluster_size: int, n_jobs: int, from_half=False):
+    from classifier import BinaryClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn import tree
+
+    X_train, y_train, time_train, X_valid, y_valid, time_valid = [], [], [], [] , [], [] 
+
+    trackData = []
+
+    threshold = 0.5
+    
+    if path2dataset.split(".")[-1] == "db":
+        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size)
+    elif path2dataset.split(".")[-1] == "joblib":
+        model = load_model(path2dataset)
+        X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
+        trackData = model.trackData
+
+    for d in range(2, 11):
+        table_one = pd.DataFrame()
+        # Initialize BinaryClassifier
+        binaryModel = BinaryClassifier(X_train, y_train, trackData)
+        binaryModel.init_models(DecisionTreeClassifier, max_depth=d)
+        binaryModel.fit()
+        # Validate BinaryClassifier
+        predict_proba_balanced_accuracy = binaryModel.validate(X_valid, y_valid, threshold=threshold) # Validating the predict_proba() mathod, that returns back probability for every class
+        predict_accuracy = binaryModel.validate_predictions(X_valid, y_valid, threshold=threshold) # validating predict() method, that returns only the highest predicted class
+        # Create tables for accurcy
+        table_one[f"Depth {d}"] = predict_proba_balanced_accuracy
+        table_one.loc[0, f"Depth {d} multiclass average"] = np.average(predict_proba_balanced_accuracy)
+        table_one.loc[0, f"Depth {d} one class prediction"] = predict_accuracy 
+        # print out table in markdown
+        print(f"Decision Tree depth {d} accuracy")
+        print(table_one.to_markdown())
+
 def validate_models(path2models: str, **argv):
     """Validate trained classifiers.
 
@@ -584,7 +618,7 @@ def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
     argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that filters out the best detections.")
-    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=1)
     argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
     argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
     argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
@@ -601,6 +635,7 @@ def main():
     argparser.add_argument("--model", help="Load classifier.", type=str)
     argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.", action="store_true", default=False)
     argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
+    argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -620,6 +655,11 @@ def main():
         investigateRenitent(args.model)
     if args.validate_classifiers and args.threshold:
         validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
+    if args.decision_tree_accuracy_over_depth:
+        if args.database:
+            BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
+        elif args.model:
+            BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
 
 if __name__ == "__main__":
     main()

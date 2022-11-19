@@ -508,7 +508,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
-    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs)
+    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
         X, y, time = make_features_for_classification_velocity_time_second_half(filteredTracks, 12, labels)
@@ -627,9 +627,9 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
     labels = optics_on_featureVectors(featureVectors, min_samples, xi, min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
-        X, y, time = make_features_for_classification_velocity_time_second_half(model.trackData, 12, labels)
+        X, y, time = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
     else:
-        X, y, time = make_features_for_classification_velocity_time(model.trackData, 12, labels)
+        X, y, time = make_features_for_classification_velocity_time(model.trackData, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
