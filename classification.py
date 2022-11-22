@@ -502,7 +502,7 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     threshold = 0.5
     
     if path2dataset.split(".")[-1] == "db":
-        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size)
+        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, from_half=from_half)
     elif path2dataset.split(".")[-1] == "joblib":
         model = load_model(path2dataset)
         X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
@@ -549,7 +549,7 @@ def validate_models(path2models: str, **argv):
         os.mkdir(os.path.join(*path2models.split("/")[:-1], "tables"))
     savepath = os.path.join(os.path.join(*path2models.split("/")[:-1], "tables"))
 
-    _, _, _, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(models[0], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+    _, _, _, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
     for clr, m in zip(classifier_names, models):
         balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
@@ -622,6 +622,19 @@ def investigateRenitent(path2model: str):
     print(f"Solid predictions: {len(probas)-len(renitent_vector)}")
     print(f"Unsure predictions: {len(renitent_vector)}")
 
+def plot_decision_tree(path2model: str):
+    """Draw out the decision tree in a tree graph.
+
+    Args:
+        path2model (str): Path to the joblib binary model file.
+    """
+    from sklearn.tree import plot_tree
+    model = load_model(path2model=path2model)
+    for i, m in enumerate(model.models_):
+        print(f"Class {i}")
+        plot_tree(m)
+        plt.show()
+    
 def main():
     import argparse
     from classification import Classification, ClassificationWorker, CalibratedClassification, CalibratedClassificationWorker, BinaryClassificationTrain, BinaryClassificationWorkerTrain, validate_models, investigateRenitent
@@ -646,6 +659,7 @@ def main():
     argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.", action="store_true", default=False)
     argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
     argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
+    argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.", action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
@@ -670,6 +684,11 @@ def main():
             BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
         elif args.model:
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
+    if args.plot_decision_tree:
+        if args.model:
+            plot_decision_tree(args.model)
+        else:
+            argparser.print_help()
 
 if __name__ == "__main__":
     main()
