@@ -226,9 +226,9 @@ Scikit-FeatureSelection
 
 https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
-## 8 | Threshold 4-6 Bence 
-## 8 | Balanced accuracy Bence
-## 21 | Monitor time in trajectory... Bence
+## 8 | Threshold 4-6 Bence | Done 
+## 8 | Balanced accuracy Bence | Done
+## 21 | Monitor time in trajectory... Bence | Done
 
 ```python
 def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
@@ -236,12 +236,12 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
     return featureVectors, labels, timeVector
 ```
 
-## 21 | Build feature vectors from second half of trajectories. Bence 
-## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron
+## 21 | Build feature vectors from second half of trajectories. Bence | Donw
+## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron | Done
 
 Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
 
-## 21 | Count predictions under threshold probability value.
+## 21 | Count predictions under threshold probability value. Bence
 
 Write predict_proba() output to Excel file with Pandas...
 
@@ -257,7 +257,7 @@ Write predict_proba() output to Excel file with Pandas...
 
 ## Draw Decision Tree results
 
-## Experiment with Decision Tree parameters, mainly with the tree depth.
+## Experiment with Decision Tree parameters, mainly with the tree depth. Bence
 
 ## GPU Accelarated pandas and scikit-learn.
 
@@ -888,7 +888,7 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
 | DT  | 0.812236 |
 
 ###### Balanced Accuracy - Threshold 0.5 - FeatureVectors made from second half of track's history
-
+|    |      KNN |       GP |      GNB |     MLP  |      SGD |      SVM |       DT |
 |---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
 |  0 | 0.847549 | 0.5      | 0.934582 | 0.5      | 0.496782 | 0.609132 | 0.92474  |
 |  1 | 0.847881 | 0.747987 | 0.817821 | 0.519737 | 0.845329 | 0.79592  | 0.928709 |
@@ -943,6 +943,173 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
 | SGD | 0.554207 |
 | SVM | 0.649698 |
 | DT  | 0.795359 |
+
+## Testing for decision tree depth
+
+### Video 0001_2
+
+Decision Tree depth 2 accuracy
+|    |   Depth 2 |   Depth 2 multiclass average |   Depth 2 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.5      |                     0.703933 |                       0.731834 |
+|  1 |  0.5      |                   nan        |                     nan        |
+|  2 |  0.59286  |                   nan        |                     nan        |
+|  3 |  0.790744 |                   nan        |                     nan        |
+|  4 |  0.57484  |                   nan        |                     nan        |
+|  5 |  0.956898 |                   nan        |                     nan        |
+|  6 |  0.706054 |                   nan        |                     nan        |
+|  7 |  0.872719 |                   nan        |                     nan        |
+|  8 |  0.66     |                   nan        |                     nan        |
+|  9 |  0.962452 |                   nan        |                     nan        |
+| 10 |  0.712298 |                   nan        |                     nan        |
+| 11 |  0.5      |                   nan        |                     nan        |
+| 12 |  0.5      |                   nan        |                     nan        |
+| 13 |  0.932767 |                   nan        |                     nan        |
+| 14 |  0.797359 |                   nan        |                     nan        |
+Decision Tree depth 3 accuracy
+|    |   Depth 3 |   Depth 3 multiclass average |   Depth 3 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.499113 |                     0.726864 |                       0.764706 |
+|  1 |  0.543691 |                   nan        |                     nan        |
+|  2 |  0.591081 |                   nan        |                     nan        |
+|  3 |  0.891708 |                   nan        |                     nan        |
+|  4 |  0.589992 |                   nan        |                     nan        |
+|  5 |  0.858674 |                   nan        |                     nan        |
+|  6 |  0.726109 |                   nan        |                     nan        |
+|  7 |  0.908222 |                   nan        |                     nan        |
+|  8 |  0.66     |                   nan        |                     nan        |
+|  9 |  0.952542 |                   nan        |                     nan        |
+| 10 |  0.716852 |                   nan        |                     nan        |
+| 11 |  0.674688 |                   nan        |                     nan        |
+| 12 |  0.534805 |                   nan        |                     nan        |
+| 13 |  0.955479 |                   nan        |                     nan        |
+| 14 |  0.8      |                   nan        |                     nan        |
+Decision Tree depth 4 accuracy
+|    |   Depth 4 |   Depth 4 multiclass average |   Depth 4 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.820542 |                      0.80093 |                       0.778547 |
+|  1 |  0.897627 |                    nan       |                     nan        |
+|  2 |  0.591081 |                    nan       |                     nan        |
+|  3 |  0.868542 |                    nan       |                     nan        |
+|  4 |  0.589074 |                    nan       |                     nan        |
+|  5 |  0.891119 |                    nan       |                     nan        |
+|  6 |  0.811317 |                    nan       |                     nan        |
+|  7 |  0.913597 |                    nan       |                     nan        |
+|  8 |  0.919096 |                    nan       |                     nan        |
+|  9 |  0.952542 |                    nan       |                     nan        |
+| 10 |  0.768576 |                    nan       |                     nan        |
+| 11 |  0.702317 |                    nan       |                     nan        |
+| 12 |  0.534805 |                    nan       |                     nan        |
+| 13 |  0.955479 |                    nan       |                     nan        |
+| 14 |  0.798239 |                    nan       |                     nan        |
+Decision Tree depth 5 accuracy
+|    |   Depth 5 |   Depth 5 multiclass average |   Depth 5 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.820542 |                      0.81307 |                       0.794118 |
+|  1 |  0.9422   |                    nan       |                     nan        |
+|  2 |  0.59286  |                    nan       |                     nan        |
+|  3 |  0.894475 |                    nan       |                     nan        |
+|  4 |  0.588157 |                    nan       |                     nan        |
+|  5 |  0.892007 |                    nan       |                     nan        |
+|  6 |  0.863949 |                    nan       |                     nan        |
+|  7 |  0.912389 |                    nan       |                     nan        |
+|  8 |  0.917288 |                    nan       |                     nan        |
+|  9 |  0.938771 |                    nan       |                     nan        |
+| 10 |  0.857515 |                    nan       |                     nan        |
+| 11 |  0.674688 |                    nan       |                     nan        |
+| 12 |  0.586558 |                    nan       |                     nan        |
+| 13 |  0.917288 |                    nan       |                     nan        |
+| 14 |  0.797359 |                    nan       |                     nan        |
+Decision Tree depth 6 accuracy
+|    |   Depth 6 |   Depth 6 multiclass average |   Depth 6 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.784828 |                     0.799032 |                       0.782007 |
+|  1 |  0.631073 |                   nan        |                     nan        |
+|  2 |  0.591081 |                   nan        |                     nan        |
+|  3 |  0.895398 |                   nan        |                     nan        |
+|  4 |  0.691465 |                   nan        |                     nan        |
+|  5 |  0.92534  |                   nan        |                     nan        |
+|  6 |  0.891159 |                   nan        |                     nan        |
+|  7 |  0.916827 |                   nan        |                     nan        |
+|  8 |  0.917288 |                   nan        |                     nan        |
+|  9 |  0.929472 |                   nan        |                     nan        |
+| 10 |  0.853872 |                   nan        |                     nan        |
+| 11 |  0.674688 |                   nan        |                     nan        |
+| 12 |  0.586558 |                   nan        |                     nan        |
+| 13 |  0.898192 |                   nan        |                     nan        |
+| 14 |  0.798239 |                   nan        |                     nan        |
+Decision Tree depth 7 accuracy
+|    |   Depth 7 |   Depth 7 multiclass average |   Depth 7 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.783055 |                     0.788302 |                       0.759516 |
+|  1 |  0.583854 |                   nan        |                     nan        |
+|  2 |  0.558941 |                   nan        |                     nan        |
+|  3 |  0.869465 |                   nan        |                     nan        |
+|  4 |  0.662997 |                   nan        |                     nan        |
+|  5 |  0.928893 |                   nan        |                     nan        |
+|  6 |  0.865738 |                   nan        |                     nan        |
+|  7 |  0.919786 |                   nan        |                     nan        |
+|  8 |  0.918192 |                   nan        |                     nan        |
+|  9 |  0.920174 |                   nan        |                     nan        |
+| 10 |  0.837542 |                   nan        |                     nan        |
+| 11 |  0.674688 |                   nan        |                     nan        |
+| 12 |  0.586558 |                   nan        |                     nan        |
+| 13 |  0.917288 |                   nan        |                     nan        |
+| 14 |  0.797359 |                   nan        |                     nan        |
+Decision Tree depth 8 accuracy
+|    |   Depth 8 |   Depth 8 multiclass average |   Depth 8 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.74734  |                     0.788764 |                       0.743945 |
+|  1 |  0.585618 |                   nan        |                     nan        |
+|  2 |  0.554493 |                   nan        |                     nan        |
+|  3 |  0.881509 |                   nan        |                     nan        |
+|  4 |  0.731415 |                   nan        |                     nan        |
+|  5 |  0.929781 |                   nan        |                     nan        |
+|  6 |  0.78679  |                   nan        |                     nan        |
+|  7 |  0.919786 |                   nan        |                     nan        |
+|  8 |  0.916383 |                   nan        |                     nan        |
+|  9 |  0.919208 |                   nan        |                     nan        |
+| 10 |  0.853872 |                   nan        |                     nan        |
+| 11 |  0.703209 |                   nan        |                     nan        |
+| 12 |  0.585649 |                   nan        |                     nan        |
+| 13 |  0.917288 |                   nan        |                     nan        |
+| 14 |  0.79912  |                   nan        |                     nan        |
+Decision Tree depth 9 accuracy
+|    |   Depth 9 |   Depth 9 multiclass average |   Depth 9 one class prediction |
+|---:|----------:|-----------------------------:|-------------------------------:|
+|  0 |  0.746454 |                     0.790632 |                       0.735294 |
+|  1 |  0.630191 |                   nan        |                     nan        |
+|  2 |  0.584853 |                   nan        |                     nan        |
+|  3 |  0.878741 |                   nan        |                     nan        |
+|  4 |  0.714429 |                   nan        |                     nan        |
+|  5 |  0.896448 |                   nan        |                     nan        |
+|  6 |  0.839422 |                   nan        |                     nan        |
+|  7 |  0.917098 |                   nan        |                     nan        |
+|  8 |  0.915479 |                   nan        |                     nan        |
+|  9 |  0.926577 |                   nan        |                     nan        |
+| 10 |  0.837542 |                   nan        |                     nan        |
+| 11 |  0.673797 |                   nan        |                     nan        |
+| 12 |  0.582013 |                   nan        |                     nan        |
+| 13 |  0.918192 |                   nan        |                     nan        |
+| 14 |  0.798239 |                   nan        |                     nan        |
+Decision Tree depth 10 accuracy
+|    |   Depth 10 |   Depth 10 multiclass average |   Depth 10 one class prediction |
+|---:|-----------:|------------------------------:|--------------------------------:|
+|  0 |   0.745567 |                      0.784341 |                        0.714533 |
+|  1 |   0.584736 |                    nan        |                      nan        |
+|  2 |   0.584853 |                    nan        |                      nan        |
+|  3 |   0.853731 |                    nan        |                      nan        |
+|  4 |   0.699277 |                    nan        |                      nan        |
+|  5 |   0.896448 |                    nan        |                      nan        |
+|  6 |   0.812212 |                    nan        |                      nan        |
+|  7 |   0.913536 |                    nan        |                      nan        |
+|  8 |   0.915479 |                    nan        |                      nan        |
+|  9 |   0.919208 |                    nan        |                      nan        |
+| 10 |   0.83572  |                    nan        |                      nan        |
+| 11 |   0.702317 |                    nan        |                      nan        |
+| 12 |   0.583831 |                    nan        |                      nan        |
+| 13 |   0.918192 |                    nan        |                      nan        |
+| 14 |   0.8      |                    nan        |                      nan        |
 
 
 ## Examples

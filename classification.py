@@ -375,7 +375,7 @@ def CalibratedClassificationWorker(path2db: str, **argv):
         calibrated = CalibratedClassifierCV(models[cls], method="sigmoid", n_jobs=18).fit(X_train, y_train)
         ValidateClassification(calibrated, X_valid, y_valid)
 
-def BinaryClassificationWorkerTrain(path2db: str, **argv):
+def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
@@ -384,7 +384,19 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
     from sklearn.svm import SVC
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
-    X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+
+    X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = [], [], [], [], [], [], []
+
+    if path2model is not None:
+        model = load_model(path2model)
+        tracks = model.trackData
+        X_train, y_train, time_train, X_valid, y_valid, time_test = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
+                                                            max_eps=argv['max_eps'], 
+                                                            xi=argv['xi'], 
+                                                            min_cluster_size=argv['min_cluster_size'],
+                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+    else:
+        X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -418,8 +430,6 @@ def BinaryClassificationWorkerTrain(path2db: str, **argv):
             binaryModel.init_models(models[clr], loss="modified_huber")
         elif clr == 'SVM':
             binaryModel.init_models(models[clr], kernel='rbf', probability=True)
-        elif clr == 'DT':
-            binaryModel.init_models(models[clr], max_depth=10)
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
@@ -632,7 +642,7 @@ def main():
     argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
     argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
-    argparser.add_argument("--model", help="Load classifier.", type=str)
+    argparser.add_argument("--model", help="Load classifier.", type=str, default=None)
     argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.", action="store_true", default=False)
     argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
     argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
@@ -648,7 +658,7 @@ def main():
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassificationWorkerTrain:
-        BinaryClassificationWorkerTrain(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
+        BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
     if args.BinaryClassificationTrain:
         BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.plot_renitent_features:
