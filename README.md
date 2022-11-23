@@ -237,15 +237,29 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
 ```
 
 ## 21 | Build feature vectors from second half of trajectories. Bence | Donw
-## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron | Done
+## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron 
 
 Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
 
+### 8 | 2 diff: top 1 acc, top 3 acc
+### 21 | features from second half, check for history lenght aswell
+### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat **
+
 ## 21 | Count predictions under threshold probability value. Bence
 
-Write predict_proba() output to Excel file with Pandas...
+## Write predict_proba() output to Excel file with Pandas...
 
-## 34 | Close probability values??? / Investigate cases when there is no solid prediction, e.g. probability vector has 2 or more identical or close values. 
+### 8 | ** list to excel
+
+### 8 | True class value to excel
+
+## Renitent detection
+
+### 34 | Close probability values??? / Investigate cases when there is no solid prediction, e.g. probability vector has 2 or more identical or close values. 
+
+### 34 | Test for single class binary probability under threshold
+
+### 34 | Test for all class probability under threshold
 
 ## Visualisation of predictions.
 
@@ -258,6 +272,10 @@ Write predict_proba() output to Excel file with Pandas...
 ## Draw Decision Tree results
 
 ## Experiment with Decision Tree parameters, mainly with the tree depth. Bence
+
+## More test videos
+
+### At least 8 more videos from different scenes to gather.
 
 ## GPU Accelarated pandas and scikit-learn.
 
