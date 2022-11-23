@@ -454,6 +454,7 @@ def make_features_for_classification_velocity_time(trackedObjects: list, k: int,
     featureVectors = []
     newLabels = []
     time = []
+    track_history_metadata = [] # list of [start_time, end_time, history_length]
     for j in range(len(trackedObjects)):
         step = len(trackedObjects[j].history)//k
         if step > 0:
@@ -462,7 +463,8 @@ def make_features_for_classification_velocity_time(trackedObjects: list, k: int,
                 featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
                 time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
-    return np.array(featureVectors), np.array(newLabels), np.array(time)
+                track_history_metadata.append([trackedObjects[j].history[0].frameID, trackedObjects[j].history[-1].frameID, len(trackedObjects[j].history)])
+    return np.array(featureVectors), np.array(newLabels), np.array(time), np.array(track_history_metadata)
 
 def make_features_for_classification_velocity_time_second_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
@@ -478,6 +480,7 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
     featureVectors = []
     newLabels = []
     time = []
+    track_history_metadata = [] # list of [start_time, end_time, history_length]
     for j in range(len(trackedObjects)):
         step = (len(trackedObjects[j].history)//2)//k
         if step > 0:
@@ -486,7 +489,8 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
                 featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
                 time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
-    return np.array(featureVectors), np.array(newLabels), np.array(time)
+                track_history_metadata.append([trackedObjects[j].history[0].frameID, trackedObjects[j].history[-1].frameID, len(trackedObjects[j].history)])
+    return np.array(featureVectors), np.array(newLabels), np.array(time), np.array(track_history_metadata)
 
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False):
     """Preprocess database data for classification.
@@ -627,9 +631,9 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
     labels = optics_on_featureVectors(featureVectors, min_samples, xi, min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
-        X, y, time = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
+        X, y, time, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
     else:
-        X, y, time = make_features_for_classification_velocity_time(model.trackData, 6, labels)
+        X, y, time, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
@@ -638,13 +642,17 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
     y_test = []
     time_test = []
     time_train = []
+    metadata_test = []
+    metadata_train = []
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
             y_test.append(y[i])
             time_test.append(time[i])
+            metadata_test.append(metadata[i])
         else:
             X_train.append(X[i])
             y_train.append(y[i])
             time_train.append(time[i])
-    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(X_test), np.array(y_test), np.array(time_test)
+            metadata_train.append(metadata[i])
+    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(time_test), np.array(metadata_test) 

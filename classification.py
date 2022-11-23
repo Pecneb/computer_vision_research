@@ -385,12 +385,12 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
 
-    X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = [], [], [], [], [], [], []
+    X_train, y_train, time_train, metadata_train, X_valid, y_valid, time_test, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
         tracks = model.trackData
-        X_train, y_train, time_train, X_valid, y_valid, time_test = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
+        X_train, y_train, time_train, metadata_train, X_valid, y_valid, time_test, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -416,9 +416,9 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     table2 = pd.DataFrame()
     probability_over_time = pd.DataFrame()
 
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables")):
-            os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables")):
+            os.mkdir(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables"))
 
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train, tracks)
@@ -446,6 +446,12 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         probability_over_time["Time_Enter"] = time_test[:, 0]
         probability_over_time["Time_Mid"] = time_test[:, 1]
         probability_over_time["Time_Exit"] = time_test[:, 2]
+        probability_over_time["True_Class"] = y_valid
+        if path2model is not None:
+            probability_over_time["History_Start"] = metadata_valid[:, 0]
+            probability_over_time["History_End"] = metadata_valid[:, 1]
+            probability_over_time["History_Lenght"] = metadata_valid[:, 2]
+
         filename = os.path.join(savepath, f"{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
@@ -549,7 +555,7 @@ def validate_models(path2models: str, **argv):
         os.mkdir(os.path.join(*path2models.split("/")[:-1], "tables"))
     savepath = os.path.join(os.path.join(*path2models.split("/")[:-1], "tables"))
 
-    _, _, _, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+    _, _, _, _, X_valid, y_valid, time_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
     for clr, m in zip(classifier_names, models):
         balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
@@ -564,6 +570,10 @@ def validate_models(path2models: str, **argv):
         probability_over_time["Time_Enter"] = time_valid[:, 0]
         probability_over_time["Time_Mid"] = time_valid[:, 1]
         probability_over_time["Time_Exit"] = time_valid[:, 2]
+        probability_over_time["History_Start"] = metadata_valid[:, 0]
+        probability_over_time["History_End"] = metadata_valid[:, 1]
+        probability_over_time["History_Lenght"] = metadata_valid[:, 2]
+        probability_over_time["True_Class"] = y_valid 
 
         filename = os.path.join(savepath, f"{datetime.date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
@@ -583,7 +593,7 @@ def investigateRenitent(path2model: str):
     """
     start = time.time()
     model = load_model(path2model)
-    _, _, _, X_test, y_test, time_test = data_preprocessing_for_classifier_from_joblib_model(model)
+    _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(model)
     probas = model.predict_proba(X_test)
 
     sure_vector = []

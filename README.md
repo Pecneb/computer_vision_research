@@ -243,15 +243,15 @@ Implement predict() method for BinaryClassifier class with np.max() and implemen
 
 ### 8 | 2 diff: top 1 acc, top 3 acc
 ### 21 | features from second half, check for history lenght aswell
-### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat **
+### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat ** Bence
 
 ## 21 | Count predictions under threshold probability value. Bence
 
 ## Write predict_proba() output to Excel file with Pandas...
 
-### 8 | ** list to excel
+### 8 | ** list to excel Bence
 
-### 8 | True class value to excel
+### 8 | True class value to excel Bence
 
 ## Renitent detection
 
