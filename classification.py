@@ -17,6 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
+from datetime import date 
 import time
 import joblib
 import numpy as np
@@ -416,9 +417,9 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     table2 = pd.DataFrame()
     probability_over_time = pd.DataFrame()
 
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables")):
-            os.mkdir(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-2].split('.')[0], "tables"))
+    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables")):
+            os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
+    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
     for clr in models:
         binaryModel = BinaryClassifier(X_train, y_train, tracks)
@@ -452,7 +453,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             probability_over_time["History_End"] = metadata_valid[:, 1]
             probability_over_time["History_Lenght"] = metadata_valid[:, 2]
 
-        filename = os.path.join(savepath, f"{clr}.xlsx")
+        filename = os.path.join(savepath, f"{date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
         save_model(path2db, str("binary_"+clr), binaryModel) 
@@ -585,52 +586,47 @@ def validate_models(path2models: str, **argv):
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
 
-def investigateRenitent(path2model: str):
+def true_class_under_threshold(predictions: np.ndarray, true_classes: np.ndarray, X: np.ndarray, threshold: float) -> np.ndarray:
+    """Return numpy array of featurevectors that's predictions for their true class is under given threshold.
+
+    Args:
+        predictions (np.ndarray): Probability vectors. 
+        true_classes (np.ndarray): Numpy array of the true classes ordered to feature vectors.
+        X (np.ndarray): Feature vectors. 
+        threshold (float): Threshold.
+
+    Returns:
+        np.ndarray: numpy array of feature vectors, that's true class's prediction probability is under threshold.
+    """
+    return_vector = []
+    for i, pred in enumerate(predictions):
+        if pred[true_classes[i]] < threshold:
+            return_vector.append(X[i])
+    return np.array(return_vector)
+
+def investigateRenitent(path2model: str, threshold: float):
     """Filter out renitent predictions, that cant predict which class the detections is really in.
 
     Args:
         path2model (str): Path to model. 
     """
-    start = time.time()
     model = load_model(path2model)
     _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(model)
     probas = model.predict_proba(X_test)
 
-    sure_vector = []
-    renitent_vector = []
+    renitent_vector = true_class_under_threshold(probas, y_test, X_test, threshold)
 
-    for i, proba_vector in enumerate(probas):
-        unsure_counter = 0
-        max = np.max(proba_vector)
-        for j, p in enumerate(proba_vector):
-            if p <= ( max + max * 0.1 ) and p >= ( max - max * 0.1):
-                unsure_counter += 1
-        if unsure_counter >= 2:
-            renitent_vector.append(X_test[i])
-        else:
-            sure_vector.append(X_test[i])
-    print(f"Processing time: {time.time()-start}")
-  
-    renitent_vector = np.array(renitent_vector) 
-    sure_vector = np.array(sure_vector)
-  
     fig, ax = plt.subplots(1,2, figsize=(20,10))
-    
+
     if len(renitent_vector) > 0:
         ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
         ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
         ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
         ax[0].set_title(f"Renitent predictions {len(renitent_vector)}")
-
-    ax[1].scatter(sure_vector[:, 0], 1 - sure_vector[:, 1], s=2.5, c='g')
-    ax[1].scatter(sure_vector[:, 4], 1 - sure_vector[:, 5], s=2.5)
-    ax[1].scatter(sure_vector[:, 6], 1 - sure_vector[:, 7], s=2.5, c='r')
-    ax[1].set_title(f"Sure predictions {len(probas)-len(renitent_vector)}")
-  
-    plt.show()
-  
-    print(f"Solid predictions: {len(probas)-len(renitent_vector)}")
-    print(f"Unsure predictions: {len(renitent_vector)}")
+        plt.show()
+        print(f"Threre are {len(renitent_vector)} renitent detections out of {len(X_test)}.")
+    else:
+        print("No renitent detections.")
 
 def plot_decision_tree(path2model: str):
     """Draw out the decision tree in a tree graph.
@@ -686,7 +682,7 @@ def main():
     if args.BinaryClassificationTrain:
         BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.plot_renitent_features:
-        investigateRenitent(args.model)
+        investigateRenitent(args.model, args.threshold)
     if args.validate_classifiers and args.threshold:
         validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
     if args.decision_tree_accuracy_over_depth:
