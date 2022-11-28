@@ -285,9 +285,8 @@ def ValidateClassification_Probability(clfmodel, X_valid: np.ndarray, y_valid: n
                 if y_proba < threshold:
                     tn += 1
                 else:
-                    fp +=1
-    #TODO
-    return True 
+                    fp += 1
+    return True
                 
 def CalibratedClassification(classifier: str, path2db: str, **argv):
     """Run classification on database data.
@@ -346,7 +345,7 @@ def CalibratedClassification(classifier: str, path2db: str, **argv):
     save_model(path2db, str("calibrated_model_"+classifier), model_calibrated)
 
 def CalibratedClassificationWorker(path2db: str, **argv):
-    """Run all of the classification methods implemented.
+    """Run all the classification methods implemented.
 
     Args:
         path2db (str): Path to database file. 
@@ -509,10 +508,12 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     threshold = 0.5
     
     if path2dataset.split(".")[-1] == "db":
-        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, from_half=from_half)
+        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(
+            path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, from_half=from_half)
     elif path2dataset.split(".")[-1] == "joblib":
         model = load_model(path2dataset)
-        X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
+        X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(
+            model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
         trackData = model.trackData
 
     for d in range(2, 11):
@@ -556,7 +557,9 @@ def validate_models(path2models: str, **argv):
         os.mkdir(os.path.join(*path2models.split("/")[:-1], "tables"))
     savepath = os.path.join(os.path.join(*path2models.split("/")[:-1], "tables"))
 
-    _, _, _, _, X_valid, y_valid, time_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"], min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+    _, _, _, _, X_valid, y_valid, time_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
+        models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
+        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
     for clr, m in zip(classifier_names, models):
         balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
@@ -573,7 +576,7 @@ def validate_models(path2models: str, **argv):
         probability_over_time["Time_Exit"] = time_valid[:, 2]
         probability_over_time["History_Start"] = metadata_valid[:, 0]
         probability_over_time["History_End"] = metadata_valid[:, 1]
-        probability_over_time["History_Lenght"] = metadata_valid[:, 2]
+        probability_over_time["History_Length"] = metadata_valid[:, 2]
         probability_over_time["True_Class"] = y_valid 
 
         filename = os.path.join(savepath, f"{datetime.date.today()}_{clr}.xlsx")
@@ -604,29 +607,66 @@ def true_class_under_threshold(predictions: np.ndarray, true_classes: np.ndarray
             return_vector.append(X[i])
     return np.array(return_vector)
 
-def investigateRenitent(path2model: str, threshold: float):
+def all_class_under_threshold(predictions: np.ndarray, true_classes: np.ndarray, X: np.ndarray, threshold: float) -> np.ndarray:
+    """Return numpy array of features that's predictions for all classes are under the given threshold.
+
+    Args:
+        predictions (np.ndarray): Probability vectors. 
+        true_classes (np.ndarray): Numpy array of the true classes ordered to feature vectors.
+        X (np.ndarray): Feature vectors. 
+        threshold (float): Threshold.
+
+    Returns:
+        np.ndarray: numpy array of feature vectors, that's classes prediction probability is under threshold.
+    """
+    return_vector = []
+    for i, preds in enumerate(predictions):
+        renitent = True
+        for pred in preds:
+            if pred > threshold:
+                renitent = False 
+        if renitent:
+            return_vector.append(X[i])
+    return np.array(return_vector)
+
+def investigateRenitent(path2model: str, threshold: float, **argv):
     """Filter out renitent predictions, that cant predict which class the detections is really in.
 
     Args:
         path2model (str): Path to model. 
     """
     model = load_model(path2model)
-    _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(model)
+    _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(
+        model, min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
+        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+
     probas = model.predict_proba(X_test)
 
     renitent_vector = true_class_under_threshold(probas, y_test, X_test, threshold)
 
-    fig, ax = plt.subplots(1,2, figsize=(20,10))
+    renitent_vector_2 = all_class_under_threshold(probas, y_test, X_test, threshold)
+
+    fig, ax = plt.subplots(1, 2)
 
     if len(renitent_vector) > 0:
+        ax[0].set_title(f"Renitent: true class under threshold {threshold}: {len(renitent_vector)}")
         ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
         ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
         ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
-        ax[0].set_title(f"Renitent predictions {len(renitent_vector)}")
-        plt.show()
-        print(f"Threre are {len(renitent_vector)} renitent detections out of {len(X_test)}.")
+        print(f"There are {len(renitent_vector)} renitent detections out of {len(X_test)}.")
     else:
-        print("No renitent detections.")
+        print(f"Renitent: true class under threshold {threshold}")
+
+    if len(renitent_vector_2) > 0:
+        ax[1].set_title(f"Renitent: classes under threshold {threshold}: {len(renitent_vector_2)}")
+        ax[1].scatter(renitent_vector_2[:, 0], 1 - renitent_vector_2[:, 1], s=2.5, c='g')
+        ax[1].scatter(renitent_vector_2[:, 4], 1 - renitent_vector_2[:, 5], s=2.5)
+        ax[1].scatter(renitent_vector_2[:, 6], 1 - renitent_vector_2[:, 7], s=2.5, c='r')
+        print(f"There are {len(renitent_vector_2)} renitent detections out of {len(X_test)}.")
+    else:
+        print(f"Renitent: classes under threshold {threshold}")
+        
+    plt.show()
 
 def plot_decision_tree(path2model: str):
     """Draw out the decision tree in a tree graph.
@@ -643,58 +683,98 @@ def plot_decision_tree(path2model: str):
     
 def main():
     import argparse
-    from classification import Classification, ClassificationWorker, CalibratedClassification, CalibratedClassificationWorker, BinaryClassificationTrain, BinaryClassificationWorkerTrain, validate_models, investigateRenitent
-    argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
+    from classification import Classification, ClassificationWorker, CalibratedClassification, \
+        CalibratedClassificationWorker, BinaryClassificationTrain, BinaryClassificationWorkerTrain, \
+        validate_models, investigateRenitent
+    argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use "
+                                        "clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to database file.")
-    argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that filters out the best detections.")
+    argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that"
+                                                                        " filters out the best detections.")
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=1)
-    argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
-    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
-    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.15)
-    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
-    argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
+    argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum "
+                                                                  "distance between two samples for one to be "
+                                                                  "considered as in the neighborhood of the other.")
+    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of "
+                                                                       "samples (or total weight) in a neighborhood "
+                                                                       "for a point to be considered as a core point.")
+    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be "
+                                             "considered as in the neighborhood of the other.", type=float, default=0.2)
+    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot "
+                                        "that constitutes a cluster boundary.", type=float, default=0.15)
+    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of "
+                                                                              "samples in an OPTICS cluster, expressed "
+                                                                              "as an absolute number or a fraction of "
+                                                                              "the number of samples (rounded to be at "
+                                                                              "least 2).")
+    argparser.add_argument("--Classification", help="Train model with classification.", default=False,
+                           choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
+    argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.",
+                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
     argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
-    argparser.add_argument("--ClassificationWorker", help="Runs all avaliable Classifications and Validate them.", default=False, action="store_true")
-    argparser.add_argument("--CalibratedClassificationWorker", help="Runs all avaliable Classifications calibrated and Validate them.", default=False, action="store_true")
-    argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true", help="Run Classification on dataset, but not as a multi class classification, rather do binary classification for each cluster.")
-    argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.", default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
-    argparser.add_argument("--from_half", help="Use thid flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
+    argparser.add_argument("--ClassificationWorker", help="Runs all available Classifications and Validate them.",
+                           default=False, action="store_true")
+    argparser.add_argument("--CalibratedClassificationWorker",
+                           help="Runs all available Classifications calibrated and Validate them.",
+                           default=False, action="store_true")
+    argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true",
+                           help="Run Classification on dataset, but not as a multi class classification, rather do "
+                                "binary classification for each cluster.")
+    argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.",
+                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
+    argparser.add_argument("--from_half",
+                           help="Use this flag, if want to make feature vectors only from second half of trajectories "
+                                "history.", action="store_true", default=False)
     argparser.add_argument("--model", help="Load classifier.", type=str, default=None)
-    argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.", action="store_true", default=False)
-    argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.", action="store_true", default=False)
+    argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.",
+                           action="store_true", default=False)
+    argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.",
+                           action="store_true", default=False)
     argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
-    argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.", action="store_true", default=False)
+    argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.",
+                           action="store_true", default=False)
     args = argparser.parse_args()
     if args.database is not None:
         checkDir(args.database)
     if args.Classification:
-        Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps,
+                       xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.ClassificationWorker:
-        ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+                             min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.CalibratedClassification:
-        CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples,
+                                 max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.CalibratedClassificationWorker:
-        CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+                                       min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.BinaryClassificationWorkerTrain:
-        BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, from_half=args.from_half)
+        BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
+                                        xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
+                                        threshold=args.threshold, from_half=args.from_half)
     if args.BinaryClassificationTrain:
-        BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+        BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
+                                  max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
+                                  n_jobs=args.n_jobs)
     if args.plot_renitent_features:
-        investigateRenitent(args.model, args.threshold)
+        investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
+                            xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.validate_classifiers and args.threshold:
-        validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
+        validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
     if args.decision_tree_accuracy_over_depth:
         if args.database:
-            BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
+            BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
+                                             args.min_cluster_size, args.n_jobs, args.from_half)
         elif args.model:
-            BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi, args.min_cluster_size, args.n_jobs, args.from_half)
+            BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
+                                             args.min_cluster_size, args.n_jobs, args.from_half)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
         else:
             argparser.print_help()
+
 
 if __name__ == "__main__":
     main()
