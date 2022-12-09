@@ -1129,6 +1129,7 @@ Decision Tree depth 10 accuracy
 | 13 |   0.918192 |                    nan        |                      nan        |
 | 14 |   0.8      |                    nan        |                      nan        |
 
+## Accuraciy (features v2)
 
 ## Examples
 
@@ -1183,4 +1184,3 @@ Decision Tree depth 10 accuracy
   organization={IEEE},  
   doi={10.1109/WACV.2018.00087}  
 }  
-

@@ -453,18 +453,22 @@ def make_features_for_classification_velocity_time(trackedObjects: list, k: int,
     """
     featureVectors = []
     newLabels = []
-    time = []
-    track_history_metadata = [] # list of [start_time, end_time, history_length]
+    track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
+    #TODO remove time vector, use track_history_metadata instead
     for j in range(len(trackedObjects)):
         step = len(trackedObjects[j].history)//k
         if step > 0:
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
-                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                featureVectors.append(np.array([trackedObjects[j].history[i].X, trackedObjects[j].history[i].Y, 
+                                            trackedObjects[j].history[i].VX, trackedObjects[j].history[i].VY,
+                                            trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
+                                            trackedObjects[j].history[i+step].X, trackedObjects[j].history[i+step].Y,
+                                            trackedObjects[j].history[i+step].VX, trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
-                time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
-                track_history_metadata.append([trackedObjects[j].history[0].frameID, trackedObjects[j].history[-1].frameID, len(trackedObjects[j].history)])
-    return np.array(featureVectors), np.array(newLabels), np.array(time), np.array(track_history_metadata)
+                track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
+                trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
+    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
 
 def make_features_for_classification_velocity_time_second_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
@@ -479,18 +483,53 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
     """
     featureVectors = []
     newLabels = []
-    time = []
-    track_history_metadata = [] # list of [start_time, end_time, history_length]
+    track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
+    #TODO remove time vector, use track_history_metadata instead
     for j in range(len(trackedObjects)):
         step = (len(trackedObjects[j].history)//2)//k
         if step > 0:
             midstep = step//2
             for i in range(len(trackedObjects[j].history)//2, len(trackedObjects[j].history)-step, step):
-                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,
+                                                trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,
+                                                trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,
+                                                trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,
+                                                trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
-                time.append(np.array([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, trackedObjects[j].history[i+step].frameID]))
-                track_history_metadata.append([trackedObjects[j].history[0].frameID, trackedObjects[j].history[-1].frameID, len(trackedObjects[j].history)])
-    return np.array(featureVectors), np.array(newLabels), np.array(time), np.array(track_history_metadata)
+                track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
+                                                trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
+    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
+
+def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i, track in enumerate(trackedObjects):
+        step = (len(track.history))//k
+        if step >= 2:
+            for j in range(step, len(track.history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([track.history[0].X, track.history[0].Y, 
+                                                track.history[0].VX, track.history[0].VY, 
+                                                track.history[midx].X, track.history[midx].Y, 
+                                                track.history[j].X, track.history[j].Y, 
+                                                track.history[j].VX, track.history[j].VY])) 
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([track.history[0].frameID, track.history[midx].frameID, 
+                                            track.history[j].frameID, len(track.history), track.objID]))
+        continue
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False):
     """Preprocess database data for classification.
@@ -505,7 +544,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
         n_jobs (int, optional): _description_. Defaults to 18.
 
     Returns:
-        List[np.ndarray]: Return X and y train and test dataset 
+        List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test, filteredTracks
     """
     from clustering import optics_clustering_on_nx4
     thres = 0.5
@@ -515,28 +554,29 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
-        X, y, time = make_features_for_classification_velocity_time_second_half(filteredTracks, 12, labels)
+        X, y, metadata = make_features_for_classification_velocity_time_second_half(filteredTracks, 6, labels)
     else:
-        X, y, time = make_features_for_classification_velocity_time(filteredTracks, 12, labels)
+        X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
     y_train = []
     X_test = []
     y_test = []
-    time_test = []
-    time_train = []
+    metadata_train = []
+    metadata_test = []
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
             y_test.append(y[i])
-            time_test.append(time[i])
+            metadata_test.append(metadata[i])
         else:
             X_train.append(X[i])
             y_train.append(y[i])
-            time_train.append(time[i])
-    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(X_test), np.array(y_test), np.array(time_test), filteredTracks
+            metadata_train.append(metadata[i])
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), filteredTracks
 
+# deprecated
 def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
@@ -610,7 +650,7 @@ def load_model(path2model: str) -> BinaryClassifier:
     """
     return joblib.load(path2model)
 
-def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False):
+def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -623,36 +663,34 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
         n_jobs (int, optional): _description_. Defaults to 18.
 
     Returns:
-        List[np.ndarray]: Return X and y train and test dataset 
+        List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test
     """
     from clustering import optics_on_featureVectors 
     #thres = 0.5
     featureVectors = makeFeatureVectorsNx4(model.trackData)
-    labels = optics_on_featureVectors(featureVectors, min_samples, xi, min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
+    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
-        X, y, time, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
+        X, y, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(model.trackData, 6, labels)
     else:
-        X, y, time, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
+        X, y, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
     X = X[y > -1]
     y = y[y > -1]
     X_train = []
     y_train = []
     X_test = []
     y_test = []
-    time_test = []
-    time_train = []
     metadata_test = []
     metadata_train = []
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
             y_test.append(y[i])
-            time_test.append(time[i])
             metadata_test.append(metadata[i])
         else:
             X_train.append(X[i])
             y_train.append(y[i])
-            time_train.append(time[i])
             metadata_train.append(metadata[i])
-    return np.array(X_train), np.array(y_train), np.array(time_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(time_test), np.array(metadata_test) 
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
