@@ -236,7 +236,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
     return featureVectors, labels, timeVector
 ```
 
-## 21 | Build feature vectors from second half of trajectories. Bence | Donw
+## 21 | Build feature vectors from second half of trajectories. Bence | Done
 ## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron 
 
 Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
