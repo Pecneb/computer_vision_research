@@ -455,7 +455,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         with pd.ExcelWriter(filename) as writer:
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
         save_model(path2db, str("binary_"+clr), binaryModel) 
-
+    table.index += 1
     print("Top picks")
     print(table.to_markdown())
     print("Threshold")

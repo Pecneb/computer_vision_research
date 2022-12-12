@@ -241,6 +241,30 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
 
 Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
 
+VIDEO:0001_1_37min
+Top picks
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  1 | 0.741259 | 0.636364 | 0.517483 | 0.643357 | 0.622378 | 0.678322 | 0.65035  |
+|  2 | 1        | 0.958042 | 0.923077 | 0.874126 | 0.769231 | 0.965035 | 0.832168 |
+|  3 | 1        | 0.993007 | 0.972028 | 0.944056 | 0.79021  | 1        | 0.874126 |
+Threshold
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  0 | 0.795733 | 0.628006 | 0.692951 | 0.561528 | 0.561528 | 0.636021 | 0.811645 |
+|  1 | 0.834374 | 0.698502 | 0.577715 | 0.606533 | 0.737932 | 0.711402 | 0.774865 |
+|  2 | 0.871976 | 0.636233 | 0.933036 | 0.645161 | 0.9303   | 0.756336 | 0.830789 |
+|  3 | 0.726378 | 0.496063 | 0.667323 | 0.5      | 0.5      | 0.5      | 0.781004 |
+|     |        0 |
+|:----|---------:|
+| KNN | 0.807115 |
+| GP  | 0.614701 |
+| GNB | 0.717756 |
+| MLP | 0.578306 |
+| SGD | 0.68244  |
+| SVM | 0.65094  |
+| DT  | 0.799576 |
+
 ### 8 | 2 diff: top 1 acc, top 3 acc
 ### 21 | features from second half, check for history lenght aswell
 ### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat ** Bence
