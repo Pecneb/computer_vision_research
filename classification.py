@@ -390,13 +390,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     if path2model is not None:
         model = load_model(path2model)
         tracks = model.trackData
-        X_train, y_train, time_train, metadata_train, X_valid, y_valid, time_test, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'])
     else:
-        X_train, y_train, time_train, X_valid, y_valid, time_test, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+        X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -444,14 +444,12 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         probabilities = binaryModel.predict_proba(X_valid)
         for i in range(probabilities.shape[1]):
             probability_over_time[f"Class {i}"] = probabilities[:, i]
-        probability_over_time["Time_Enter"] = time_test[:, 0]
-        probability_over_time["Time_Mid"] = time_test[:, 1]
-        probability_over_time["Time_Exit"] = time_test[:, 2]
-        probability_over_time["True_Class"] = y_valid
-        if path2model is not None:
-            probability_over_time["History_Start"] = metadata_valid[:, 0]
-            probability_over_time["History_End"] = metadata_valid[:, 1]
-            probability_over_time["History_Lenght"] = metadata_valid[:, 2]
+        probability_over_time["Time_Enter"] = metadata_valid[:, 0]
+        probability_over_time["Time_Mid"] = metadata_valid[:, 1]
+        probability_over_time["Time_Exit"] = metadata_valid[:, 2]
+        probability_over_time["History_Length"] = metadata_valid[:, 3]
+        probability_over_time["TrackID"] = metadata_valid[:, 4]
+        probability_over_time["True_Class"] = y_valid 
 
         filename = os.path.join(savepath, f"{date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
