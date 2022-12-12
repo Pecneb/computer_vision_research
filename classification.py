@@ -396,7 +396,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'])
     else:
-        X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
@@ -556,7 +556,7 @@ def validate_models(path2models: str, **argv):
         os.mkdir(os.path.join(*path2models.split("/")[:-1], "tables"))
     savepath = os.path.join(os.path.join(*path2models.split("/")[:-1], "tables"))
 
-    _, _, _, _, X_valid, y_valid, time_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
+    _, _, _, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
         models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
         min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
@@ -570,13 +570,12 @@ def validate_models(path2models: str, **argv):
         probabilities = m.predict_proba(X_valid)
         for i in range(probabilities.shape[1]):
             probability_over_time[f"Class {i}"] = probabilities[:, i]
-        probability_over_time["Time_Enter"] = time_valid[:, 0]
-        probability_over_time["Time_Mid"] = time_valid[:, 1]
-        probability_over_time["Time_Exit"] = time_valid[:, 2]
-        probability_over_time["History_Start"] = metadata_valid[:, 0]
-        probability_over_time["History_End"] = metadata_valid[:, 1]
-        probability_over_time["History_Length"] = metadata_valid[:, 2]
-        probability_over_time["True_Class"] = y_valid 
+        probability_over_time["Time_Enter"] = metadata_valid[:, 0]
+        probability_over_time["Time_Mid"] = metadata_valid[:, 1]
+        probability_over_time["Time_Exit"] = metadata_valid[:, 2]
+        probability_over_time["History_Length"] = metadata_valid[:, 3]
+        probability_over_time["TrackID"] = metadata_valid[:, 4]
+        probability_over_time["True_Class"] = y_valid  
 
         filename = os.path.join(savepath, f"{datetime.date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
