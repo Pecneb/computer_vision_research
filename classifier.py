@@ -97,8 +97,10 @@ class BinaryClassifier(object):
         if top > len(self.class_labels_[0]):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
         self.class_proba_ = self.predict_proba(X=X)
+        # print(self.class_proba_)
         #print(self.class_proba_.shape)
         prediction_result = numpy.argsort(self.class_proba_)
+        # print(prediction_result)
         top_pred_res = numpy.zeros(prediction_result.shape)
         """for i, sor in enumerate(prediction_result):
             for oszlop in sor:
@@ -107,6 +109,7 @@ class BinaryClassifier(object):
                 else:
                     top_pred_res[i,oszlop] = prediction_result[i,oszlop]
         """
+        # print(prediction_result[:,-top:])
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 
@@ -155,14 +158,14 @@ class BinaryClassifier(object):
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
+    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32, top: int=1):
         """Validate trained models.
         Args:
             X_test (numpy.ndarray): Validation dataset of shape( n_samples, n_features ). 
             y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
             threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
-        predict_results = self.predict(X_test, threshold=threshold, top=1)
+        predict_results = self.predict(X_test, threshold=threshold, top=top)
         #print(predict_results)
         #print(predict_results.shape)
         accuracy_vector = []
