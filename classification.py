@@ -385,6 +385,8 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
 
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
+
     if path2model is not None:
         model = load_model(path2model)
         tracks = model.trackData
@@ -431,6 +433,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
+<<<<<<< HEAD
 
         top_picks = []
         for i in range(1,4):
@@ -440,6 +443,14 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
 
         # print(np.asarray(top_picks) )
         table[clr] = np.asarray(top_picks) 
+=======
+        top_picks = []
+        for i in range(1,4):
+            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
+        balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
+        # print(np.asarray(top_picks) )
+        table[clr] = np.asarray(top_picks)
+>>>>>>> iteration_2
         table2[clr] = balanced_threshold
 
         probabilities = binaryModel.predict_proba(X_valid)
@@ -448,15 +459,15 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         probability_over_time["Time_Enter"] = metadata_valid[:, 0]
         probability_over_time["Time_Mid"] = metadata_valid[:, 1]
         probability_over_time["Time_Exit"] = metadata_valid[:, 2]
-        probability_over_time["True_Class"] = y_valid
-        probability_over_time["History_Lenght"] = metadata_valid[:, 3]
+        probability_over_time["History_Length"] = metadata_valid[:, 3]
         probability_over_time["TrackID"] = metadata_valid[:, 4]
+        probability_over_time["True_Class"] = y_valid 
 
         filename = os.path.join(savepath, f"{date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
         save_model(path2db, str("binary_"+clr), binaryModel) 
-
+    table.index += 1
     print("Top picks")
     print(table.to_markdown())
     print("Threshold")
@@ -496,12 +507,17 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
 
+# depracated do not use
 def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_eps: float, xi: float, min_cluster_size: int, n_jobs: int, from_half=False):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
 
+<<<<<<< HEAD
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = [], [], [], [] , [], [] 
+=======
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_train = [], [], [], [] , [], [] 
+>>>>>>> iteration_2
 
     trackData = []
 
@@ -559,7 +575,7 @@ def validate_models(path2models: str, **argv):
 
     _, _, _, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
         models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
-        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"], features_v2=argv["features_v2"])
+        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
     for clr, m in zip(classifier_names, models):
         balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
@@ -576,7 +592,7 @@ def validate_models(path2models: str, **argv):
         probability_over_time["Time_Exit"] = metadata_valid[:, 2]
         probability_over_time["History_Length"] = metadata_valid[:, 3]
         probability_over_time["TrackID"] = metadata_valid[:, 4]
-        probability_over_time["True_Class"] = y_valid 
+        probability_over_time["True_Class"] = y_valid  
 
         filename = os.path.join(savepath, f"{datetime.date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
@@ -648,7 +664,7 @@ def investigateRenitent(path2model: str, threshold: float, **argv):
     fig, ax = plt.subplots(1, 2)
 
     if len(renitent_vector) > 0:
-        ax[0].set_title(f"Renitent: true class under threshold {threshold}: {len(renitent_vector)} out of {len(X_test)}")
+        ax[0].set_title(f"Renitent: true class under threshold {threshold}: {len(renitent_vector)}")
         ax[0].scatter(renitent_vector[:, 0], 1 - renitent_vector[:, 1], s=2.5, c='g')
         ax[0].scatter(renitent_vector[:, 4], 1 - renitent_vector[:, 5], s=2.5)
         ax[0].scatter(renitent_vector[:, 6], 1 - renitent_vector[:, 7], s=2.5, c='r')
@@ -657,7 +673,7 @@ def investigateRenitent(path2model: str, threshold: float, **argv):
         print(f"Renitent: true class under threshold {threshold}")
 
     if len(renitent_vector_2) > 0:
-        ax[1].set_title(f"Renitent: classes under threshold {threshold}: {len(renitent_vector_2)} out of {len(X_test)}")
+        ax[1].set_title(f"Renitent: classes under threshold {threshold}: {len(renitent_vector_2)}")
         ax[1].scatter(renitent_vector_2[:, 0], 1 - renitent_vector_2[:, 1], s=2.5, c='g')
         ax[1].scatter(renitent_vector_2[:, 4], 1 - renitent_vector_2[:, 5], s=2.5)
         ax[1].scatter(renitent_vector_2[:, 6], 1 - renitent_vector_2[:, 7], s=2.5, c='r')
@@ -737,41 +753,32 @@ def main():
 
     if args.database is not None:
         checkDir(args.database)
-
     if args.Classification:
         Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps,
                        xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-
     if args.ClassificationWorker:
         ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
                              min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-
     if args.CalibratedClassification:
         CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples,
                                  max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
                                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-
-    if args.BinaryClassificationWorkerTrain and args.database is not None:
+    if args.BinaryClassificationWorkerTrain:
         BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                         xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
                                         threshold=args.threshold, from_half=args.from_half)
-
     if args.BinaryClassificationTrain:
         BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
                                   max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
                                   n_jobs=args.n_jobs)
-
-    if args.plot_renitent_features and args.model is not None:
+    if args.plot_renitent_features:
         investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-        
     if args.validate_classifiers and args.threshold:
         validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                            min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold, features_v2=args.features_v2)
-
+                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
     if args.decision_tree_accuracy_over_depth:
         if args.database:
             BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
@@ -779,10 +786,11 @@ def main():
         elif args.model:
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
-
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
+        else:
+            argparser.print_help()
 
 
 if __name__ == "__main__":
