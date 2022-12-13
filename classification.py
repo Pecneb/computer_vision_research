@@ -492,6 +492,7 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
 
+# depracated do not use
 def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_eps: float, xi: float, min_cluster_size: int, n_jobs: int, from_half=False):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier

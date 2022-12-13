@@ -309,7 +309,7 @@ Implement predict() method for BinaryClassifier class with np.max() and implemen
             break
 ```
 
-1. Implement YOLO API - hldnapi.py - that works with the C-API of Darknet. In this function, the image has to be transformed to Darknet be able to run inference on it. `cv.cvtColor(image, cv.COLOR_BGR2RGB)` convert OpenCV color (Blue,Green,Red) to Darknet color (Red, Green, Blue). `cv.resize(image_rgb, (darknet_width, darknet_height), interpolation=cv.INTER_LINEAR)` resize image to Darknet's neural net image size. `darknet.detect_image(network, class_name, img_for_detect)` run detection on preprocessed image. This function returns a tuple (label, confidence, bbox[x,y,w,h]), the bounding box coordinates have to be resized to the original image.
+2. Implement YOLO API - hldnapi.py - that works with the C-API of Darknet. In this function, the image has to be transformed to Darknet be able to run inference on it. `cv.cvtColor(image, cv.COLOR_BGR2RGB)` convert OpenCV color (Blue,Green,Red) to Darknet color (Red, Green, Blue). `cv.resize(image_rgb, (darknet_width, darknet_height), interpolation=cv.INTER_LINEAR)` resize image to Darknet's neural net image size. `darknet.detect_image(network, class_name, img_for_detect)` run detection on preprocessed image. This function returns a tuple (label, confidence, bbox[x,y,w,h]), the bounding box coordinates have to be resized to the original image.
 
 ```python
     def cvimg2detections(image):
@@ -1130,6 +1130,42 @@ Decision Tree depth 10 accuracy
 | 14 |   0.8      |                    nan        |                      nan        |
 
 ## Accuraciy (features v2)
+
+### 0001_2
+
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  1 | 0.778547 | 0.622837 | 0.702422 | 0.560554 | 0.3391   | 0.756055 | 0.66955  |
+|  2 | 0.910035 | 0.82526  | 0.818339 | 0.641869 | 0.387543 | 0.884083 | 0.738754 |
+|  3 | 0.944637 | 0.901384 | 0.866782 | 0.705882 | 0.49827  | 0.934256 | 0.747405 |
+Threshold
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  0 | 0.5      | 0.5      | 0.890451 | 0.5      | 0.496454 | 0.641971 | 0.745567 |
+|  1 | 0.628427 | 0.5      | 0.920154 | 0.5      | 0.471781 | 0.540164 | 0.583854 |
+|  2 | 0.53125  | 0.53125  | 0.56528  | 0.5      | 0.53125  | 0.591971 | 0.614324 |
+|  3 | 0.907442 | 0.830566 | 0.932503 | 0.5      | 0.815754 | 0.803711 | 0.881509 |
+|  4 | 0.57484  | 0.5      | 0.595051 | 0.5      | 0.772866 | 0.558771 | 0.715819 |
+|  5 | 0.958674 | 0.5      | 0.964476 | 0.5      | 0.498224 | 0.861338 | 0.896448 |
+|  6 | 0.887581 | 0.499106 | 0.879531 | 0.5      | 0.523632 | 0.704265 | 0.839422 |
+|  7 | 0.929265 | 0.870969 | 0.842197 | 0.834406 | 0.523521 | 0.881805 | 0.871746 |
+|  8 | 0.897288 | 0.5      | 0.691971 | 0.5      | 0.659313 | 0.871863 | 0.916383 |
+|  9 | 0.95991  | 0.881049 | 0.948938 | 0.82175  | 0.960167 | 0.930084 | 0.910875 |
+| 10 | 0.891087 | 0.5      | 0.71591  | 0.5      | 0.751335 | 0.80488  | 0.853872 |
+| 11 | 0.558824 | 0.496435 | 0.923351 | 0.5      | 0.812834 | 0.702317 | 0.672906 |
+| 12 | 0.607143 | 0.517857 | 0.661623 | 0.5      | 0.534805 | 0.535714 | 0.626494 |
+| 13 | 0.990958 | 0.5      | 0.790054 | 0.5      | 0.498192 | 0.614575 | 0.938192 |
+| 14 | 0.7      | 0.5      | 0.786796 | 0.5      | 0.5      | 0.75     | 0.795599 |
+|     |        0 |
+|:----|---------:|
+| KNN | 0.768179 |
+| GP  | 0.575149 |
+| GNB | 0.807219 |
+| MLP | 0.543744 |
+| SGD | 0.623342 |
+| SVM | 0.719562 |
+| DT  | 0.790867 |
+
 
 ## Examples
 
