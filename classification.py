@@ -385,7 +385,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
 
-    X_train, y_train, time_train, metadata_train, X_valid, y_valid, time_test, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
@@ -501,18 +501,18 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
 
-    X_train, y_train, time_train, X_valid, y_valid, time_valid = [], [], [], [] , [], [] 
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_train = [], [], [], [] , [], [] 
 
     trackData = []
 
     threshold = 0.5
     
     if path2dataset.split(".")[-1] == "db":
-        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, trackData = data_preprocessing_for_classifier(
             path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, from_half=from_half)
     elif path2dataset.split(".")[-1] == "joblib":
         model = load_model(path2dataset)
-        X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
             model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
         trackData = model.trackData
 
@@ -635,7 +635,7 @@ def investigateRenitent(path2model: str, threshold: float, **argv):
         path2model (str): Path to model. 
     """
     model = load_model(path2model)
-    _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(
+    _, _, _, X_test, y_test, _ = data_preprocessing_for_classifier_from_joblib_model(
         model, min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
         min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
