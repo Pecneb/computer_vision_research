@@ -432,10 +432,14 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             binaryModel.init_models(models[clr])
         binaryModel.fit()
 
-        balanced_toppicks = binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'])
+        top_picks = []
+        for i in range(1,4):
+            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
+
         balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
 
-        table.loc[0, clr] = balanced_toppicks 
+        # print(np.asarray(top_picks) )
+        table[clr] = np.asarray(top_picks) 
         table2[clr] = balanced_threshold
 
         probabilities = binaryModel.predict_proba(X_valid)
