@@ -501,7 +501,7 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
 
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_train = [], [], [], [] , [], [] 
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = [], [], [], [] , [], [] 
 
     trackData = []
 
