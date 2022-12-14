@@ -385,7 +385,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
 
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
@@ -433,24 +433,12 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         else:
             binaryModel.init_models(models[clr])
         binaryModel.fit()
-<<<<<<< HEAD
-
-        top_picks = []
-        for i in range(1,4):
-            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
-
-        balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
-
-        # print(np.asarray(top_picks) )
-        table[clr] = np.asarray(top_picks) 
-=======
         top_picks = []
         for i in range(1,4):
             top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
         balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         # print(np.asarray(top_picks) )
         table[clr] = np.asarray(top_picks)
->>>>>>> iteration_2
         table2[clr] = balanced_threshold
 
         probabilities = binaryModel.predict_proba(X_valid)
@@ -513,11 +501,7 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
 
-<<<<<<< HEAD
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = [], [], [], [] , [], [] 
-=======
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_train = [], [], [], [] , [], [] 
->>>>>>> iteration_2
 
     trackData = []
 
