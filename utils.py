@@ -528,10 +528,39 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([track.history[0].frameID, track.history[midx].frameID, 
                                             track.history[j].frameID, len(track.history), track.objID]))
-        continue
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False):
+def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in range(len(trackedObjects)//2, len(trackedObjects)):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range(step, len(trackedObjects[i].history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                                                trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY])) 
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -555,6 +584,10 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     #X, y = make_features_for_classification(filteredTracks, 6, labels)
     if from_half:
         X, y, metadata = make_features_for_classification_velocity_time_second_half(filteredTracks, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(filteredTracks, 6, labels)
     else:
         X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
     X = X[y > -1]
@@ -650,7 +683,7 @@ def load_model(path2model: str) -> BinaryClassifier:
     """
     return joblib.load(path2model)
 
-def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False):
+def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -674,6 +707,8 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
         X, y, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(model.trackData, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(model.trackData, 6, labels)
     else:
         X, y, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
     X = X[y > -1]
