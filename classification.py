@@ -385,7 +385,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
 
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
