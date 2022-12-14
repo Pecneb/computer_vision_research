@@ -394,13 +394,18 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
-                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+                                                            n_jobs=argv['n_jobs'], 
+                                                            from_half=argv['from_half'],
+                                                            features_v2=argv['features_v2'],
+                                                            features_v2_half=argv['features_v2_half'])
     else:
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
-                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'],
+                                                            features_v2=argv['features_v2'],
+                                                            features_v2_half=argv['features_v2_half'])
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -559,13 +564,16 @@ def validate_models(path2models: str, **argv):
 
     _, _, _, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
         models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
-        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"],
+        features_v2=argv['features_v2'], features_v2_half=argv['features_v2_half'])
 
     for clr, m in zip(classifier_names, models):
-        balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
+        top_picks = []
+        for i in range(1,4):
+            top_picks.append(m.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
         balanced_threshold = m.validate(X_valid, y_valid, argv['threshold'])
-
-        table.loc[0, clr] = balanced_toppicks 
+        # print(np.asarray(top_picks) )
+        table[clr] = np.asarray(top_picks)
         table2[clr] = balanced_threshold
 
         probabilities = m.predict_proba(X_valid)
@@ -733,6 +741,7 @@ def main():
     argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.",
                            action="store_true", default=False)
     argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
+    argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
     args = argparser.parse_args()
 
     if args.database is not None:
@@ -752,7 +761,9 @@ def main():
     if args.BinaryClassificationWorkerTrain:
         BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                         xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
-                                        threshold=args.threshold, from_half=args.from_half)
+                                        threshold=args.threshold, from_half=args.from_half, 
+                                        features_v2=args.features_v2, 
+                                        features_v2_half=args.features_v2_half)
     if args.BinaryClassificationTrain:
         BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
                                   max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
@@ -762,7 +773,8 @@ def main():
                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.validate_classifiers and args.threshold:
         validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
+                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold,
+                        features_v2=args.features_v2, features_v2_half=args.features_v2_half)
     if args.decision_tree_accuracy_over_depth:
         if args.database:
             BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
