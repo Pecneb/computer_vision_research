@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir
+from processing_utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir
 import databaseLoader
 import matplotlib.pyplot as plt
 import numpy as np
