@@ -512,7 +512,7 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
     Returns:
         tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
     """
-    X_featurevectors = []
+    X_featurevectors = [] # [history[0].X, history[0]. Y,history[0].VX, history[0].VY,history[mid].X, history[mid].Y,history[end].X, history[end]. Y,history[end].VX, history[end].VY]
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
     for i, track in enumerate(trackedObjects):

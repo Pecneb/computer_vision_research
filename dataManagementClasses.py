@@ -90,6 +90,7 @@ class TrackedObject():
     AX: float = field(init=False)
     AY: float = field(init=False)
     # bugged: int = field(init=False)
+    featureVector: np.ndarray = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -107,6 +108,7 @@ class TrackedObject():
         self.max_age = max_age
         self.time_since_update = 0
         self.mean = []
+        self.featureVector = np.array() # feature vector that describes the track 
         #self.bugged = 0 
     
     def __repr__(self) -> str:
@@ -129,6 +131,51 @@ class TrackedObject():
         """
         self.AX = (new_vx - old_vx) / (self.time_since_update+1)
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
+
+    def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
+        """Rescale normalized coordinates with the given frame sizes.
+
+        Args:
+            featureVector (np.ndarray): Feature vector of the track.
+            framewidth (int): Width of the video frame. 
+            frameheight (int): Height of the video frame. 
+
+        Returns:
+            np.ndarray: upscaled feature vector
+        """
+        return np.array([framewidth*featureVector[0], frameheight*featureVector[1], framewidth*featureVector[2],
+                        frameheight*featureVector[3], framewidth*featureVector[4], frameheight*featureVector[5],
+                        framewidth*featureVector[6], frameheight*featureVector[7], framewidth*featureVector[8],
+                        frameheight*featureVector[9]])
+
+    def downscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
+        """Downscale coordinates to normalized coordinates with the given frame sizes.
+
+        Args:
+            featureVector (np.ndarray): Feature vector of the track.
+            framewidth (int): Width of the video frame. 
+            frameheight (int): Height of the video frame. 
+
+        Returns:
+            np.ndarray: downscaled feature vector
+        """
+        return np.array([featureVector[0] / framewidth, featureVector[1] / frameheight, featureVector[2] / framewidth,
+                        featureVector[3] / frameheight, featureVector[4] / framewidth, featureVector[5] / frameheight,
+                        featureVector[6] / framewidth, featureVector[7] / frameheight, featureVector[8] / framewidth,
+                        featureVector[9] / frameheight])
+                        
+    def update_feature(self, framewidth: int, frameheight: int):
+        """Update the track's feature vector.
+
+        Args:
+            framewidth (int): Width of the video frame.
+            frameheight (int): Height of the video frame. 
+        """
+        n = len(self.history)
+        self.featureVector = np.array([self.history[0].X, self.history[0].Y, self.history[0].VX, 
+                                    self.history[0].VY, self.history[n//2].X, self.history[n//2].Y, 
+                                    self.history[n].X, self.history[n].Y, self.history[n].VX, 
+                                    self.history[n].VY])
 
     def update(self, detection=None, mean=None, historyDepth = 30):
         """Update tracking
