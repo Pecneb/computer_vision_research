@@ -382,7 +382,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import BinaryClassifier
+    from classifier import BinaryClassifier, OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
@@ -416,6 +416,16 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         'SVM' : SVC,
         'DT' : DecisionTreeClassifier
     }
+    
+    parameters = {
+        'KNN' : {'n_neighbors' : 15},
+        'GP' :  {},
+        'GNB' : {},
+        'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+        'SGD' : {'loss' : 'modified_huber'},
+        'SVM' : {'kernel' : 'rbf', 'probability' : True},
+        'DT' : {} 
+    }
 
     table = pd.DataFrame()
     table2 = pd.DataFrame()
@@ -426,18 +436,28 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
     for clr in models:
-        binaryModel = BinaryClassifier(X_train, y_train, tracks)
+        #binaryModel = BinaryClassifier(X_train, y_train, tracks)
         if clr == 'KNN':
-            binaryModel.init_models(models[clr], n_neighbors=15)
+            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
+            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+            #binaryModel.init_models(models[clr], n_neighbors=15)
         elif clr == 'MLP':
-            binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
+            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
+            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+            #binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
         elif clr == 'SGD':
-            binaryModel.init_models(models[clr], loss="modified_huber")
+            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
+            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+            #binaryModel.init_models(models[clr], loss="modified_huber")
         elif clr == 'SVM':
-            binaryModel.init_models(models[clr], kernel='rbf', probability=True)
+            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
+            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+            #binaryModel.init_models(models[clr], kernel='rbf', probability=True)
         else:
-            binaryModel.init_models(models[clr])
-        binaryModel.fit()
+            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
+            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+            #binaryModel.init_models(models[clr])
+        binaryModel.fit(X_train, y_train)
         top_picks = []
         for i in range(1,4):
             top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
