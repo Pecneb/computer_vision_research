@@ -253,46 +253,77 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
 
 
 class OneVSRestClassifierExtended(OneVsRestClassifier):
+    """Extended One vs. Rest Classifier
 
-    def __init__(self, estimator, tracks):
+    The predict() method takes 2 extra agruments, threshold and a top n.
+    Only the top n classes over the threshold will be returned.
+    Also a validate and a validate_predictions method is implemented.
+    The validate() method calculates the balanced accuracy of the classifier.
+    It takes 3 arguments, X_test, y_test, threshold. X and y test are the
+    testing datasets, the threshold is a float value that 
+
+    Attributes
+    ----------
+
+    Parameters
+    ----------
+    estimator : estimator object
+        A regressor or a classifier that implements fit. When a classifier is passed, 
+        decision_function will be used in priority and it will fallback to :term`predict_proba` 
+        if it is not available. When a regressor is passed, predict is used.
+    tracks : list
+    
+    """
+
+    def __init__(self, estimator, tracks, n_jobs=16):
         self.trackData = tracks
-        super().__init__(estimator, n_jobs=16)
+        super().__init__(estimator, n_jobs=n_jobs)
 
-    def predict(self, X: numpy.ndarray,  threshold: numpy.float32 = 0.5, top:int=1):
-        """Return predicted top labels of dataset  X
+    def predict(self, X: numpy.ndarray, top:int=1):
+        """Return predicted top labels of dataset X
 
-        Args:
-            X (numpy.ndarray): Feature vector of shape( n_samples, n_features ) for prediction. 
-            top (int): Number tof classes with the highest probability
+        Parameters
+        ----------
+        X : numpy.ndarray shape (n_samples, n_features)
+            Sample dataset.
+        threshold : numpy.float32
+            Probability threshold, if prediction is above this value,
+            then it has a chance to get in the top n predictions.
+        top : int
+            Number of classes with the highest probability
 
-        Returns:
-            numpy.ndarray: lists of prediction result class labels, lenght=top
+        Returns
+        -------
+        predictions : numpy.ndarray shape (top,) 
+            Top n classes.
         """
         if top > len(self.classes_):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+
+        # Get probability for all classes.
         class_proba = self.predict_proba(X=X)
-        # print(class_proba)
-        #print(class_proba.shape)
+        # Sort to ascending order.
         prediction_result = numpy.argsort(class_proba)
-        # print(prediction_result)
-        top_pred_res = numpy.zeros(prediction_result.shape)
-        """for i, sor in enumerate(prediction_result):
-            for oszlop in sor:
-                if self.class_proba_[i,oszlop] < threshold:
-                    top_pred_res[i,oszlop] = -1
-                else:
-                    top_pred_res[i,oszlop] = prediction_result[i,oszlop]
-        """
-        # print(prediction_result[:,-top:])
+        
+        #top_pred_res = numpy.zeros(prediction_result.shape)
+        print(prediction_result[:,-top:])
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 
     def validate(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
         """Validate trained models.
-        Args:
-            X_test (numpy.ndarray): Validation dataset of shape( n_samples, n_features ). 
-            y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
-            threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
+
+        Calculates the balanced accuracy of the underlying trained models.
+
+        Parameters
+        ----------
+        X_test : numpy.ndarray shape ( n_samples, n_features )
+            Test dataset. 
+        y_test : numpy.ndarray shape (n_samples,)
+            Labels of the test dataset.
+        threshold : numpy.float32 
+            Probability threshold, if prediction probability higher
+            than the threshold, then it counts as a valid prediction.
         """
         predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []
@@ -330,29 +361,34 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32, top: int=1):
+    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, top: int=1):
         """Validate trained models.
-        Args:
-            X_test (numpy.ndarray): Validation dataset of shape( n_samples, n_features ). 
-            y_test (numpy.ndarray): Validation class labels shape( n_samples, 1 ). 
-            threshold (numpy.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
+
+        Parameters
+        ----------
+        X_test : numpy.ndarray shape ( n_samples, n_features )
+            Test dataset. 
+        y_test : numpy.ndarray shape (n_samples,)
+            Labels of the test dataset.
+        threshold : numpy.float32 
+            Probability threshold, if prediction probability higher
+            than the threshold, then it counts as a valid prediction.
+        top : int
+            Parameter for predict() method, that returns the top n predictions.
         """
-        predict_results = self.predict(X_test, threshold=threshold, top=top)
-        #print(predict_results)
-        #print(predict_results.shape)
-        accuracy_vector = []
-        balanced_accuracy = []
+        predict_results = self.predict(X_test, top=top)
+
         tp = 0 # True positive --> predicting true and it is really true 
         fn = 0 # False negative (type II error) --> predicting false, although its true 
         tn = 0 # True negative --> predicting false and it is really false
         fp = 0 # False positive (type I error) --> predicting true, although it is false
+
         for i, _y_test in enumerate(y_test):
-            # print(_y_test in predict_results[i])
             if _y_test in predict_results[i]:
                 tp += 1
             else:
                 fp +=1
-        #print(tp, len(y_test))
+
         map_ = tp/len(y_test)
-        #print(map_)
+
         return map_

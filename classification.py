@@ -436,31 +436,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
     for clr in models:
-        #binaryModel = BinaryClassifier(X_train, y_train, tracks)
-        if clr == 'KNN':
-            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
-            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
-            #binaryModel.init_models(models[clr], n_neighbors=15)
-        elif clr == 'MLP':
-            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
-            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
-            #binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
-        elif clr == 'SGD':
-            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
-            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
-            #binaryModel.init_models(models[clr], loss="modified_huber")
-        elif clr == 'SVM':
-            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
-            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
-            #binaryModel.init_models(models[clr], kernel='rbf', probability=True)
-        else:
-            #binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks)
-            binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
-            #binaryModel.init_models(models[clr])
+        binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
+        #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+        #binaryModel.init_models(models[clr])
         binaryModel.fit(X_train, y_train)
         top_picks = []
         for i in range(1,4):
-            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
+            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i))
         balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
         # print(np.asarray(top_picks) )
         table[clr] = np.asarray(top_picks)
@@ -590,7 +572,7 @@ def validate_models(path2models: str, **argv):
     for clr, m in zip(classifier_names, models):
         top_picks = []
         for i in range(1,4):
-            top_picks.append(m.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
+            top_picks.append(m.validate_predictions(X_valid, y_valid, top=i))
         balanced_threshold = m.validate(X_valid, y_valid, argv['threshold'])
         # print(np.asarray(top_picks) )
         table[clr] = np.asarray(top_picks)
