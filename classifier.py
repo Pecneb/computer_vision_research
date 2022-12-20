@@ -306,7 +306,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         prediction_result = numpy.argsort(class_proba)
         
         #top_pred_res = numpy.zeros(prediction_result.shape)
-        print(prediction_result[:,-top:])
+        #print(prediction_result[:,-top:])
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 

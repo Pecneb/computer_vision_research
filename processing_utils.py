@@ -654,7 +654,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
             y_train.append(y[i])
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
-from classifier import BinaryClassifier
+from classifier import OneVSRestClassifierExtended 
 def save_model(path2db: str, classifier_type: str, model):
     """Save model to research_data dir.
 
@@ -672,7 +672,7 @@ def save_model(path2db: str, classifier_type: str, model):
     else:
         print("Error: model is None, model was not saved.")
 
-def load_model(path2model: str) -> BinaryClassifier:
+def load_model(path2model: str) -> OneVSRestClassifierExtended:
     """Load classifier model.
 
     Args:
@@ -683,7 +683,7 @@ def load_model(path2model: str) -> BinaryClassifier:
     """
     return joblib.load(path2model)
 
-def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
+def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
