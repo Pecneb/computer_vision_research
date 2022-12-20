@@ -108,7 +108,7 @@ class TrackedObject():
         self.max_age = max_age
         self.time_since_update = 0
         self.mean = []
-        self.featureVector = np.array() # feature vector that describes the track 
+        self.featureVector = np.array([]) # feature vector that describes the track 
         #self.bugged = 0 
     
     def __repr__(self) -> str:

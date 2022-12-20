@@ -382,7 +382,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import BinaryClassifier, OneVSRestClassifierExtended
+    from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
@@ -439,12 +439,14 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
         #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
         #binaryModel.init_models(models[clr])
+
         binaryModel.fit(X_train, y_train)
+
         top_picks = []
         for i in range(1,4):
             top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i))
         balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
-        # print(np.asarray(top_picks) )
+
         table[clr] = np.asarray(top_picks)
         table2[clr] = balanced_threshold
 
@@ -460,8 +462,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
 
         filename = os.path.join(savepath, f"{date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
-            probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
+            probability_over_time.to_excel(writer, sheet_name="Probability_over_time") # each feature vector
+            table.to_excel(writer, sheet_name="Top_Picks") # top n accuracy
+            table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
+
+        #TODO: name models according to their classifier parameters
         save_model(path2db, str("binary_"+clr), binaryModel) 
+
     table.index += 1
     print("Top picks")
     print(table.to_markdown())
@@ -470,6 +477,17 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     print(table2.aggregate(np.average).to_markdown())
     
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
+    """Deprecated, dont use.
+
+    Will update in time.
+
+    Args:
+        classifier (str): _description_
+        path2db (str): _description_
+    """
+    print("Warning: deprecated function, dont use.")
+    print("Exiting...")
+    exit(1)
     from classifier import BinaryClassifier
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
