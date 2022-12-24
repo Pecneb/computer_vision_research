@@ -9,7 +9,7 @@ def main():
     argparser.add_argument("--min_samples", help="Parameter for optics clustering", default=10, type=int)
     argparser.add_argument("--max_eps", help="Parameter for optics clustering", default=0.2, type=float)
     argparser.add_argument("--xi", help="Parameter for optics clustering", default=0.15, type=float)
-    argparser.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10)
+    argparser.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10, type=int)
     args = argparser.parse_args()
     if args.database is None:
         argparser.print_help()

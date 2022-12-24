@@ -785,7 +785,35 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
     
     tracks_labels = [tracks_car_only, labels]
 
-    filename = path2tracks.split('/')[-1].split('.')[0] + '.joblib' 
+    filename = path2tracks.split('/')[-1].split('.')[0] + '_filtered.joblib' 
     savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
 
+    print("Saving: ", savepath)
+
     return joblib.dump(tracks_labels, savepath)
+
+def random_split_tracks(dataset: list, train_percentage: float, seed: int):
+    #TODO randomized shuffle of tracks, creating training and testing dataset.
+
+    if len(dataset) == 2:
+        tracks = dataset[0]
+        labels = dataset[1]
+    else:
+        tracks = dataset
+        labels = None
+
+    train_size = int(len(tracks) * train_percentage) 
+    test_size = len(tracks) - train_size
+
+    print(train_size)
+    print(test_size)
+
+    train = []
+    test = []
+
+    # Iterate through filtered tracks with labels
+    for i, t in tqdm.tqdm(enumerate(tracks), desc="Tracks processed"):
+        #print(t)
+        continue
+
+    return train, test
