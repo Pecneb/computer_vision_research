@@ -794,7 +794,10 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
     #TODO randomized shuffle of tracks, creating training and testing dataset.
+    from sklearn.utils import shuffle
 
+    # check wheter the given dataset is filtered or not
+    # if filtered, the dataset contains tracks with labels ordered to them
     if len(dataset) == 2:
         tracks = dataset[0]
         labels = dataset[1]
@@ -802,18 +805,19 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
         tracks = dataset
         labels = None
 
+    # calculate train and test dataset size based on the given percentage
     train_size = int(len(tracks) * train_percentage) 
     test_size = len(tracks) - train_size
 
-    print(train_size)
-    print(test_size)
 
-    train = []
+    train = shuffle(tracks, random_state=seed, n_samples=train_size) 
     test = []
 
-    # Iterate through filtered tracks with labels
-    for i, t in tqdm.tqdm(enumerate(tracks), desc="Tracks processed"):
-        #print(t)
-        continue
+    # fill test dataset with the rest of the tracks
+    i = 0
+    while(len(test) != test_size or i > len(tracks)):
+        if tracks[i] not in train and tracks[i] not in test:
+            test.append(tracks[i])
+        i += 1
 
     return train, test
