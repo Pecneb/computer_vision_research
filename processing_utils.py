@@ -764,6 +764,19 @@ def load_joblib_tracks(path2tracks: str):
     return joblib.load(path2tracks)
 
 def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18):
+    """Save training tracks with class numbers ordered to them.
+
+    Args:
+        path2tracks (str): Path to dataset. 
+        min_samples (int, optional): Optics clustering parameter. Defaults to 10.
+        max_eps (float, optional): Optics clustering parameter. Defaults to 0.2.
+        xi (float, optional): Optics clustering parameter. Defaults to 0.15.
+        min_cluster_size (int, optional): Optics clustering parameter. Defaults to 10.
+        n_jobs (int, optional): Number of processes to run. Defaults to 18.
+
+    Returns:
+        _type_: _description_
+    """
     from clustering import optics_on_featureVectors 
     filext = path2tracks.split('/')[-1].split('.')[-1]
     
@@ -783,41 +796,38 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
                                     max_eps=max_eps, xi=xi, 
                                     min_cluster_size=min_cluster_size, n_jobs=n_jobs)
     
-    tracks_labels = [tracks_car_only, labels]
+    # order labels to tracks, store it in a list[dictionary] format
+    tracks_classes = []
+    for i, t in enumerate(tracks_car_only):
+        tracks_classes.append({
+            "track": t,
+            "class": labels[i] 
+        })
 
     filename = path2tracks.split('/')[-1].split('.')[0] + '_filtered.joblib' 
     savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
 
     print("Saving: ", savepath)
 
-    return joblib.dump(tracks_labels, savepath)
+    return joblib.dump(tracks_classes, savepath)
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
     #TODO randomized shuffle of tracks, creating training and testing dataset.
     from sklearn.utils import shuffle
 
-    # check wheter the given dataset is filtered or not
-    # if filtered, the dataset contains tracks with labels ordered to them
-    if len(dataset) == 2:
-        tracks = dataset[0]
-        labels = dataset[1]
-    else:
-        tracks = dataset
-        labels = None
-
     # calculate train and test dataset size based on the given percentage
-    train_size = int(len(tracks) * train_percentage) 
-    test_size = len(tracks) - train_size
+    train_size = int(len(dataset) * train_percentage) 
+    test_size = len(dataset) - train_size
 
 
-    train = shuffle(tracks, random_state=seed, n_samples=train_size) 
+    train = shuffle(dataset, random_state=seed, n_samples=train_size) 
     test = []
 
     # fill test dataset with the rest of the tracks
     i = 0
-    while(len(test) != test_size or i > len(tracks)):
-        if tracks[i] not in train and tracks[i] not in test:
-            test.append(tracks[i])
+    while(len(test) != test_size or i > len(dataset)):
+        if dataset[i] not in train and dataset[i] not in test:
+            test.append(dataset[i])
         i += 1
 
     return train, test

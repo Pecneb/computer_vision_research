@@ -10,7 +10,9 @@ def main():
     tracks = load_joblib_tracks(args.db) 
 
     print("\nFiltered tracks")
-    random_split_tracks(tracks, 0.7, args.seed)
+    train, test = random_split_tracks(tracks, 0.7, args.seed)
+    print(train)
+    print(test)
     print("\n")
 
 if __name__ == "__main__":
