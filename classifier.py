@@ -1,8 +1,8 @@
 import numpy
 from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.utils import multiclass, validation
-from sklearn.metrics import balanced_accuracy_score
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.multiclass import check_is_fitted
 
 class BinaryClassifier(ClassifierMixin, BaseEstimator):
     """Base Binary Classifier
@@ -276,8 +276,27 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
     """
 
     def __init__(self, estimator, tracks, n_jobs=16):
-        self.trackData = tracks
+        self.tracks = tracks
         super().__init__(estimator, n_jobs=n_jobs)
+    
+    def predict_proba(self, X: numpy.ndarray):
+        """Return predicted probabilities of dataset X
+
+        Parameters
+        ----------
+        X : numpy.ndarray shape (n_samples, n_features)
+
+        Returns:
+        numpy.ndarray : shape (n_samples, n_classes_) 
+            Prediction probabilities of 
+        """
+        check_is_fitted(self)
+        X = validation.check_array(X, ensure_2d=True)
+
+        Y = numpy.zeros((X.shape[0], self.classes_.shape[0]))
+        for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
+            Y[:, clr] = mdl.predict_proba(X)[:, 1]
+        return Y 
 
     def predict(self, X: numpy.ndarray, top:int=1):
         """Return predicted top labels of dataset X
@@ -297,6 +316,9 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         predictions : numpy.ndarray shape (top,) 
             Top n classes.
         """
+        check_is_fitted(self)
+        X = validation.check_array(X, ensure_2d=True)
+
         if top > len(self.classes_):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
 
@@ -324,6 +346,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         threshold : numpy.float32 
             Probability threshold, if prediction probability higher
             than the threshold, then it counts as a valid prediction.
+
+        Returns
+        -------
+        balanced_accuracy : float, shape (n_classes,)
         """
         predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []

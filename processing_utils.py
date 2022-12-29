@@ -761,6 +761,9 @@ def load_joblib_tracks(path2tracks: str):
     Returns:
         list[TrackedObjects]: Loaded list of tracked objects. 
     """
+    if path2tracks.split('.')[-1] != "joblib":
+        print("Error: Not joblib file.")
+        exit(1)
     return joblib.load(path2tracks)
 
 def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18):
@@ -812,7 +815,6 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
     return joblib.dump(tracks_classes, savepath)
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
-    #TODO randomized shuffle of tracks, creating training and testing dataset.
     from sklearn.utils import shuffle
 
     # calculate train and test dataset size based on the given percentage

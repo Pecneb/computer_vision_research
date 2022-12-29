@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 from processing_utils import load_model, save_model, data_preprocessing_for_calibrated_classifier, data_preprocessing_for_classifier, data_preprocessing_for_classifier_from_joblib_model, checkDir
+np.seterr(divide='ignore', invalid='ignore')
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
@@ -520,7 +521,6 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     save_model(path2db, str("binary_"+classifier), binaryModel) 
     print(table.to_markdown()) # print out pandas dataframe in markdown table format.
 
-# depracated do not use
 def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_eps: float, xi: float, min_cluster_size: int, n_jobs: int, from_half=False):
     from classifier import BinaryClassifier
     from sklearn.tree import DecisionTreeClassifier
@@ -707,6 +707,105 @@ def plot_decision_tree(path2model: str):
         print(f"Class {i}")
         plot_tree(m)
         plt.show()
+
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_jobs=18):
+    """Calculate classification model accuracy with cross validation method.
+
+    Args:
+        path2dataset (str): Path to dataset. File with joblib extension. 
+        train_ratio (float, optional): _description_. Defaults to 0.75.
+        seed (int, optional): _description_. Defaults to 1.
+        n_jobs (int, optional): _description_. Defaults to 18.
+    """
+    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_features_for_classification_velocity_time
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    from classifier import OneVSRestClassifierExtended, BinaryClassifier 
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import cross_val_score
+
+    # load tracks from joblib file
+    # tracks stored as list[dict]
+    # {
+    #   "track": t,
+    #   "class": c
+    # }
+    tracks = load_joblib_tracks(path2dataset)
+    tracks_filteted = []
+    for t in tracks:
+        if t["class"] != -1:
+            tracks_filteted.append(t)
+
+    # shuffle tracks, and separate into a train and test dataset
+    train, test = random_split_tracks(tracks_filteted, train_ratio, seed)
+
+    tracks_train = [t["track"] for t in train]
+    labels_train = np.array([t["class"] for t in train])
+    tracks_test = [t["track"] for t in test]
+    labels_test = np.array([t["class"] for t in test])
+
+    X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
+    X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+
+    models = {
+        'KNN' : KNeighborsClassifier,
+        'GP' : GaussianProcessClassifier,
+        'GNB' : GaussianNB,
+        'MLP' : MLPClassifier,
+        'SGD' : SGDClassifier,
+        'SVM' : SVC,
+        'DT' : DecisionTreeClassifier
+    }
+    
+    parameters = {
+        'KNN' : {'n_neighbors' : 15},
+        'GP' :  {},
+        'GNB' : {},
+        'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+        'SGD' : {'loss' : 'modified_huber'},
+        'SVM' : {'kernel' : 'rbf', 'probability' : True},
+        'DT' : {} 
+    }
+
+
+    splits = ["Split_1", "Split_2", "Split_3", "Split_4", "Split_5", "Mean", "Standart deviation"]
+    balanced_table = pd.DataFrame()
+    top_k_table = pd.DataFrame()
+
+    balanced_table["Split"] = splits
+    top_k_table["Split"] = splits
+
+    t1 = time.time()
+    for m in models:
+        clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[m]), tracks=tracks_train, n_jobs=n_jobs)
+        #clf = BinaryClassifier(tracks_train, models[m], parameters[m])
+
+        balanced_scores = cross_val_score(clf, X_train, y_train, cv=5, scoring='balanced_accuracy')
+        #print(f"\n{m}:\n\tBalanced: {balanced_scores} Mean: {balanced_scores.mean()} Standart deviation: {balanced_scores.std()}")
+        balanced_table[m] = np.append(balanced_scores, [balanced_scores.mean(), balanced_scores.std()]) 
+
+        top_k_scores = cross_val_score(clf, X_train, y_train, cv=5, scoring='top_k_accuracy')
+        #print(f"\n\tTop_k: {top_k_scores} Mean: {top_k_scores.mean()} Standart deviation: {top_k_scores.std()}")
+        top_k_table[m] = np.append(top_k_scores, [top_k_scores.mean(), top_k_scores.std()])
+
+        #clf.fit(X_train, y_train)
+        #print(clf.predict_proba(X_test))
+        #print(f"\tTest dataset score: {clf.score(X_test, y_test)}")
+
+    t2 = time.time()
+    td = t2 - t1
+    print("\nTime: %d s" % td)
+    
+    print("\nBalanced accuracy\n")
+    print(balanced_table.to_markdown())
+
+    print("\nTop k accuracy\n")
+    print(top_k_table.to_markdown())
+    print()
     
 def main():
     import argparse
@@ -762,6 +861,9 @@ def main():
                            action="store_true", default=False)
     argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
     argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
+    argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
+    argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
     args = argparser.parse_args()
 
     if args.database is not None:
@@ -784,10 +886,10 @@ def main():
                                         threshold=args.threshold, from_half=args.from_half, 
                                         features_v2=args.features_v2, 
                                         features_v2_half=args.features_v2_half)
-    if args.BinaryClassificationTrain:
-        BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
-                                  max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
-                                  n_jobs=args.n_jobs)
+    #if args.BinaryClassificationTrain:
+    #    BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
+    #                              max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
+    #                              n_jobs=args.n_jobs)
     if args.plot_renitent_features:
         investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
@@ -802,6 +904,8 @@ def main():
         elif args.model:
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
+    if args.cross_val:
+        cross_validate(args.database, args.train_ratio, args.seed, args.n_jobs)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
