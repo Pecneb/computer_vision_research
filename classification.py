@@ -708,7 +708,7 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18):
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
@@ -718,14 +718,14 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
         n_jobs (int, optional): Number of jobs to run. Defaults to 18.
     """
-    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_features_for_classification_velocity_time
+    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_feature_vectors_version_two_half
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import OneVSRestClassifierExtended, BinaryClassifier 
+    from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.model_selection import cross_val_score
 
@@ -762,16 +762,25 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         'DT' : DecisionTreeClassifier
     }
     
-    parameters = {
-        'KNN' : {'n_neighbors' : 15},
-        'GP' :  {},
-        'GNB' : {},
-        'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-        'SGD' : {'loss' : 'modified_huber'},
-        'SVM' : {'kernel' : 'rbf', 'probability' : True},
-        'DT' : {} 
-    }
-
+    parameters = [{
+                    'KNN' : {'n_neighbors' : 15},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 3},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True},
+                    'DT' : {} 
+                }]
+    
+    print(parameters[estimator_params_set-1])
 
     splits = np.append(np.arange(1,6,1), [ "Mean", "Standart deviation"])
     basic_table = pd.DataFrame()
