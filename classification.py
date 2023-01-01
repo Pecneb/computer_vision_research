@@ -708,14 +708,15 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_jobs=18):
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
         path2dataset (str): Path to dataset. File with joblib extension. 
-        train_ratio (float, optional): _description_. Defaults to 0.75.
-        seed (int, optional): _description_. Defaults to 1.
-        n_jobs (int, optional): _description_. Defaults to 18.
+        train_ratio (float, optional): Split ratio of the tracks. Defaults to 0.75.
+        seed (int, optional): Seed for reproducable track splitting. Defaults to 1.
+        n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
+        n_jobs (int, optional): Number of jobs to run. Defaults to 18.
     """
     from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_features_for_classification_velocity_time
     from sklearn.neighbors import KNeighborsClassifier
@@ -772,39 +773,71 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_jobs=18):
     }
 
 
-    splits = ["Split_1", "Split_2", "Split_3", "Split_4", "Split_5", "Mean", "Standart deviation"]
+    splits = np.append(np.arange(1,6,1), [ "Mean", "Standart deviation"])
+    basic_table = pd.DataFrame()
     balanced_table = pd.DataFrame()
     top_k_table = pd.DataFrame()
+    final_test_basic = pd.DataFrame()
+    final_test_balanced = pd.DataFrame()
+    final_test_top_k_idx = ["Top_1", "Top_2", "Top_3"]
+    final_test_top_k = pd.DataFrame()
 
+    basic_table["Split"] = splits
     balanced_table["Split"] = splits
     top_k_table["Split"] = splits
+    final_test_top_k["Top"] = final_test_top_k_idx
 
     t1 = time.time()
     for m in models:
         clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[m]), tracks=tracks_train, n_jobs=n_jobs)
-        #clf = BinaryClassifier(tracks_train, models[m], parameters[m])
 
-        balanced_scores = cross_val_score(clf, X_train, y_train, cv=5, scoring='balanced_accuracy')
-        #print(f"\n{m}:\n\tBalanced: {balanced_scores} Mean: {balanced_scores.mean()} Standart deviation: {balanced_scores.std()}")
+        basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
+        basic_table[m] = np.append(basic_scores, [basic_scores.mean(), basic_scores.std()]) 
+
+        balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy')
         balanced_table[m] = np.append(balanced_scores, [balanced_scores.mean(), balanced_scores.std()]) 
 
-        top_k_scores = cross_val_score(clf, X_train, y_train, cv=5, scoring='top_k_accuracy')
-        #print(f"\n\tTop_k: {top_k_scores} Mean: {top_k_scores.mean()} Standart deviation: {top_k_scores.std()}")
+        top_k_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='top_k_accuracy')
         top_k_table[m] = np.append(top_k_scores, [top_k_scores.mean(), top_k_scores.std()])
 
-        #clf.fit(X_train, y_train)
-        #print(clf.predict_proba(X_test))
-        #print(f"\tTest dataset score: {clf.score(X_test, y_test)}")
+        clf.fit(X_train, y_train)
+
+        final_balanced = clf.validate(X_test, y_test, threshold=0.5)
+        final_balanced_avg = np.average(final_balanced)
+        final_balanced_std = np.std(final_balanced)
+        final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
+        final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
+
+        final_top_k = []
+        for i in range(3):
+            final_top_k.append(clf.validate_predictions(X_test, y_test, top=i))
+        final_test_top_k[m] = final_top_k
+
+        final_basic = np.array([clf.score(X_test, y_test)])
+        final_test_basic[m] = final_basic
 
     t2 = time.time()
     td = t2 - t1
     print("\nTime: %d s" % td)
+
+    print("\nCross-val Basic accuracy\n")
+    print(basic_table.to_markdown())
     
-    print("\nBalanced accuracy\n")
+    print("\nCross-val Balanced accuracy\n")
     print(balanced_table.to_markdown())
 
-    print("\nTop k accuracy\n")
+    print("\nCross-val Top k accuracy\n")
     print(top_k_table.to_markdown())
+
+    print("\nTest set basic\n")
+    print(final_test_basic.to_markdown())
+
+    print("\nTest set balanced\n")
+    print(final_test_balanced.to_markdown())
+
+    print("\nTest set top k\n")
+    print(final_test_top_k.to_markdown())
+
     print()
     
 def main():
@@ -905,7 +938,7 @@ def main():
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
     if args.cross_val:
-        cross_validate(args.database, args.train_ratio, args.seed, args.n_jobs)
+        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
