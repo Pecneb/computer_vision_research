@@ -780,8 +780,6 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
                     'DT' : {} 
                 }]
     
-    print(parameters[estimator_params_set-1])
-
     splits = np.append(np.arange(1,6,1), [ "Mean", "Standart deviation"])
     basic_table = pd.DataFrame()
     balanced_table = pd.DataFrame()
@@ -798,7 +796,7 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
 
     t1 = time.time()
     for m in models:
-        clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[m]), tracks=tracks_train, n_jobs=n_jobs)
+        clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
 
         basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
         basic_table[m] = np.append(basic_scores, [basic_scores.mean(), basic_scores.std()]) 
@@ -828,6 +826,9 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     t2 = time.time()
     td = t2 - t1
     print("\nTime: %d s" % td)
+
+    print("\nClassifier parameters\n")
+    print(parameters[estimator_params_set-1])
 
     print("\nCross-val Basic accuracy\n")
     print(basic_table.to_markdown())
@@ -906,6 +907,7 @@ def main():
     argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
     argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    argparser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2], default=1)
     args = argparser.parse_args()
 
     if args.database is not None:
@@ -947,7 +949,7 @@ def main():
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
     if args.cross_val:
-        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs)
+        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
