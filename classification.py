@@ -778,9 +778,25 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
                     'SGD' : {'loss' : 'modified_huber'},
                     'SVM' : {'kernel' : 'linear', 'probability' : True},
                     'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 1},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 15},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'DT' : {} 
                 }]
     
-    splits = np.append(np.arange(1,6,1), [ "Mean", "Standart deviation"])
+    splits = np.append(np.arange(1,6,1), ["Max split", "Mean", "Standart deviation"])
     basic_table = pd.DataFrame()
     balanced_table = pd.DataFrame()
     top_k_table = pd.DataFrame()
@@ -799,13 +815,13 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
 
         basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
-        basic_table[m] = np.append(basic_scores, [basic_scores.mean(), basic_scores.std()]) 
+        basic_table[m] = np.append(basic_scores, [np.max(basic_scores), basic_scores.mean(), basic_scores.std()]) 
 
         balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy')
-        balanced_table[m] = np.append(balanced_scores, [balanced_scores.mean(), balanced_scores.std()]) 
+        balanced_table[m] = np.append(balanced_scores, [np.max(balanced_scores), balanced_scores.mean(), balanced_scores.std()]) 
 
         top_k_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='top_k_accuracy')
-        top_k_table[m] = np.append(top_k_scores, [top_k_scores.mean(), top_k_scores.std()])
+        top_k_table[m] = np.append(top_k_scores, [np.max(top_k_scores), top_k_scores.mean(), top_k_scores.std()])
 
         clf.fit(X_train, y_train)
 
@@ -816,7 +832,7 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
 
         final_top_k = []
-        for i in range(3):
+        for i in range(1,4):
             final_top_k.append(clf.validate_predictions(X_test, y_test, top=i))
         final_test_top_k[m] = final_top_k
 
@@ -907,7 +923,7 @@ def main():
     argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
     argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
-    argparser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2], default=1)
+    argparser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
     args = argparser.parse_args()
 
     if args.database is not None:
