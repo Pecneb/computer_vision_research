@@ -865,6 +865,7 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     print(final_test_top_k.to_markdown())
 
     print()
+    return basic_table, balanced_table, top_k_table, final_test_basic, final_test_balanced, final_test_top_k
     
 def main():
     import argparse
