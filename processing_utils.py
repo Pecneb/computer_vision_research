@@ -815,6 +815,16 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
     return joblib.dump(tracks_classes, savepath)
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
+    """Shuffle track dataset, then split it into a train and test dataset.
+
+    Args:
+        dataset (list): Tracked object list. 
+        train_percentage (float): What percentage of the dataset should be train dataset. Value between 0.0 - 1.0 
+        seed (int): A seed to be able to repeat the shuffle algorithm. 
+
+    Returns:
+        tuple(list, list): train, test datasets 
+    """
     from sklearn.utils import shuffle
 
     # calculate train and test dataset size based on the given percentage
