@@ -90,7 +90,7 @@ class TrackedObject():
     AX: float = field(init=False)
     AY: float = field(init=False)
     # bugged: int = field(init=False)
-    featureVector: np.ndarray = field(init=False)
+    # featureVector: np.ndarray = field(init=False)
 
     def __init__(self, id, first, max_age=30):
         self.objID = id
@@ -101,6 +101,10 @@ class TrackedObject():
         self.VY = 0
         self.AX = 0
         self.AY = 0
+        self.history[-1].VX = self.VX
+        self.history[-1].VY = self.VY
+        self.history[-1].AX = self.AX
+        self.history[-1].AY = self.AY
         self.label = first.label
         self.isMoving = False
         self.futureX = []
@@ -131,6 +135,7 @@ class TrackedObject():
         self.AX = (new_vx - old_vx) / (self.time_since_update+1)
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
+    @staticmethod
     def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
         """Rescale normalized coordinates with the given frame sizes.
 
@@ -148,6 +153,7 @@ class TrackedObject():
                         framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
                         frameheight*featureVector[9]])
 
+    @staticmethod
     def downscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
         """Downscale coordinates to normalized coordinates with the given frame sizes.
 
@@ -165,14 +171,16 @@ class TrackedObject():
                         featureVector[6] / framewidth*ratio, featureVector[7] / frameheight, featureVector[8] / framewidth*ratio,
                         featureVector[9] / frameheight])
                         
-    def getFeature(self):
+    def feature_(self):
         """Return feature vector of track.
 
         Args:
             framewidth/ratio (int): Width of the video frame.
             frameheight (int): Height of the video frame. 
         """
-        n = len(self.history)
+        n = len(self.history)-1
+        if n < 3:
+            return None
         return np.array([self.history[0].X, self.history[0].Y, self.history[0].VX, 
                         self.history[0].VY, self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
@@ -194,7 +202,11 @@ class TrackedObject():
             VY_old = self.VY
             self.VX = mean[4]
             self.VY = mean[5]
+            self.history[-1].VX = self.VX
+            self.history[-1].VY = self.VY
             self.updateAccel(self.VX, VX_old, self.VY, VY_old)
+            self.history[-1].AX = self.AX
+            self.history[-1].AY = self.AY
             self.time_since_update = 0 
         else:
             self.time_since_update += 1

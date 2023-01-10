@@ -68,7 +68,7 @@ def makeDetectionObject(darknetDetection: darknetDetection):
         darknetDetection.Height, darknetDetection.Height], 
         float(darknetDetection.confidence), [], darknetDetection)
 
-def updateHistory(history: list, Tracker: Tracker, detections: list, db_connection: sqlite3.Connection, historyDepth=30):
+def updateHistory(history: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30):
     """Update TrackedObject history
 
     Args:
@@ -109,5 +109,6 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
         if not updated:
             newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
             history.append(newTrack)
-            databaseLogger.logObject(db_connection, newTrack.objID, newTrack.label)
+            if db_connection is not None:
+                databaseLogger.logObject(db_connection, newTrack.objID, newTrack.label)
             

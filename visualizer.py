@@ -17,13 +17,15 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from classifier import OneVSRestClassifierExtended 
 from processing_utils import load_joblib_tracks, load_model
 from dataManagementClasses import Detection, TrackedObject
 import cv2 as cv
 import argparse
 import tqdm
 import numpy as np
+from deepsortTracking import initTrackerMetric, getTracker, updateHistory
+from main import getTargets
+from main import draw_boxes
 
 def parseArgs():
     """Handle command line arguments.
@@ -34,8 +36,11 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True, help="Path to video.", type=str)
     parser.add_argument("--model", required=True, help="Path to trained model.", type=str)
-    parser.add_argument("--tracks", required=True, help="Path to the tracks joblib file.", type=str)
+    parser.add_argument("--train_tracks", required=True, help="Path to the tracks joblib file.", type=str)
     parser.add_argument("--all_tracks", help="Not only the tracks used for model training, rather all detections.", type=str)
+    parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
+    parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
+    parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
     
     args = parser.parse_args()
     return args
@@ -182,13 +187,15 @@ def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int
 def main():
     args = parseArgs()
 
+    from yolov7api import detect, COLORS
+
     cap = cv.VideoCapture(args.video)
 
     framewidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
     model = load_model(args.model)
-    dataset = load_joblib_tracks(args.tracks) 
+    dataset = load_joblib_tracks(args.train_tracks) 
     if args.all_tracks:
         all_tracks = load_joblib_tracks(args.all_tracks)
 
@@ -201,12 +208,23 @@ def main():
     # upscale the coordinates of the centroids to the video's scale
     cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
 
+    dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
+
+    history = [] # TrackedObjects
+
     for frameidx in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT)))):
         try:
             ret, frame = cap.read()
             if frame is None:
                 print("Video enden, closing player.")
                 break
+
+            frameNum = cap.get(cv.CAP_PROP_POS_FRAMES)
+            yoloDetections = detect(frame) # get detections from yolo nn
+            targetDetections = getTargets(yoloDetections, frameNum, targetNames=("car")) # get target detections and make Detection() objects
+            updateHistory(history, dsTracker, targetDetections, historyDepth=args.history) # update track history and update tracker
+
+            draw_boxes(history, frame, COLORS, frameNum)
 
             #if args.all_tracks:
             #    for t in all_tracks:
@@ -230,13 +248,15 @@ def main():
                                 centroids = [cluster_centroids_upscaled[p[0]] for p in predictions]
                                 draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
                 else:
-                    for t in tracks:
-                            feature = feature_at_idx(t, frameidx)
+                    for t in history:
+                            # feature = feature_at_idx(t, frameidx)
+                            feature = t.feature_()
                             if feature is not None:
-                                predictions = model.predict(np.array([feature]))
-                                upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
+                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]))
+                                #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
                                 centroids = [cluster_centroids_upscaled[p[0]] for p in predictions]
-                                draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
+                                #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
+                                draw_prediction((int(feature[6]), int(feature[7])), centroids, frame)
                     #for d in t.history:
                         #if d.frameID == frameidx:
                         #    draw_prediction((int(d.X * framewidth / (framewidth/frameheight)), int(d.Y * frameheight)), cluster_centroids_upscaled[l], frame)
