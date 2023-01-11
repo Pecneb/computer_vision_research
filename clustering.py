@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir
+from processing_utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir
 import databaseLoader
 import matplotlib.pyplot as plt
 import numpy as np
@@ -477,15 +477,17 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
             fig, axes = plt.subplots(1,1,figsize=(10,10))
             trajectory_x = []
             trajectory_y = []
+            n_tracks = 0
             for idx in range(len(featureVectors)):
                 if labels[idx]==i:
+                    n_tracks += 1
                     for k in range(1,len(trackedObjects[idx].history)):
                         trajectory_x.append(trackedObjects[idx].history[k].X)
                         trajectory_y.append(1-trackedObjects[idx].history[k].Y)
             axes.scatter(trajectory_x, trajectory_y, s=2)
             axes.set_xlim(0,2)
             axes.set_ylim(0,2)   
-            axes.set_title(f"Axis of cluster number {i}")
+            axes.set_title(f"Axis of cluster number {i}, with {n_tracks} detections")
             enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
             axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
@@ -532,15 +534,16 @@ def optics_worker(path2db: str, min_samples: int, xi: float, min_cluster_size: f
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
-    max_progress = k[1] * int(threshold[1] / thres_interval)
-    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
-        thres = threshold[0]
-        while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
-            optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
-            thres += thres_interval 
-            print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
-            progress += 1
+    #max_progress = k[1] * int(threshold[1] / thres_interval)
+    max_progress = int(threshold[1] / thres_interval)
+    #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+    thres = threshold[0]
+    while thres <= threshold[1]:
+        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
+        thres += thres_interval 
+        print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
+        progress += 1
 
 def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_samples: int, xi: float, min_cluster_size: float, eps:float, n_jobs=-1):
     """Run clustering with optics, then dbscan using the results of the optics clustering.
@@ -592,15 +595,17 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
             fig, axes = plt.subplots(1,1,figsize=(10,10))
             trajectory_x = []
             trajectory_y = []
+            n_tracks = 0
             for idx in range(len(featureVectors)):
                 if labels[idx]==i:
+                    n_tracks += 1
                     for k in range(1,len(trackedObjects[idx].history)):
                         trajectory_x.append(trackedObjects[idx].history[k].X)
                         trajectory_y.append(1-trackedObjects[idx].history[k].Y)
             axes.scatter(trajectory_x, trajectory_y, s=2)
             axes.set_xlim(0,2)
             axes.set_ylim(0,2)   
-            axes.set_title(f"Axis of cluster number {i}")
+            axes.set_title(f"Axis of cluster number {i}, with {n_tracks} detections.")
             enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
             axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
@@ -646,15 +651,16 @@ def optics_dbscan_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
-    max_progress = k[1] * int(threshold[1] / thres_interval)
-    for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
-        thres = threshold[0]
-        while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
-            cluster_optics_dbscan_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, eps=eps, show=False)
-            thres += thres_interval 
-            print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
-            progress += 1
+    #max_progress = k[1] * int(threshold[1] / thres_interval)
+    max_progress = int(threshold[1] / thres_interval)
+    #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
+    thres = threshold[0]
+    while thres <= threshold[1]:
+        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        cluster_optics_dbscan_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, path2db=path2db, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, eps=eps, show=False)
+        thres += thres_interval 
+        print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
+        progress += 1
 
 def elbow_visualizer(X, k, model='kmeans', metric='silhouette', distance_metric='euclidean', show=False) -> plt.Figure:
     """Create elbow plot, to visualize what cluster number fits the best for the dataset.
@@ -827,7 +833,7 @@ def main():
     argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
     argparser.add_argument("--shuffle_dataset", default=False, action="store_true", help="DBSCAN parameter: Shuffle dataset for slightly different clustering results.")
     argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=0.2)
+    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=np.inf)
     argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.15)
     argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")

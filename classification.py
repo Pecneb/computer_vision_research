@@ -24,7 +24,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-from utils import load_model, save_model, data_preprocessing_for_calibrated_classifier, data_preprocessing_for_classifier, data_preprocessing_for_classifier_from_joblib_model, checkDir
+from processing_utils import load_model, save_model, data_preprocessing_for_calibrated_classifier, data_preprocessing_for_classifier, data_preprocessing_for_classifier_from_joblib_model, checkDir
+np.seterr(divide='ignore', invalid='ignore')
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
@@ -382,10 +383,10 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import BinaryClassifier
+    from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
 
-    X_train, y_train, time_train, metadata_train, X_valid, y_valid, time_test, metadata_valid, tracks = [], [], [], [], [], [], [], [], []
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
@@ -394,13 +395,18 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
-                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+                                                            n_jobs=argv['n_jobs'], 
+                                                            from_half=argv['from_half'],
+                                                            features_v2=argv['features_v2'],
+                                                            features_v2_half=argv['features_v2_half'])
     else:
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
                                                             min_cluster_size=argv['min_cluster_size'],
-                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'])
+                                                            n_jobs=argv['n_jobs'], from_half=argv['from_half'],
+                                                            features_v2=argv['features_v2'],
+                                                            features_v2_half=argv['features_v2_half'])
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -410,6 +416,16 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
         'SGD' : SGDClassifier,
         'SVM' : SVC,
         'DT' : DecisionTreeClassifier
+    }
+    
+    parameters = {
+        'KNN' : {'n_neighbors' : 15},
+        'GP' :  {},
+        'GNB' : {},
+        'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+        'SGD' : {'loss' : 'modified_huber'},
+        'SVM' : {'kernel' : 'rbf', 'probability' : True},
+        'DT' : {} 
     }
 
     table = pd.DataFrame()
@@ -421,23 +437,17 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
     for clr in models:
-        binaryModel = BinaryClassifier(X_train, y_train, tracks)
-        if clr == 'KNN':
-            binaryModel.init_models(models[clr], n_neighbors=15)
-        elif clr == 'MLP':
-            binaryModel.init_models(models[clr], max_iter=1000, solver="sgd")
-        elif clr == 'SGD':
-            binaryModel.init_models(models[clr], loss="modified_huber")
-        elif clr == 'SVM':
-            binaryModel.init_models(models[clr], kernel='rbf', probability=True)
-        else:
-            binaryModel.init_models(models[clr])
-        binaryModel.fit()
+        binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
+        #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
+        #binaryModel.init_models(models[clr])
+
+        binaryModel.fit(X_train, y_train)
+
         top_picks = []
         for i in range(1,4):
-            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, argv['threshold'], top=i))
+            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i))
         balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
-        # print(np.asarray(top_picks) )
+
         table[clr] = np.asarray(top_picks)
         table2[clr] = balanced_threshold
 
@@ -453,8 +463,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
 
         filename = os.path.join(savepath, f"{date.today()}_{clr}.xlsx")
         with pd.ExcelWriter(filename) as writer:
-            probability_over_time.to_excel(writer, sheet_name="Probability_over_time")
+            probability_over_time.to_excel(writer, sheet_name="Probability_over_time") # each feature vector
+            table.to_excel(writer, sheet_name="Top_Picks") # top n accuracy
+            table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
+
+        #TODO: name models according to their classifier parameters
         save_model(path2db, str("binary_"+clr), binaryModel) 
+
     table.index += 1
     print("Top picks")
     print(table.to_markdown())
@@ -463,6 +478,17 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     print(table2.aggregate(np.average).to_markdown())
     
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
+    """Deprecated, dont use.
+
+    Will update in time.
+
+    Args:
+        classifier (str): _description_
+        path2db (str): _description_
+    """
+    print("Warning: deprecated function, dont use.")
+    print("Exiting...")
+    exit(1)
     from classifier import BinaryClassifier
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
@@ -500,18 +526,18 @@ def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_ep
     from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
 
-    X_train, y_train, time_train, X_valid, y_valid, time_valid = [], [], [], [] , [], [] 
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = [], [], [], [] , [], [] 
 
     trackData = []
 
     threshold = 0.5
     
     if path2dataset.split(".")[-1] == "db":
-        X_train, y_train, time_train, X_valid, y_valid, time_valid, trackData = data_preprocessing_for_classifier(
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, trackData = data_preprocessing_for_classifier(
             path2dataset, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, from_half=from_half)
     elif path2dataset.split(".")[-1] == "joblib":
         model = load_model(path2dataset)
-        X_train, y_train, time_train, X_valid, y_valid, time_valid = data_preprocessing_for_classifier_from_joblib_model(
+        X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
             model=model, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, from_half=from_half)
         trackData = model.trackData
 
@@ -558,13 +584,16 @@ def validate_models(path2models: str, **argv):
 
     _, _, _, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(
         models[1], min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
-        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
+        min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"],
+        features_v2=argv['features_v2'], features_v2_half=argv['features_v2_half'])
 
     for clr, m in zip(classifier_names, models):
-        balanced_toppicks = m.validate_predictions(X_valid, y_valid, argv['threshold'])
+        top_picks = []
+        for i in range(1,4):
+            top_picks.append(m.validate_predictions(X_valid, y_valid, top=i))
         balanced_threshold = m.validate(X_valid, y_valid, argv['threshold'])
-
-        table.loc[0, clr] = balanced_toppicks 
+        # print(np.asarray(top_picks) )
+        table[clr] = np.asarray(top_picks)
         table2[clr] = balanced_threshold
 
         probabilities = m.predict_proba(X_valid)
@@ -634,7 +663,7 @@ def investigateRenitent(path2model: str, threshold: float, **argv):
         path2model (str): Path to model. 
     """
     model = load_model(path2model)
-    _, _, _, _, X_test, y_test, time_test, _ = data_preprocessing_for_classifier_from_joblib_model(
+    _, _, _, X_test, y_test, _ = data_preprocessing_for_classifier_from_joblib_model(
         model, min_samples=argv["min_samples"], max_eps=argv["max_eps"], xi=argv["xi"],
         min_cluster_size=argv["min_cluster_size"], n_jobs=argv["n_jobs"])
 
@@ -678,6 +707,165 @@ def plot_decision_tree(path2model: str):
         print(f"Class {i}")
         plot_tree(m)
         plt.show()
+
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1):
+    """Calculate classification model accuracy with cross validation method.
+
+    Args:
+        path2dataset (str): Path to dataset. File with joblib extension. 
+        train_ratio (float, optional): Split ratio of the tracks. Defaults to 0.75.
+        seed (int, optional): Seed for reproducable track splitting. Defaults to 1.
+        n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
+        n_jobs (int, optional): Number of jobs to run. Defaults to 18.
+    """
+    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_feature_vectors_version_two_half
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    from classifier import OneVSRestClassifierExtended
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import cross_val_score
+
+    # load tracks from joblib file
+    # tracks stored as list[dict]
+    # {
+    #   "track": t,
+    #   "class": c
+    # }
+    tracks = load_joblib_tracks(path2dataset)
+    tracks_filteted = []
+    for t in tracks:
+        if t["class"] != -1:
+            tracks_filteted.append(t)
+
+    # shuffle tracks, and separate into a train and test dataset
+    train, test = random_split_tracks(tracks_filteted, train_ratio, seed)
+
+    tracks_train = [t["track"] for t in train]
+    labels_train = np.array([t["class"] for t in train])
+    tracks_test = [t["track"] for t in test]
+    labels_test = np.array([t["class"] for t in test])
+
+    X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
+    X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+
+    models = {
+        'KNN' : KNeighborsClassifier,
+        'GP' : GaussianProcessClassifier,
+        'GNB' : GaussianNB,
+        'MLP' : MLPClassifier,
+        'SGD' : SGDClassifier,
+        'SVM' : SVC,
+        'DT' : DecisionTreeClassifier
+    }
+    
+    parameters = [{
+                    'KNN' : {'n_neighbors' : 15},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 3},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 1},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 15},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
+                    'SGD' : {'loss' : 'modified_huber'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'DT' : {} 
+                }]
+    
+    splits = np.append(np.arange(1,6,1), ["Max split", "Mean", "Standart deviation"])
+    basic_table = pd.DataFrame()
+    balanced_table = pd.DataFrame()
+    top_k_table = pd.DataFrame()
+    final_test_basic = pd.DataFrame()
+    final_test_balanced = pd.DataFrame()
+    final_test_top_k_idx = ["Top_1", "Top_2", "Top_3"]
+    final_test_top_k = pd.DataFrame()
+
+    basic_table["Split"] = splits
+    balanced_table["Split"] = splits
+    top_k_table["Split"] = splits
+    final_test_top_k["Top"] = final_test_top_k_idx
+
+    t1 = time.time()
+    for m in models:
+        clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
+
+        basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
+        basic_table[m] = np.append(basic_scores, [np.max(basic_scores), basic_scores.mean(), basic_scores.std()]) 
+
+        balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy')
+        balanced_table[m] = np.append(balanced_scores, [np.max(balanced_scores), balanced_scores.mean(), balanced_scores.std()]) 
+
+        top_k_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='top_k_accuracy')
+        top_k_table[m] = np.append(top_k_scores, [np.max(top_k_scores), top_k_scores.mean(), top_k_scores.std()])
+
+        clf.fit(X_train, y_train)
+
+        final_balanced = clf.validate(X_test, y_test, threshold=0.5)
+        final_balanced_avg = np.average(final_balanced)
+        final_balanced_std = np.std(final_balanced)
+        final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
+        final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
+
+        final_top_k = []
+        for i in range(1,4):
+            final_top_k.append(clf.validate_predictions(X_test, y_test, top=i))
+        final_test_top_k[m] = final_top_k
+
+        final_basic = np.array([clf.score(X_test, y_test)])
+        final_test_basic[m] = final_basic
+
+    t2 = time.time()
+    td = t2 - t1
+    print("\nTime: %d s" % td)
+
+    print("\nClassifier parameters\n")
+    print(parameters[estimator_params_set-1])
+
+    print("\nCross-val Basic accuracy\n")
+    print(basic_table.to_markdown())
+    
+    print("\nCross-val Balanced accuracy\n")
+    print(balanced_table.to_markdown())
+
+    print("\nCross-val Top k accuracy\n")
+    print(top_k_table.to_markdown())
+
+    print("\nTest set basic\n")
+    print(final_test_basic.to_markdown())
+
+    print("\nTest set balanced\n")
+    print(final_test_balanced.to_markdown())
+
+    print("\nTest set top k\n")
+    print(final_test_top_k.to_markdown())
+
+    print()
+    return basic_table, balanced_table, top_k_table, final_test_basic, final_test_balanced, final_test_top_k
     
 def main():
     import argparse
@@ -732,6 +920,11 @@ def main():
     argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.",
                            action="store_true", default=False)
     argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
+    argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
+    argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
+    argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    argparser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
     args = argparser.parse_args()
 
     if args.database is not None:
@@ -751,17 +944,20 @@ def main():
     if args.BinaryClassificationWorkerTrain:
         BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                         xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
-                                        threshold=args.threshold, from_half=args.from_half)
-    if args.BinaryClassificationTrain:
-        BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
-                                  max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
-                                  n_jobs=args.n_jobs)
+                                        threshold=args.threshold, from_half=args.from_half, 
+                                        features_v2=args.features_v2, 
+                                        features_v2_half=args.features_v2_half)
+    #if args.BinaryClassificationTrain:
+    #    BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
+    #                              max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
+    #                              n_jobs=args.n_jobs)
     if args.plot_renitent_features:
         investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.validate_classifiers and args.threshold:
         validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold)
+                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold,
+                        features_v2=args.features_v2, features_v2_half=args.features_v2_half)
     if args.decision_tree_accuracy_over_depth:
         if args.database:
             BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
@@ -769,6 +965,8 @@ def main():
         elif args.model:
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
+    if args.cross_val:
+        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)

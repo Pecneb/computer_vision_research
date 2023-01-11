@@ -512,7 +512,7 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
     Returns:
         tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
     """
-    X_featurevectors = []
+    X_featurevectors = [] # [history[0].X, history[0]. Y,history[0].VX, history[0].VY,history[mid].X, history[mid].Y,history[end].X, history[end]. Y,history[end].VX, history[end].VY]
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
     for i, track in enumerate(trackedObjects):
@@ -528,43 +528,80 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([track.history[0].frameID, track.history[midx].frameID, 
                                             track.history[j].frameID, len(track.history), track.objID]))
-        continue
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False):
+def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in range(len(trackedObjects)//2, len(trackedObjects)):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range(step, len(trackedObjects[i].history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                                                trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY])) 
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
     Args:
-        path2db (str): _description_
-        min_samples (int, optional): _description_. Defaults to 10.
-        max_eps (float, optional): _description_. Defaults to 0.1.
-        xi (float, optional): _description_. Defaults to 0.15.
-        min_cluster_size (int, optional): _description_. Defaults to 10.
-        n_jobs (int, optional): _description_. Defaults to 18.
+        path2db (str): Path to database. 
+        min_samples (int, optional): Optics Clustering param. Defaults to 10.
+        max_eps (float, optional): Optics Clustering param. Defaults to 0.1.
+        xi (float, optional): Optics clustering param. Defaults to 0.15.
+        min_cluster_size (int, optional): Optics clustering param. Defaults to 10.
+        n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
 
     Returns:
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test, filteredTracks
     """
     from clustering import optics_clustering_on_nx4
+
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
-    #X, y = make_features_for_classification(filteredTracks, 6, labels)
+
     if from_half:
         X, y, metadata = make_features_for_classification_velocity_time_second_half(filteredTracks, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(filteredTracks, 6, labels)
     else:
         X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
+
     X = X[y > -1]
     y = y[y > -1]
+
     X_train = []
     y_train = []
     X_test = []
     y_test = []
     metadata_train = []
     metadata_test = []
+
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
@@ -574,6 +611,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
             X_train.append(X[i])
             y_train.append(y[i])
             metadata_train.append(metadata[i])
+
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), filteredTracks
 
 # deprecated
@@ -621,7 +659,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
             y_train.append(y[i])
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
-from classifier import BinaryClassifier
+from classifier import OneVSRestClassifierExtended 
 def save_model(path2db: str, classifier_type: str, model):
     """Save model to research_data dir.
 
@@ -639,7 +677,7 @@ def save_model(path2db: str, classifier_type: str, model):
     else:
         print("Error: model is None, model was not saved.")
 
-def load_model(path2model: str) -> BinaryClassifier:
+def load_model(path2model: str) -> OneVSRestClassifierExtended:
     """Load classifier model.
 
     Args:
@@ -650,7 +688,7 @@ def load_model(path2model: str) -> BinaryClassifier:
     """
     return joblib.load(path2model)
 
-def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False):
+def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -666,24 +704,29 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test
     """
     from clustering import optics_on_featureVectors 
-    #thres = 0.5
+
     featureVectors = makeFeatureVectorsNx4(model.trackData)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
-    #X, y = make_features_for_classification(filteredTracks, 6, labels)
+
     if from_half:
         X, y, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(model.trackData, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(model.trackData, 6, labels)
     else:
         X, y, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
+
     X = X[y > -1]
     y = y[y > -1]
+
     X_train = []
     y_train = []
     X_test = []
     y_test = []
     metadata_test = []
     metadata_train = []
+
     for i in range(len(X)):
         if i%5==0:
             X_test.append(X[i])
@@ -693,4 +736,110 @@ def data_preprocessing_for_classifier_from_joblib_model(model: BinaryClassifier,
             X_train.append(X[i])
             y_train.append(y[i])
             metadata_train.append(metadata[i])
+
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
+
+def tracks2joblib(path2db: str, n_jobs=18):
+    """Extract tracks from database and save them in a joblib object.
+
+    Args:
+        path2db (str): Path to database. 
+        n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
+    """
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
+    filename =  path2db.split('/')[-1].split('.')[0] + '.joblib'
+    savepath = os.path.join('research_data', path2db.split('/')[-1].split('.')[0])
+    print('Saving: ', os.path.join(savepath, filename))
+    joblib.dump(tracks, os.path.join(savepath, filename))
+
+def load_joblib_tracks(path2tracks: str):
+    """Load tracks from joblib file.
+
+    Args:
+        path2tracks (str): Path to joblib file. 
+
+    Returns:
+        list[TrackedObjects]: Loaded list of tracked objects. 
+    """
+    if path2tracks.split('.')[-1] != "joblib":
+        print("Error: Not joblib file.")
+        exit(1)
+    return joblib.load(path2tracks)
+
+def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18):
+    """Save training tracks with class numbers ordered to them.
+
+    Args:
+        path2tracks (str): Path to dataset. 
+        min_samples (int, optional): Optics clustering parameter. Defaults to 10.
+        max_eps (float, optional): Optics clustering parameter. Defaults to 0.2.
+        xi (float, optional): Optics clustering parameter. Defaults to 0.15.
+        min_cluster_size (int, optional): Optics clustering parameter. Defaults to 10.
+        n_jobs (int, optional): Number of processes to run. Defaults to 18.
+
+    Returns:
+        _type_: _description_
+    """
+    from clustering import optics_on_featureVectors 
+    filext = path2tracks.split('/')[-1].split('.')[-1]
+    
+    if filext == 'db':
+        tracks = preprocess_database_data_multiprocessed(path2tracks, n_jobs)
+    elif filext == 'joblib':
+        tracks = load_joblib_tracks(path2tracks)
+    else:
+        print("Error: Wrong file type.")
+        return False
+    
+    tracks_filtered = filter_out_edge_detections(tracks, 0.5)
+    tracks_car_only = filter_tracks(tracks_filtered)
+
+    cluster_features = makeFeatureVectorsNx4(tracks_car_only)
+    labels = optics_on_featureVectors(cluster_features, min_samples=min_samples, 
+                                    max_eps=max_eps, xi=xi, 
+                                    min_cluster_size=min_cluster_size, n_jobs=n_jobs)
+    
+    # order labels to tracks, store it in a list[dictionary] format
+    tracks_classes = []
+    for i, t in enumerate(tracks_car_only):
+        tracks_classes.append({
+            "track": t,
+            "class": labels[i] 
+        })
+
+    filename = path2tracks.split('/')[-1].split('.')[0] + '_filtered.joblib' 
+    savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
+
+    print("Saving: ", savepath)
+
+    return joblib.dump(tracks_classes, savepath)
+
+def random_split_tracks(dataset: list, train_percentage: float, seed: int):
+    """Shuffle track dataset, then split it into a train and test dataset.
+
+    Args:
+        dataset (list): Tracked object list. 
+        train_percentage (float): What percentage of the dataset should be train dataset. Value between 0.0 - 1.0 
+        seed (int): A seed to be able to repeat the shuffle algorithm. 
+
+    Returns:
+        tuple(list, list): train, test datasets 
+    """
+    from sklearn.utils import shuffle
+
+    # calculate train and test dataset size based on the given percentage
+    train_size = int(len(dataset) * train_percentage) 
+    test_size = len(dataset) - train_size
+
+
+    train = shuffle(dataset, random_state=seed, n_samples=train_size) 
+    test = []
+
+    # fill test dataset with the rest of the tracks
+    i = 0
+    while(len(test) != test_size or i > len(dataset)):
+        if dataset[i] not in train and dataset[i] not in test:
+            test.append(dataset[i])
+        i += 1
+
+    return train, test
