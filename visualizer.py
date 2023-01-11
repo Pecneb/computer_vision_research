@@ -191,6 +191,14 @@ def main():
 
     cap = cv.VideoCapture(args.video)
 
+    frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
+
+    # create named window
+    cv.namedWindow("Video")
+    # create trackbar to be able to set frameposition
+    setFrame = lambda frame_num: cap.set(cv.CAP_PROP_POS_FRAMES, frame_num)
+    cv.createTrackbar("Frame", "Video", 0, frame_count, setFrame)
+
     framewidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
@@ -212,7 +220,7 @@ def main():
 
     history = [] # TrackedObjects
 
-    for frameidx in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT)))):
+    for frameidx in tqdm.tqdm(range(frame_count)):
         try:
             ret, frame = cap.read()
             if frame is None:
@@ -251,19 +259,21 @@ def main():
                     for t in history:
                             # feature = feature_at_idx(t, frameidx)
                             feature = t.feature_()
-                            if feature is not None:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]))
-                                #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
-                                centroids = [cluster_centroids_upscaled[p[0]] for p in predictions]
-                                #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
-                                draw_prediction((int(feature[6]), int(feature[7])), centroids, frame)
+                            if t.isMoving:
+                                if feature is not None:
+                                    predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 3).reshape((-1))
+                                    #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
+                                    centroids = [cluster_centroids_upscaled[p] for p in predictions]
+                                    #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
+                                    draw_prediction((int(feature[6]), int(feature[7])), centroids, frame)
                     #for d in t.history:
                         #if d.frameID == frameidx:
                         #    draw_prediction((int(d.X * framewidth / (framewidth/frameheight)), int(d.Y * frameheight)), cluster_centroids_upscaled[l], frame)
             #for t in tracks:
             #    cv.circle(frame, (int(t.history[-1].X * framewidth / (framewidth/frameheight)), int(t.history[-1].Y * frameheight)), 1, (0,0,255), -1)
 
-            cv.imshow("Frame", frame)
+            cv.imshow("Video", frame)
+            cv.setTrackbarPos("Frame", "Video", int(frameNum))
 
             # pause video
             if cv.waitKey(1) == ord('p'):
@@ -278,6 +288,8 @@ def main():
                 break
         except KeyboardInterrupt:
             break
+    cap.release()
+    cv.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
