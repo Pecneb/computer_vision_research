@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from processing_utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir
+from processing_utils import detectionParser, trackedObjectFactory, filter_out_false_positive_detections, filter_out_edge_detections, filter_tracks, makeFeatureVectorsNx4, makeFeatureVectors_Nx2, preprocess_database_data_multiprocessed, shuffle_data, checkDir, load_dataset
 import databaseLoader
 import matplotlib.pyplot as plt
 import numpy as np
@@ -530,7 +530,8 @@ def optics_worker(path2db: str, min_samples: int, xi: float, min_cluster_size: f
     if k[0] < 1 or k[1] < k[0]:
         print("Error: this is not how we use this program properly")
         return False
-    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjects = load_dataset(path2db)
+    #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
@@ -647,7 +648,8 @@ def optics_dbscan_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size
     if k[0] < 1 or k[1] < k[0]:
         print("Error: this is not how we use this program properly")
         return False
-    trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    trackedObjectFactory = load_dataset(path2db)
+    #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1

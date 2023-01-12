@@ -843,3 +843,12 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
         i += 1
 
     return train, test
+
+def load_dataset(path2dataset: str):
+    ext = path2dataset.split('.')[-1] # extension of dataset file
+    if ext == "joblib":
+        return load_joblib_tracks(path2dataset)
+    elif ext == "db":
+        return preprocess_database_data_multiprocessed(path2dataset, n_jobs=None) # None for n_jobs to utilize all cpu threads
+    print("Error: Bad file type.")
+    return False 
