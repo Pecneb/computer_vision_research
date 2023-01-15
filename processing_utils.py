@@ -852,3 +852,20 @@ def load_dataset(path2dataset: str):
         return preprocess_database_data_multiprocessed(path2dataset, n_jobs=None) # None for n_jobs to utilize all cpu threads
     print("Error: Bad file type.")
     return False 
+
+def strfy_dict_params(params: dict):
+    """Stringify params stored in dictionaries.
+
+    Args:
+        params (dict): Dict storing the params. 
+
+    Returns:
+        str: Stringified params returned in the format "_param1_value1_param2_value2". 
+    """
+    ret_str = ""
+    if len(params) == 0:
+        return ret_str
+    for p in params:
+        ret_str += str("_"+p+"_"+str(params[p]))
+    return ret_str
+    

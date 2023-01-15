@@ -246,7 +246,7 @@ def main():
             #                drawbbox(d, frame)
 
             for c in cluster_centroids_upscaled:
-                cv.circle(frame, (int(cluster_centroids_upscaled[c][0]), int(cluster_centroids_upscaled[c][1])), 50, (0,0,255), 5)
+                cv.circle(frame, (int(cluster_centroids_upscaled[c][0]), int(cluster_centroids_upscaled[c][1])), 10, (0,0,255), 3)
                 if args.all_tracks:
                     for t in all_tracks:
                             feature = feature_at_idx(t, frameidx)
@@ -261,7 +261,7 @@ def main():
                             feature = t.feature_()
                             if t.isMoving:
                                 if feature is not None:
-                                    predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 3).reshape((-1))
+                                    predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
                                     #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
                                     centroids = [cluster_centroids_upscaled[p] for p in predictions]
                                     #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)

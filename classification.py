@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 from processing_utils import load_model, save_model, data_preprocessing_for_calibrated_classifier, data_preprocessing_for_classifier, data_preprocessing_for_classifier_from_joblib_model, checkDir
+from tqdm import tqdm
 np.seterr(divide='ignore', invalid='ignore')
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
@@ -385,6 +386,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
+    from processing_utils import strfy_dict_params
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
@@ -468,7 +470,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
 
         #TODO: name models according to their classifier parameters
-        save_model(path2db, str("binary_"+clr), binaryModel) 
+        save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])), binaryModel) 
 
     table.index += 1
     print("Top picks")
@@ -708,7 +710,7 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1):
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
@@ -749,8 +751,12 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     tracks_test = [t["track"] for t in test]
     labels_test = np.array([t["class"] for t in test])
 
-    X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
-    X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+    if from_half:
+        X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    else:
+        X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -811,7 +817,7 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     final_test_top_k["Top"] = final_test_top_k_idx
 
     t1 = time.time()
-    for m in models:
+    for m in tqdm(models, desc="Cross validate models"):
         clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
 
         basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
@@ -903,10 +909,10 @@ def main():
     argparser.add_argument("--CalibratedClassificationWorker",
                            help="Runs all available Classifications calibrated and Validate them.",
                            default=False, action="store_true")
-    argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true",
+    argparser.add_argument("--train_binary_classifiers", default=False, action="store_true",
                            help="Run Classification on dataset, but not as a multi class classification, rather do "
                                 "binary classification for each cluster.")
-    argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.",
+    argparser.add_argument("--train_binary_classifier", help="Train model with binary classification.",
                            default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
     argparser.add_argument("--from_half",
                            help="Use this flag, if want to make feature vectors only from second half of trajectories "
@@ -941,7 +947,7 @@ def main():
     if args.CalibratedClassificationWorker:
         CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
                                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.BinaryClassificationWorkerTrain:
+    if args.train_binary_classifiers:
         BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                         xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
                                         threshold=args.threshold, from_half=args.from_half, 
@@ -966,7 +972,7 @@ def main():
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
     if args.cross_val:
-        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set)
+        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set, from_half=args.from_half)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)
