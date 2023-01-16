@@ -392,7 +392,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
 
     if path2model is not None:
         model = load_model(path2model)
-        tracks = model.trackData
+        tracks = model.tracks
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
@@ -400,7 +400,8 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             n_jobs=argv['n_jobs'], 
                                                             from_half=argv['from_half'],
                                                             features_v2=argv['features_v2'],
-                                                            features_v2_half=argv['features_v2_half'])
+                                                            features_v2_half=argv['features_v2_half'],
+                                                            features_v3=argv['features_v3'])
     else:
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
@@ -408,7 +409,8 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'],
                                                             features_v2=argv['features_v2'],
-                                                            features_v2_half=argv['features_v2_half'])
+                                                            features_v2_half=argv['features_v2_half'],
+                                                            features_v3=argv['features_v3'])
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -438,7 +440,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
     savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
-    for clr in models:
+    for clr in tqdm(models, desc="Classifier trained."):
         binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
         #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
         #binaryModel.init_models(models[clr])
@@ -469,8 +471,16 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             table.to_excel(writer, sheet_name="Top_Picks") # top n accuracy
             table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
 
-        #TODO: name models according to their classifier parameters
-        save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])), binaryModel) 
+        #TODO: somehow show in title which feature vectors were used for the tarining 
+        if argv['from_half']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_from_half")), binaryModel) 
+        elif argv['features_v2']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v2")), binaryModel)
+        elif argv['features_v2_half']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v2_from_half")), binaryModel)
+        elif argv['features_v3']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v3")), binaryModel)
+
 
     table.index += 1
     print("Top picks")
@@ -710,7 +720,7 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False):
+def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False, ):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
@@ -720,7 +730,16 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
         n_jobs (int, optional): Number of jobs to run. Defaults to 18.
     """
-    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_feature_vectors_version_two_half
+    from processing_utils import (
+                                    load_joblib_tracks, 
+                                    random_split_tracks, 
+                                    make_feature_vectors_version_two, 
+                                    make_feature_vectors_version_two_half, 
+                                    make_features_for_classification_velocity_time, 
+                                    make_features_for_classification_velocity_time_second_half,
+                                    make_feature_vectors_version_three, 
+                                    make_feature_vectors_version_three_half
+                                )
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
@@ -752,11 +771,23 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     labels_test = np.array([t["class"] for t in test])
 
     if from_half:
-        X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
-        X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
-    else:
+        X_train, y_train, metadata_train = make_features_for_classification_velocity_time_second_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_features_for_classification_velocity_time_second_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif features_v2:
         X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif features_v2_half:
+        X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif features_v3:
+        X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif features_v3_half:
+        X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    else:
+        X_train, y_train, metadata_train = make_features_for_classification_velocity_time(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_features_for_classification_velocity_time(trackedObjects=tracks_test, k=6, labels=labels_test)
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -927,6 +958,8 @@ def main():
                            action="store_true", default=False)
     argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
     argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
+    argparser.add_argument("--features_v3", help="Use third version of feature vectors.", action="store_true", default=False)
+    argparser.add_argument("--features_v3_half", help="Make third version feature vectors from half of the history.", action="store_true", default=False)
     argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
     argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
@@ -935,24 +968,26 @@ def main():
 
     if args.database is not None:
         checkDir(args.database)
-    if args.Classification:
-        Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps,
-                       xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.ClassificationWorker:
-        ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                             min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.CalibratedClassification:
-        CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples,
-                                 max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.CalibratedClassificationWorker:
-        CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                                       min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    #if args.Classification:
+    #    Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps,
+    #                   xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    #if args.ClassificationWorker:
+    #    ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+    #                         min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    #if args.CalibratedClassification:
+    #    CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples,
+    #                             max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
+    #if args.CalibratedClassificationWorker:
+    #    CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+    #                                   min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.train_binary_classifiers:
         BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                         xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
                                         threshold=args.threshold, from_half=args.from_half, 
                                         features_v2=args.features_v2, 
-                                        features_v2_half=args.features_v2_half)
+                                        features_v2_half=args.features_v2_half,
+                                        features_v3=args.features_v3, 
+                                        features_v3_half=args.features_v3_half)
     #if args.BinaryClassificationTrain:
     #    BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
     #                              max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
@@ -960,10 +995,10 @@ def main():
     if args.plot_renitent_features:
         investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.validate_classifiers and args.threshold:
-        validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold,
-                        features_v2=args.features_v2, features_v2_half=args.features_v2_half)
+    #if args.validate_classifiers and args.threshold:
+    #    validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
+    #                    min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold,
+    #                    features_v2=args.features_v2, features_v2_half=args.features_v2_half)
     if args.decision_tree_accuracy_over_depth:
         if args.database:
             BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
@@ -972,7 +1007,14 @@ def main():
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
     if args.cross_val:
-        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set, from_half=args.from_half)
+        cross_validate(args.database, args.train_ratio, 
+                        args.seed, n_jobs=args.n_jobs, 
+                        estimator_params_set=args.param_set, 
+                        from_half=args.from_half, 
+                        features_v2=args.features_v2, 
+                        features_v2_half=args.features_v2_half,
+                        features_v3=args.features_v3, 
+                        features_v3_half=args.features_v3_half)
     if args.plot_decision_tree:
         if args.model:
             plot_decision_tree(args.model)

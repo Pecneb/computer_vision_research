@@ -648,7 +648,7 @@ def optics_dbscan_worker(path2db: str, min_samples=10, xi=0.05, min_cluster_size
     if k[0] < 1 or k[1] < k[0]:
         print("Error: this is not how we use this program properly")
         return False
-    trackedObjectFactory = load_dataset(path2db)
+    trackedObjects = load_dataset(path2db)
     #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     trackedObjects = filter_tracks(trackedObjects) # filter out only cars
     progress = 1

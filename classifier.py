@@ -276,9 +276,24 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
     """
 
     def __init__(self, estimator, tracks, n_jobs=16):
+        """_summary_
+
+        Parameters
+        ----------
+        estimator : classifier 
+            Scikit-Learn classifier object, that will be used
+            to create the binary classifiers.
+        tracks : list[TrackedObject]
+            Filtered track dataset, that was used to create
+            feature vectors for clustering, and X, y feature
+            vectors and labels. 
+        n_jobs : int
+            Number of processes to run. 
+            Default n_jobs value is 16.
+        """
         self.tracks = tracks
         super().__init__(estimator, n_jobs=n_jobs)
-    
+       
     def predict_proba(self, X: numpy.ndarray):
         """Return predicted probabilities of dataset X
 
