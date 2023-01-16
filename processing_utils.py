@@ -545,10 +545,10 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)//2, len(trackedObjects)):
+    for i, track in enumerate(trackedObjects):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
-            for j in range(step, len(trackedObjects[i].history), step):
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
                 midx = j//2
                 X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
                                                 trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
@@ -615,10 +615,10 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     y_newLabels = []
     cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)//2, len(trackedObjects)):
+    for i in range(len(trackedObjects)):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
-            for j in range(step, len(trackedObjects[i].history), step):
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
                 midx = j//2
                 X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
                                                 #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 

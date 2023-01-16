@@ -473,13 +473,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
 
         #TODO: somehow show in title which feature vectors were used for the tarining 
         if argv['from_half']:
-            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_from_half")), binaryModel) 
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_from_half"), binaryModel) 
         elif argv['features_v2']:
-            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v2")), binaryModel)
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2"), binaryModel)
         elif argv['features_v2_half']:
-            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v2_from_half")), binaryModel)
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2_from_half"), binaryModel)
         elif argv['features_v3']:
-            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr]+"_v3")), binaryModel)
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3"), binaryModel)
 
 
     table.index += 1
