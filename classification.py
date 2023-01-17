@@ -748,7 +748,8 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
-    from sklearn.model_selection import cross_val_score
+    from sklearn.model_selection import cross_val_score, cross_validate
+    from sklearn.metrics import top_k_accuracy_score, balanced_accuracy_score, make_scorer, recall_score
 
     # load tracks from joblib file
     # tracks stored as list[dict]
@@ -836,7 +837,9 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     splits = np.append(np.arange(1,6,1), ["Max split", "Mean", "Standart deviation"])
     basic_table = pd.DataFrame()
     balanced_table = pd.DataFrame()
-    top_k_table = pd.DataFrame()
+    top_1_table = pd.DataFrame()
+    top_2_table = pd.DataFrame()
+    top_3_table = pd.DataFrame()
     final_test_basic = pd.DataFrame()
     final_test_balanced = pd.DataFrame()
     final_test_top_k_idx = ["Top_1", "Top_2", "Top_3"]
@@ -844,8 +847,20 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
 
     basic_table["Split"] = splits
     balanced_table["Split"] = splits
-    top_k_table["Split"] = splits
+    top_1_table["Split"] = splits
+    top_2_table["Split"] = splits
+    top_3_table["Split"] = splits
     final_test_top_k["Top"] = final_test_top_k_idx
+
+    # makeing top_k scorer callables, to be able to set their k parameter
+    #top_1_scorer = make_scorer(top_k_accuracy_score, k=1)
+    #top_2_scorer = make_scorer(top_k_accuracy_score, k=2)
+    #top_3_scorer = make_scorer(top_k_accuracy_score, k=3)
+    top_k_scorers = {
+        'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
+        'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
+        'top_3' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True) 
+    }
 
     t1 = time.time()
     for m in tqdm(models, desc="Cross validate models"):
@@ -857,8 +872,10 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy')
         balanced_table[m] = np.append(balanced_scores, [np.max(balanced_scores), balanced_scores.mean(), balanced_scores.std()]) 
 
-        top_k_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='top_k_accuracy')
-        top_k_table[m] = np.append(top_k_scores, [np.max(top_k_scores), top_k_scores.mean(), top_k_scores.std()])
+        top_k_scores = cross_validate(clf, X_train, y_train, scoring=top_k_scorers, cv=5)
+        top_1_table[m] = np.append(top_k_scores['test_top_1'], [np.max(top_k_scores['test_top_1']), top_k_scores['test_top_1'].mean(), top_k_scores['test_top_1'].std()])
+        top_2_table[m] = np.append(top_k_scores['test_top_2'], [np.max(top_k_scores['test_top_2']), top_k_scores['test_top_2'].mean(), top_k_scores['test_top_2'].std()])
+        top_3_table[m] = np.append(top_k_scores['test_top_3'], [np.max(top_k_scores['test_top_3']), top_k_scores['test_top_3'].mean(), top_k_scores['test_top_3'].std()])
 
         clf.fit(X_train, y_train)
 
@@ -889,8 +906,14 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     print("\nCross-val Balanced accuracy\n")
     print(balanced_table.to_markdown())
 
-    print("\nCross-val Top k accuracy\n")
-    print(top_k_table.to_markdown())
+    print("\nCross-val Top 1 accuracy\n")
+    print(top_1_table.to_markdown())
+
+    print("\nCross-val Top 2 accuracy\n")
+    print(top_2_table.to_markdown())
+
+    print("\nCross-val Top 3 accuracy\n")
+    print(top_3_table.to_markdown())
 
     print("\nTest set basic\n")
     print(final_test_basic.to_markdown())
@@ -902,7 +925,7 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     print(final_test_top_k.to_markdown())
 
     print()
-    return basic_table, balanced_table, top_k_table, final_test_basic, final_test_balanced, final_test_top_k
+    return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
     
 def main():
     import argparse
