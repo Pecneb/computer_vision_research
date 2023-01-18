@@ -1,14 +1,44 @@
 # computer_vision_research
 
-Predicting trajectories of objects
+## Predicting trajectories of objects
 
-## Abstract
+### Table of Contents  
+1. [Abstract](#abstract)  
+2. [Darknet](#darknet)
+   - [YOLOV7](#yolov7)
+   - [Installation](#inst)
+3. [Tracking of detected objects](#trackobj)
+4. [Predicting trajectories of moving objects](#predictobj)
+   - [Linear regression](#linearreg)
+   - [Polynom fitting](#polyfit)
+   - [Spilne fitting](#splinefit)
+5. [Clustering](#cluster)
+   - [Feature extraction](#featextract)
+   - [Clustering evaluation](#clustereval)
+6. [Classification](#classification)
+   - [Feature vectors](#featvect)
+   - [Save Scikit model](#savescikitmodel)
+7. [Documentation](#document)
+8. [Classification Results](#classresfeatv1)
+9.  [Testing for decision tree depth](#testdectree)
+10. [Classification Results - Features V2](#classresfeatv2)
+11. [Cross validation](#crossval)
+12. [References](#ref)
+    - [Darkner-YOLO](#refdarknet)
+    - [DeepSORT](#refdeepsort)
+
+
+<a name="abstract"/>
+
+# Abstract
 
 **TODO**: Abstract
 
 **Notice:** linear regression implemented, very primitive, but working  
 
-## Darknet
+<a name="darknet"/>
+
+# Darknet
 
 For detection, I used darknet neural net and YOLOV4 pretrained model. [[1]](#1)
 In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project. (My Makefile to build darknet can be found in the darknet_config_files directory)  
@@ -17,6 +47,8 @@ In order to be able to use the darknet api, build from source with the LIB flag 
 
 For Darknet, I wrote an API hldnapi.py, that makes object detection more easier. cvimg2detections(img) it takes only an opencv img and returns the detections in format [label, confidence, xywh]
 
+<a name="yolov7"/>
+
 ## YOLOV7
 
 Yolov7 is the most recent version of YOLO. Darknet is no more, the source code of the neural net is in PyTorch. [Original-Repository](https://github.com/WongKinYiu/yolov7) [[2]](#2). To work with my framework, I read the whole codebase of Yolov7. I wrote yolov7api.py, function load_model(device, weights, imgsz, classify) can load the desired yolo model, if GPU is used half precision can be used (FP16 instead of FP32), detect(img) takes an opencv image as argument, it can take a lot more arguments, but those are only for parametization, there are default values set for those arguments, that are tested. The image has to be resized to the size of the NeuralNet. After the model is loaded, we can input the resized image to the neural net. The results are a matrix shaped (number of input images, number of detections, 6). A detection is a vector of [x, y, x, y, confidence, class] (first xy is top-left, second xy is bottom-right). The raw output of the neural net has to be resized to fit the original image. The output is still not good for my framework.
@@ -24,7 +56,10 @@ The output have to be converted to a matrix of shape(number of detections, 3) wh
 
 **NOTICE**: If pytorch throws this error: RuntimeError: CUDA out of memory. Tried to allocate X.XX GiB (GPU 0; X.XX GiB total capacity; X.XX MiB already allocated; X.XX GiB free; X.XX GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF. Then set environment variable PYTORCH_CUDA_ALLOC_CONF to `PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:256"`, if this does not solve the problem, play with the `max_split_size_mb`, try to give it other sizes.
 
-### Installation
+
+<a id="inst"/>
+
+## Installation
 
 The program was implemented and tested in a linux environment. The usage of anaconda is recommended, download it from here [Anaconda](https://www.anaconda.com/)  
 
@@ -44,7 +79,9 @@ The setup of **PYTHONPATH** variable is very important, because python will thro
 
 If someone only want to use the dataAnalyzer.py script or just fetch data from database, then the gathered data can be donwloaded through [ipfs](https://ipfs.io/ipfs/Qmdyq5N7qstpCSuebBK55CHdiKgSTwf7zHt5m681NbNEAd)
 
-## Tracking of detected objects
+<a id="trackobj"/>
+
+# Tracking of detected objects
 
 **Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
 
@@ -70,9 +107,13 @@ This can save read, write time and memory.
 **Bug**: The above mentioned bug is in correlation with another problem, few tracks from the piled up tracks, are logged out to the terminal output, although only moving objects should be logged. The velocity and accelaration of these objects are stuck and not changing, sometimes these values are way high to be real.
 **Fixes**: To filter out the bugged tracks, a bugged counter field is being added to the dataManagementClasses.TrackedObject() class. The counter is incremented, when the velocities are the same as the velocities from the earlier detection. Then the track is removed from the history, when the counter reaches the given maxAge value.
 
-## Predicting trajectories of moving objects
+<a id="predictobj"/>
 
-### Linear Regression
+# Predicting trajectories of moving objects
+
+<a id="linearreg"/>
+
+## Linear Regression
 
 Using **Scikit Learn Linear Models**  
 
@@ -86,7 +127,9 @@ Best working linear model RANSACRegressor() with base_estimator LinearRegression
 
 **TODO**: this has to be implemented, calculate weights based on detecions position.  
 
-#### Polynom fitting
+<a id="polyfit"/>
+
+## Polynom fitting
 
 Using Sklearn PolynomialFeatures function to generate X and Y training points for the estimator.  
 
@@ -98,13 +141,19 @@ polyModel.fit(X_train.reshape(-1, 1), y_train.reshape(-1, 1))
 y_pred = polyModel.predict(X_test.reshape(-1, 1))  
 ```
 
-#### Spline
+<a id="splinefit"/>
+
+## Spline
 
 **TODO**: Implement Spline, not working yet.
 
 #### Regression with coordinate depending weigths
 
 Kalman filter calculates velocities, these velocities can be used as weight in the regression.
+
+<a id="cluster"/>
+
+# Clustering 
 
 ### Feature extraction, clustering, classification (building a model)
 
@@ -118,7 +167,9 @@ To make the predictions smarter, a learning algorithm have to be implemented, th
 **Feature extraction -> Classification**  
 **TODO**: OPTICS (Partially done, still testing)
 
-#### Creating the perfect feature vector for clustering
+<a id="featextract"/>
+
+## Creating the perfect feature vector for clustering
 
 [x, y] the x and y coordinates of the detection  
 
@@ -126,7 +177,9 @@ To make the predictions smarter, a learning algorithm have to be implemented, th
 
 Not all feature vectors are good for us, there are many false positive detections, that are come from the inaccuracy of yolo. These false positives can be filtered out based on their euclidean distance. Although a threshold value have to be given. The enter and exit points, that distance is under this value, is not chosen as training data for the clustaring algorithm.  
 
-#### Clustering performance evaluation
+<a id="clustereval"/>
+
+## Clustering performance evaluation
 **TODO**: Parameters
 
 There are several algorithms that can evaluate the results of our clustering. There are no ground thruth available to us, so only those evaluation algorithms are useful, that require none.  
@@ -199,13 +252,16 @@ The index is defined as the average similarity between each cluster $C_i$ for $i
 A simple choice to construct $R_ij$ so that it is nonnegative and symmetric is: $$R_{ij} = \frac{s_i + s_j}{d_{ij}}$$
 Then the Davies-Bouldin index is defined as: $$DB = \frac{1}{k} \sum_{i=1}^k \max_{i \neq j} R_{ij}$$
 
+
 ##### References
 
 * Davies, David L.; Bouldin, Donald W. (1979). [“A Cluster Separation Measure”](https://doi.org/10.1109/TPAMI.1979.4766909) IEEE Transactions on Pattern Analysis and Machine Intelligence. PAMI-1 (2): 224-227.
 * Halkidi, Maria; Batistakis, Yannis; Vazirgiannis, Michalis (2001). [“On Clustering Validation Techniques”](https://doi.org/10.1023/A:1012801612483) Journal of Intelligent Information Systems, 17(2-3), 107-145.
 * [Wikipedia entry for Davies-Bouldin index](https://en.wikipedia.org/wiki/Davies%E2%80%93Bouldin_index).
 
-### Classification
+<a id="classification"/>
+
+# Classification
 
 Propability Calibration
 
@@ -214,13 +270,17 @@ Voting Classifier, Naive Bayes, Gaussian Process Classification (GPC), Stochasti
 
 [Tuning the hyperparameters of an estimator](https://scikit-learn.org/stable/modules/grid_search.html#searching-for-optimal-parameters-with-successive-halving)
 
-#### New feature vectors
+<a id="featvect"/>
+
+## New feature vectors
 
 Create feature vectors for Classification. A feature vector could be the start middle and end detection.
 
 The KNN Classifier only accepts N x 2 dimension feature vectors, so a feature vector can be created from the euclidean distance of the enter and middle detection as the first feature, and euclidean distance of the middle and end detection as the second feature.
 
 Scikit-FeatureSelection
+
+<a id="savescikitmodel"/>
 
 ## Save Scikit model
 
@@ -265,6 +325,74 @@ Threshold
 | SVM | 0.65094  |
 | DT  | 0.799576 |
 
+VIDEO:0001_2_608min
+Top picks
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  1 | 0.778547 | 0.622837 | 0.702422 | 0.558824 | 0.638408 | 0.743945 | 0.66955  |
+|  2 | 0.910035 | 0.82526  | 0.818339 | 0.610727 | 0.756055 | 0.875433 | 0.737024 |
+|  3 | 0.944637 | 0.901384 | 0.866782 | 0.709343 | 0.802768 | 0.934256 | 0.747405 |
+Threshold
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  0 | 0.5      | 0.5      | 0.890451 | 0.5      | 0.498227 | 0.641971 | 0.745567 |
+|  1 | 0.628427 | 0.5      | 0.920154 | 0.5      | 0.499118 | 0.540164 | 0.631954 |
+|  2 | 0.53125  | 0.53125  | 0.56528  | 0.5      | 0.53125  | 0.591971 | 0.578625 |
+|  3 | 0.907442 | 0.830566 | 0.932503 | 0.5      | 0.816677 | 0.803711 | 0.880586 |
+|  4 | 0.57484  | 0.5      | 0.595051 | 0.5      | 0.529386 | 0.573923 | 0.73097  |
+|  5 | 0.958674 | 0.5      | 0.964476 | 0.5      | 0.5      | 0.861338 | 0.896448 |
+|  6 | 0.887581 | 0.499106 | 0.879531 | 0.5      | 0.59453  | 0.704265 | 0.78679  |
+|  7 | 0.929265 | 0.870969 | 0.842197 | 0.832051 | 0.857261 | 0.880325 | 0.883913 |
+|  8 | 0.897288 | 0.5      | 0.691971 | 0.5      | 0.578192 | 0.871863 | 0.916383 |
+|  9 | 0.95991  | 0.881049 | 0.948938 | 0.74675  | 0.962098 | 0.931049 | 0.910875 |
+| 10 | 0.891087 | 0.5      | 0.71591  | 0.5      | 0.799416 | 0.80488  | 0.821211 |
+| 11 | 0.558824 | 0.496435 | 0.923351 | 0.5      | 0.52852  | 0.586453 | 0.672906 |
+| 12 | 0.607143 | 0.517857 | 0.661623 | 0.5      | 0.534805 | 0.535714 | 0.605    |
+| 13 | 0.990958 | 0.5      | 0.790054 | 0.5      | 0.498192 | 0.614575 | 0.938192 |
+| 14 | 0.7      | 0.5      | 0.786796 | 0.5      | 0.5      | 0.75     | 0.793838 |
+|     |        0 |
+|:----|---------:|
+| KNN | 0.768179 |
+| GP  | 0.575149 |
+| GNB | 0.807219 |
+| MLP | 0.538587 |
+| SGD | 0.615178 |
+| SVM | 0.712813 |
+| DT  | 0.786217 |
+
+VIDEO:0002_2_308min
+Top picks
+|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
+|  1 | 0.708791 | 0.43956  | 0.403846 | 0.313187 | 0.222527 | 0.664835 | 0.607143 |
+|  2 | 0.884615 | 0.651099 | 0.68956  | 0.409341 | 0.453297 | 0.865385 | 0.692308 |
+|  3 | 0.936813 | 0.804945 | 0.763736 | 0.483516 | 0.554945 | 0.934066 | 0.706044 |
+Threshold
+|    |      KNN |       GP |      GNB |   MLP |      SGD |      SVM |       DT |
+|---:|---------:|---------:|---------:|------:|---------:|---------:|---------:|
+|  0 | 0.616132 | 0.5      | 0.597182 |   0.5 | 0.5      | 0.71137  | 0.684645 |
+|  1 | 0.656463 | 0.5      | 0.620991 |   0.5 | 0.5      | 0.683188 | 0.754616 |
+|  2 | 0.798499 | 0.528792 | 0.815481 |   0.5 | 0.648494 | 0.748512 | 0.842488 |
+|  3 | 0.60666  | 0.5      | 0.586603 |   0.5 | 0.5      | 0.494065 | 0.752555 |
+|  4 | 0.913961 | 0.633117 | 0.827922 |   0.5 | 0.712662 | 0.709416 | 0.879058 |
+|  5 | 0.909314 | 0.5      | 0.889461 |   0.5 | 0.711765 | 0.599755 | 0.857353 |
+|  6 | 0.935243 | 0.5      | 0.74564  |   0.5 | 0.952847 | 0.926316 | 0.911274 |
+|  7 | 0.837985 | 0.5      | 0.772461 |   0.5 | 0.5      | 0.60925  | 0.763955 |
+|  8 | 0.867692 | 0.498462 | 0.703077 |   0.5 | 0.496923 | 0.654359 | 0.766667 |
+|  9 | 0.848024 | 0.5      | 0.723708 |   0.5 | 0.49848  | 0.695441 | 0.830699 |
+| 10 | 0.879574 | 0.5      | 0.780314 |   0.5 | 0.498534 | 0.5      | 0.876642 |
+| 11 | 0.666667 | 0.5      | 0.973011 |   0.5 | 0.497159 | 0.583333 | 0.870739 |
+| 12 | 0.71     | 0.5      | 0.904286 |   0.5 | 0.782857 | 0.714286 | 0.885714 |
+|     |        0 |
+|:----|---------:|
+| KNN | 0.78817  |
+| GP  | 0.512336 |
+| GNB | 0.764626 |
+| MLP | 0.5      |
+| SGD | 0.599979 |
+| SVM | 0.663792 |
+| DT  | 0.821262 |
+
 ### 8 | 2 diff: top 1 acc, top 3 acc
 ### 21 | features from second half, check for history lenght aswell
 ### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat ** Bence
@@ -306,8 +434,9 @@ Threshold
 [cuML](https://github.com/rapidsai/cuml)
 [cuDF](https://github.com/rapidsai/cudf)
 
+<a id="document"/>
 
-## Documentation
+# Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
 
@@ -612,7 +741,9 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 
 26. The results of the clustering are the classes used in classification. There are many classification algorithm, ex.: [KNN](https://scikit-learn.org/stable/modules/neighbors.html#nearest-neighbors-classification), [GaussianNB](https://scikit-learn.org/stable/modules/naive_bayes.html#gaussian-naive-bayes), [StochasticGradientDescent](https://scikit-learn.org/stable/modules/sgd.html#classification), etc... [Neural Network Models](https://scikit-learn.org/stable/modules/neural_networks_supervised.html#classification) also can be used for classification.
 
-### Classification Results
+<a id="classresfeatv1"/>
+
+# Classification Results
 
 #### 0002_2_308min.mp4
 
@@ -986,7 +1117,9 @@ $$ Accuracy = \frac{(TP + TN)}{(TP + TN + FP + FN)} $$
 | SVM | 0.649698 |
 | DT  | 0.795359 |
 
-## Testing for decision tree depth
+<a id="testdectree"/>
+
+# Testing for decision tree depth
 
 ### Video 0001_2
 
@@ -1153,7 +1286,9 @@ Decision Tree depth 10 accuracy
 | 13 |   0.918192 |                    nan        |                      nan        |
 | 14 |   0.8      |                    nan        |                      nan        |
 
-## Accuraciy (features v2)
+<a id="classresfeatv2"/>
+
+# Accuraciy (features v2)
 
 ### 0001_2
 
@@ -1227,7 +1362,9 @@ Threshold
 | SVM | 0.827971 |
 | DT  | 0.977797 |
 
-## Sklearn Cross Validation
+<a id="crossval"/>
+
+# Sklearn Cross Validation
 
 ### 0001_2
 
@@ -1388,9 +1525,13 @@ Time: 223 s
 |  1 | Top_2 | 0.875256 | 0.842536 | 0.822086 | 0.644172 | 0.787321 | 0.852761 | 0.611452 |
 |  2 | Top_3 | 0.93865  | 0.897751 | 0.912065 | 0.683027 | 0.873211 | 0.985685 | 0.687117 |
 
-## References
+<a id="ref"/>
 
-### Darknet-YOLO
+# References
+
+<a id="refdarknet"/>
+
+## Darknet-YOLO
 
 <a id="1">[1]</a>  
 @misc{bochkovskiy2020yolov4,  
@@ -1418,7 +1559,9 @@ Time: 223 s
   year={2022}  
 }  
 
-### DeepSORT
+<a id="refdeepsort"/>
+
+## DeepSORT
 
 <a id="3">[3]</a>  
 @inproceedings{Wojke2017simple,  

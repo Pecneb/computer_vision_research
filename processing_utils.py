@@ -545,10 +545,10 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)//2, len(trackedObjects)):
+    for i, track in enumerate(trackedObjects):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
-            for j in range(step, len(trackedObjects[i].history), step):
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
                 midx = j//2
                 X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
                                                 trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
@@ -560,7 +560,101 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
+def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    from visualizer import aoiextraction
+    X_featurevectors = []
+    y_newLabels = []
+    cluster_centroids = aoiextraction(trackedObjects, labels)
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in range(len(trackedObjects)):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range(step, len(trackedObjects[i].history), step):
+                midx = j//2
+                """ X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                                                #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,])) """
+                fv = np.array([
+                            trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                            #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                            trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                            trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                            #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
+                            ])
+                """for c in cluster_centroids:
+                    fv = np.append(fv, [
+                                        cluster_centroids[c][0] - trackedObjects[i].history[0].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[0].Y, 
+                                        cluster_centroids[c][0] - trackedObjects[i].history[midx].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[midx].Y,
+                                        cluster_centroids[c][0] - trackedObjects[i].history[j].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[j].Y,
+                                        ]
+                                    )"""
+                X_featurevectors.append(fv)
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    from visualizer import aoiextraction
+    X_featurevectors = []
+    y_newLabels = []
+    cluster_centroids = aoiextraction(trackedObjects, labels)
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in range(len(trackedObjects)):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                                                #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
+                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,]))
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -589,6 +683,8 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
         X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
     elif features_v2_half:
         X, y, metadata = make_feature_vectors_version_two_half(filteredTracks, 6, labels)
+    elif features_v3:
+        X, y, metadata = make_feature_vectors_version_three(filteredTracks, 6, labels)
     else:
         X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
 
@@ -660,7 +756,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
 from classifier import OneVSRestClassifierExtended 
-def save_model(path2db: str, classifier_type: str, model):
+def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
     """Save model to research_data dir.
 
     Args:
@@ -668,9 +764,9 @@ def save_model(path2db: str, classifier_type: str, model):
         classifier_type (str): Classifier name. 
         model (Model): The model itself. 
     """
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
-        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    if not os.path.isdir(os.path.join(savedir, "models")):
+        os.mkdir(os.path.join(savedir, "models"))
+    savepath = os.path.join(savedir, "models")
     filename = os.path.join(savepath, f"{classifier_type}.joblib")
     if model is not None:
         joblib.dump(model, filename)
@@ -688,7 +784,7 @@ def load_model(path2model: str) -> OneVSRestClassifierExtended:
     """
     return joblib.load(path2model)
 
-def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False):
+def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
 
@@ -705,17 +801,19 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     """
     from clustering import optics_on_featureVectors 
 
-    featureVectors = makeFeatureVectorsNx4(model.trackData)
+    featureVectors = makeFeatureVectorsNx4(model.tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(model.trackData, 6, labels)
+        X, y, metadata = make_features_for_classification_velocity_time_second_half(model.tracks, 6, labels)
     elif features_v2:
-        X, y, metadata = make_feature_vectors_version_two(model.trackData, 6, labels)
+        X, y, metadata = make_feature_vectors_version_two(model.tracks, 6, labels)
     elif features_v2_half:
-        X, y, metadata = make_feature_vectors_version_two_half(model.trackData, 6, labels)
+        X, y, metadata = make_feature_vectors_version_two_half(model.tracks, 6, labels)
+    elif features_v3:
+        X, y, metadata = make_feature_vectors_version_three(model.tracks, 6, labels)
     else:
-        X, y, metadata = make_features_for_classification_velocity_time(model.trackData, 6, labels)
+        X, y, metadata = make_features_for_classification_velocity_time(model.tracks, 6, labels)
 
     X = X[y > -1]
     y = y[y > -1]
@@ -738,6 +836,55 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
             metadata_train.append(metadata[i])
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
+
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False):
+    from clustering import optics_on_featureVectors 
+    from visualizer import aoiextraction
+
+    tracks = load_dataset(path2dataset)
+
+    featureVectors = makeFeatureVectorsNx4(tracks)
+    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
+
+    # Filter out -1 labeled tracks and labels, because optics clustering can give -1 label to tracks that are outliers
+    tracks_filtered= [t for t, l in zip(tracks, labels) if l > -1]
+    labels_filtered= [l for l in labels if l > -1]
+    cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
+
+    if from_half:
+        X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(tracks, 6, labels)
+    elif features_v3:
+        X, y, metadata = make_feature_vectors_version_three(tracks, 6, labels)
+    elif features_v3_half:
+        X, y, metadata = make_feature_vectors_version_three_half(tracks, 6, labels)
+    else:
+        X, y, metadata = make_features_for_classification_velocity_time(tracks, 6, labels)
+
+    X = X[y > -1]
+    y = y[y > -1]
+
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    metadata_test = []
+    metadata_train = []
+
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+            metadata_test.append(metadata[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+            metadata_train.append(metadata[i])
+
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), tracks, cluster_centroids
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.
@@ -843,3 +990,48 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
         i += 1
 
     return train, test
+
+def load_dataset(path2dataset: str):
+    """This function loads the track data from sqlite db or joblib file.
+    The extract_tracks_from_db.py script can create two type of joblib
+    files. One with all the tracks unfiltered, and one with filtered tracks
+    that only contain tracks used in clustering an classifier training.
+    The filtered dataset stores the tracks with their corresponding labels
+    that are assigned at clustering in dictionaries in the following format
+    dict['track': TrackedObject, 'class': label].
+
+    Args:
+        path2dataset (str): Path to file containing dataset. 
+
+    Returns:
+        list[TrackedObject]: list of TrackedObject objects. 
+    """
+    ext = path2dataset.split('.')[-1] # extension of dataset file
+    if ext == "joblib":
+        dataset = load_joblib_tracks(path2dataset)
+        if len(dataset[0]) == 1:
+            return dataset
+        elif len(dataset[0]) == 2:
+            ret_dataset = [d['track'] for d in dataset] 
+            return ret_dataset
+    elif ext == "db":
+        return preprocess_database_data_multiprocessed(path2dataset, n_jobs=None) # None for n_jobs to utilize all cpu threads
+    print("Error: Bad file type.")
+    return False 
+
+def strfy_dict_params(params: dict):
+    """Stringify params stored in dictionaries.
+
+    Args:
+        params (dict): Dict storing the params. 
+
+    Returns:
+        str: Stringified params returned in the format "_param1_value1_param2_value2". 
+    """
+    ret_str = ""
+    if len(params) == 0:
+        return ret_str
+    for p in params:
+        ret_str += str("_"+p+"_"+str(params[p]))
+    return ret_str
+    

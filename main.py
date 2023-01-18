@@ -120,7 +120,7 @@ def draw_boxes(history, image, colors, frameNumber):
             bbox = (detection.X, detection.Y, detection.Width, detection.Height)
             left, top, right, bottom = bbox2points(bbox)
             cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
-            cv.putText(image, "{} ID{} [{:.2f}]".format(detection.label, detections.objID, float(detection.confidence)),
+            cv.putText(image, "{} ID{} [{:.2f}] VX: {:.2f} VY: {:.2f}".format(detection.label, detections.objID, float(detection.confidence), float(detection.VX), float(detection.VY)),
                         (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
                         colors[detection.label], 2)
 
