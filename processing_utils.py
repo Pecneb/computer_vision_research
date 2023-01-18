@@ -846,11 +846,6 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     featureVectors = makeFeatureVectorsNx4(tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
-    # Filter out -1 labeled tracks and labels, because optics clustering can give -1 label to tracks that are outliers
-    tracks_filtered= [t for t, l in zip(tracks, labels) if l > -1]
-    labels_filtered= [l for l in labels if l > -1]
-    cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
-
     if from_half:
         X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
     elif features_v2:
@@ -884,7 +879,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
             y_train.append(y[i])
             metadata_train.append(metadata[i])
 
-    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), tracks, cluster_centroids
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test)
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.

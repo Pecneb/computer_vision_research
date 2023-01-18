@@ -31,7 +31,8 @@ from processing_utils import (
     data_preprocessing_for_classifier, 
     data_preprocessing_for_classifier_from_joblib_model, 
     checkDir,
-    preprocess_dataset_for_training
+    preprocess_dataset_for_training,
+    load_joblib_tracks
     )
 from tqdm import tqdm
 np.seterr(divide='ignore', invalid='ignore')
@@ -520,6 +521,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
     from processing_utils import strfy_dict_params
+    from visualizer import aoiextraction
 
     #X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
@@ -545,7 +547,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
                                                             features_v2_half=argv['features_v2_half'],
                                                             features_v3=argv['features_v3'])"""
 
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks, cluster_centroids = preprocess_dataset_for_training(
+    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = preprocess_dataset_for_training(
         path2dataset=path2dataset, 
         min_samples=argv['min_samples'], 
         max_eps=argv['max_eps'], 
@@ -555,8 +557,21 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         from_half=argv['from_half'],
         features_v2=argv['features_v2'],
         features_v2_half=argv['features_v2_half'],
-        features_v3=argv['features_v3']
+        features_v3=argv['features_v3'],
+        features_v3_half=argv['features_v3_half']
     ) 
+
+    dataset = load_joblib_tracks(path2tracks=path2dataset)
+    if type(dataset[0]) != dict:
+        raise TypeError()
+    tracks = [t["track"] for t in dataset] 
+    tracks_filtered = [t["track"] for t in dataset if t["class"] > -1] 
+    labels_filtered = [t["class"] for t in dataset if t["class"] > -1]  
+
+
+    cluster_centroids = None
+    if argv['features_v3'] or argv['features_v3_half']:
+        cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -590,20 +605,17 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
         #binaryModel.init_models(models[clr])
 
-        if argv['features_v3'] or argv['features_v3_half']:
-            binaryModel.fit(X_train, y_train, cluster_centroids)
-        else:
-            binaryModel.fit(X_train, y_train)
+        binaryModel.fit(X_train, y_train, centroids=cluster_centroids)
 
         top_picks = []
         for i in range(1,4):
-            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i))
-        balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'])
+            top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i, centroids=cluster_centroids))
+        balanced_threshold = binaryModel.validate(X_valid, y_valid, argv['threshold'], centroids=cluster_centroids)
 
         table[clr] = np.asarray(top_picks)
         table2[clr] = balanced_threshold
 
-        probabilities = binaryModel.predict_proba(X_valid)
+        probabilities = binaryModel.predict_proba(X_valid, centroids=cluster_centroids)
         for i in range(probabilities.shape[1]):
             probability_over_time[f"Class {i}"] = probabilities[:, i]
         probability_over_time["Time_Enter"] = metadata_valid[:, 0]
@@ -931,7 +943,6 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
         fit_params = {
             'centroids' : cluster_centroids
         }
-
     elif features_v3_half:
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
