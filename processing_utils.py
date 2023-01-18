@@ -582,7 +582,7 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
         if step >= 2:
             for j in range(step, len(trackedObjects[i].history), step):
                 midx = j//2
-                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                """ X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
                                                 #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
                                                 trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
                                                 trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
@@ -592,7 +592,25 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
                                                 cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
                                                 cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
                                                 cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,]))
+                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,])) """
+                fv = np.array([
+                            trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                            #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                            trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                            trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                            #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
+                            ])
+                """for c in cluster_centroids:
+                    fv = np.append(fv, [
+                                        cluster_centroids[c][0] - trackedObjects[i].history[0].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[0].Y, 
+                                        cluster_centroids[c][0] - trackedObjects[i].history[midx].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[midx].Y,
+                                        cluster_centroids[c][0] - trackedObjects[i].history[j].X, 
+                                        cluster_centroids[c][1] - trackedObjects[i].history[j].Y,
+                                        ]
+                                    )"""
+                X_featurevectors.append(fv)
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
@@ -738,7 +756,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
 from classifier import OneVSRestClassifierExtended 
-def save_model(path2db: str, classifier_type: str, model):
+def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
     """Save model to research_data dir.
 
     Args:
@@ -746,9 +764,9 @@ def save_model(path2db: str, classifier_type: str, model):
         classifier_type (str): Classifier name. 
         model (Model): The model itself. 
     """
-    if not os.path.isdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models")):
-        os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
-    savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "models"))
+    if not os.path.isdir(os.path.join(savedir, "models")):
+        os.mkdir(os.path.join(savedir, "models"))
+    savepath = os.path.join(savedir, "models")
     filename = os.path.join(savepath, f"{classifier_type}.joblib")
     if model is not None:
         joblib.dump(model, filename)
@@ -821,11 +839,17 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
 def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False):
     from clustering import optics_on_featureVectors 
+    from visualizer import aoiextraction
 
     tracks = load_dataset(path2dataset)
 
     featureVectors = makeFeatureVectorsNx4(tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
+
+    # Filter out -1 labeled tracks and labels, because optics clustering can give -1 label to tracks that are outliers
+    tracks_filtered= [t for t, l in zip(tracks, labels) if l > -1]
+    labels_filtered= [l for l in labels if l > -1]
+    cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
 
     if from_half:
         X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
@@ -860,7 +884,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
             y_train.append(y[i])
             metadata_train.append(metadata[i])
 
-    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test)
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), tracks, cluster_centroids
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.

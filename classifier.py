@@ -1,6 +1,9 @@
+from joblib import Parallel, delayed
 import numpy
 from sklearn.base import ClassifierMixin, BaseEstimator
-from sklearn.utils import multiclass, validation
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.utils import validation
+from sklearn import multiclass
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multiclass import check_is_fitted
 
@@ -293,9 +296,84 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         """
         self.tracks = tracks
         super().__init__(estimator, n_jobs=n_jobs)
+    
+    def fit(self, X, y, centroids: dict = None):
+        """Fit underlying estimators.
+        If centroids dictionary are given,
+        then version three feature vectors
+        are calculated per cluster.
+
+        Parameters
+        ----------
+        X : (sparse) array-like of shape (n_samples, n_features)
+            Data.
+
+        y : (sparse) array-like of shape (n_samples,) or (n_samples, n_classes)
+            Multi-class targets. An indicator matrix turns on multilabel
+            classification.
+
+        Returns
+        -------
+        self : object
+            Instance of fitted estimator.
+        """
+        # A sparse LabelBinarizer, with sparse_output=True, has been shown to
+        # outperform or match a dense label binarizer in all cases and has also
+        # resulted in less or equal memory consumption in the fit_ovr function
+        # overall.
+        self.label_binarizer_ = LabelBinarizer(sparse_output=True)
+        Y = self.label_binarizer_.fit_transform(y)
+        Y = Y.tocsc()
+        self.classes_ = self.label_binarizer_.classes_
+        columns = (col.toarray().ravel() for col in Y.T)
+        # In cases where individual estimators are very fast to train setting
+        # n_jobs > 1 in can results in slower performance due to the overhead
+        # of spawning threads.  See joblib issue #112.
+        if centroids is not None:
+            self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
+                delayed(multiclass._fit_binary)(
+                    self.estimator,
+                    numpy.array([numpy.append(x, [centroids[i][0] - x[0], 
+                                            centroids[i][1] - x[1], 
+                                            centroids[i][0] - x[2], 
+                                            centroids[i][1] - x[3], 
+                                            centroids[i][0] - x[4], 
+                                            centroids[i][1] - x[5]]) for x in X]),
+                    column,
+                    classes=[
+                        "not %s" % self.label_binarizer_.classes_[i],
+                        self.label_binarizer_.classes_[i],
+                    ],
+                )
+                for i, column in enumerate(columns)
+            )
+        else:
+            self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
+                delayed(multiclass._fit_binary)(
+                    self.estimator,
+                    X,
+                    column,
+                    classes=[
+                        "not %s" % self.label_binarizer_.classes_[i],
+                        self.label_binarizer_.classes_[i],
+                    ],
+                )
+                for i, column in enumerate(columns)
+            )
+
+        if hasattr(self.estimators_[0], "n_features_in_"):
+            self.n_features_in_ = self.estimators_[0].n_features_in_
+        if hasattr(self.estimators_[0], "feature_names_in_"):
+            self.feature_names_in_ = self.estimators_[0].feature_names_in_
+
+        return self
+
        
-    def predict_proba(self, X: numpy.ndarray):
-        """Return predicted probabilities of dataset X
+    def predict_proba(self, X: numpy.ndarray, centroids: dict = None):
+        """Return predicted probabilities of dataset X.
+        If cluster centroids dictionary is given, then 
+        version three feature vectors are used, that are
+        calculated per cluster.
 
         Parameters
         ----------
@@ -307,13 +385,24 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         """
         check_is_fitted(self)
         X = validation.check_array(X, ensure_2d=True)
+        
 
         Y = numpy.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
-            Y[:, clr] = mdl.predict_proba(X)[:, 1]
+            if centroids is not None:
+                Y[:, clr] = mdl.predict_proba(numpy.array([numpy.append(x, [
+                    centroids[clr][0] - x[0], 
+                    centroids[clr][1] - x[1], 
+                    centroids[clr][0] - x[2], 
+                    centroids[clr][1] - x[3], 
+                    centroids[clr][0] - x[4], 
+                    centroids[clr][1] - x[5]
+                ]) for x in X]))[:, 1]
+            else:
+                Y[:, clr] = mdl.predict_proba(X)[:, 1]
         return Y 
 
-    def predict(self, X: numpy.ndarray, top:int=1):
+    def predict(self, X: numpy.ndarray, top:int=1, centroids: dict = None):
         """Return predicted top labels of dataset X
 
         Parameters
@@ -338,7 +427,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
 
         # Get probability for all classes.
-        class_proba = self.predict_proba(X=X)
+        if centroids is not None:
+            class_proba = self.predict_proba(X=X, centroids=centroids)
+        else:
+            class_proba = self.predict_proba(X=X)
         # Sort to ascending order.
         prediction_result = numpy.argsort(class_proba)
         
@@ -347,7 +439,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 
-    def validate(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32):
+    def validate(self, X_test: numpy.ndarray, y_test: numpy.ndarray, threshold: numpy.float32, centroids: dict = None):
         """Validate trained models.
 
         Calculates the balanced accuracy of the underlying trained models.
@@ -366,7 +458,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         -------
         balanced_accuracy : float, shape (n_classes,)
         """
-        predict_proba_results = self.predict_proba(X_test)
+        if centroids is not None:
+            predict_proba_results = self.predict_proba(X_test, centroids)
+        else:
+            predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []
         balanced_accuracy = []
         for j in self.classes_: 
@@ -402,7 +497,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, top: int=1):
+    def validate_predictions(self, X_test: numpy.ndarray, y_test: numpy.ndarray, top: int=1, centroids: dict = None):
         """Validate trained models.
 
         Parameters
@@ -417,7 +512,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         top : int
             Parameter for predict() method, that returns the top n predictions.
         """
-        predict_results = self.predict(X_test, top=top)
+        if centroids is not None:
+            predict_results = self.predict(X_test, top=top, centroids=centroids)
+        else:
+            predict_results = self.predict(X_test, top=top)
 
         tp = 0 # True positive --> predicting true and it is really true 
         fn = 0 # False negative (type II error) --> predicting false, although its true 

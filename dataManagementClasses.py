@@ -171,7 +171,7 @@ class TrackedObject():
                         featureVector[6] / framewidth*ratio, featureVector[7] / frameheight, featureVector[8] / framewidth*ratio,
                         featureVector[9] / frameheight])
                         
-    def feature_(self):
+    def feature_(self, version_3=False):
         """Return feature vector of track.
 
         Args:
@@ -181,6 +181,10 @@ class TrackedObject():
         n = len(self.history)-1
         if n < 3:
             return None
+        if version_3:
+            return np.array([self.history[0].X, self.history[0].Y,
+                            self.history[n//2].X, self.history[n//2].Y,
+                            self.history[n].X, self.history[n].Y])
         return np.array([self.history[0].X, self.history[0].Y, self.history[0].VX, 
                         self.history[0].VY, self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
