@@ -136,25 +136,31 @@ class TrackedObject():
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
     @staticmethod
-    def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
+    def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int, feature_v3: bool = False):
         """Rescale normalized coordinates with the given frame sizes.
 
         Args:
             featureVector (np.ndarray): Feature vector of the track.
             framewidth/ratio (int): Width of the video frame. 
             frameheight (int): Height of the video frame. 
+            feature_v3 (bool): This param decides which feature 
+                              vector version to use.
 
         Returns:
             np.ndarray: upscaled feature vector
         """
         ratio = framewidth / frameheight
+        if feature_v3:
+            return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], 
+                            framewidth/ratio*featureVector[2], frameheight*featureVector[3], 
+                            framewidth/ratio*featureVector[4], frameheight*featureVector[5]])
         return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], framewidth/ratio*featureVector[2],
                         frameheight*featureVector[3], framewidth/ratio*featureVector[4], frameheight*featureVector[5],
                         framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
                         frameheight*featureVector[9]])
 
     @staticmethod
-    def downscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
+    def downscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int, feature_v3: bool = False):
         """Downscale coordinates to normalized coordinates with the given frame sizes.
 
         Args:
@@ -166,12 +172,16 @@ class TrackedObject():
             np.ndarray: downscaled feature vector
         """
         ratio = framewidth / frameheight
+        if feature_v3:
+            return np.array([featureVector[0] / framewidth*ratio, featureVector[1] / frameheight, 
+                            featureVector[2] / framewidth*ratio, featureVector[3] / frameheight, 
+                            featureVector[4] / framewidth*ratio, featureVector[5] / frameheight,])
         return np.array([featureVector[0] / framewidth*ratio, featureVector[1] / frameheight, featureVector[2] / framewidth*ratio,
                         featureVector[3] / frameheight, featureVector[4] / framewidth*ratio, featureVector[5] / frameheight,
                         featureVector[6] / framewidth*ratio, featureVector[7] / frameheight, featureVector[8] / framewidth*ratio,
                         featureVector[9] / frameheight])
                         
-    def feature_(self, version_3=False):
+    def feature_(self, feature_v3: bool = False):
         """Return feature vector of track.
 
         Args:
@@ -181,7 +191,7 @@ class TrackedObject():
         n = len(self.history)-1
         if n < 3:
             return None
-        if version_3:
+        if feature_v3:
             return np.array([self.history[0].X, self.history[0].Y,
                             self.history[n//2].X, self.history[n//2].Y,
                             self.history[n].X, self.history[n].Y])

@@ -26,6 +26,8 @@ import numpy as np
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from main import getTargets
 from main import draw_boxes
+from classifier import OneVSRestClassifierExtended
+from joblib import Parallel, delayed
 
 def parseArgs():
     """Handle command line arguments.
@@ -41,7 +43,7 @@ def parseArgs():
     parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
     parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
     parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
-    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=[2,3], default=2)
+    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['2','3'], default='2')
     
     args = parser.parse_args()
     return args
@@ -141,8 +143,11 @@ def draw_prediction(detectionCoordinates: tuple, centroid: list[np.ndarray], ima
     """
     ratio = image.shape[1] / image.shape[0]
     X, Y = detectionCoordinates
-    for c in centroid:
-        cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,0,255), 3)
+    for i, c in enumerate(centroid):
+        if i == 0:
+            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,255,0), 1)
+        else:
+            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,0,255), 1)
 
 def upscale_coordinates(p1, p2, image: np.ndarray):
     ratio = image.shape[1]/image.shape[0]
@@ -185,22 +190,40 @@ def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int
                         framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
                         frameheight*featureVector[9]])
 
+def prediction_paralell(t: TrackedObject, model: OneVSRestClassifierExtended, frame: np.ndarray, framewidth: int, frameheight: int, cluster_centroids: dict, cluster_centroids_upscaled: dict, feature_v3: bool = False):
+    """Prediction algorithm for paralellism.
+
+    Args:
+        t (TrackedObject): _description_
+        model (OneVSRestClassifierExtended): _description_
+        frame (np.ndarray): _description_
+        framewidth (int): _description_
+        frameheight (int): _description_
+        cluster_centroids (dict): _description_
+        cluster_centroids_upscaled (dict): _description_
+        feature_v3 (bool, optional): _description_. Defaults to False.
+    """
+    VERSION_3 = feature_v3
+    feature = t.feature_(VERSION_3)
+    if t.isMoving:
+        if feature is not None:
+            if VERSION_3:
+                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 1, centroids=cluster_centroids).reshape((-1))
+            else:
+                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
+            #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
+            centroids = [cluster_centroids_upscaled[p] for p in predictions]
+            #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
+            draw_prediction((int(t.X), int(t.Y)), centroids, frame)
+
 def main():
     args = parseArgs()
 
-    VERSION_3 = args.feature_version == 3
+    VERSION_3 = int(args.feature_version) == 3
 
     from yolov7api import detect, COLORS
 
     cap = cv.VideoCapture(args.video)
-
-    frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
-
-    # create named window
-    cv.namedWindow("Video")
-    # create trackbar to be able to set frameposition
-    setFrame = lambda frame_num: cap.set(cv.CAP_PROP_POS_FRAMES, frame_num)
-    cv.createTrackbar("Frame", "Video", 0, frame_count, setFrame)
 
     framewidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
@@ -222,6 +245,14 @@ def main():
     dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
 
     history = [] # TrackedObjects
+
+    frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
+
+    # create named window
+    cv.namedWindow("Video")
+    # create trackbar to be able to set frameposition
+    setFrame = lambda frame_num: cap.set(cv.CAP_PROP_POS_FRAMES, frame_num)
+    cv.createTrackbar("Frame", "Video", 0, frame_count, setFrame)
 
     for frameidx in tqdm.tqdm(range(frame_count)):
         try:
@@ -265,13 +296,28 @@ def main():
                             if t.isMoving:
                                 if feature is not None:
                                     if VERSION_3:
-                                        predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1, centroids=cluster_centroids).reshape((-1))
+                                        predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 3, centroids=cluster_centroids).reshape((-1))
                                     else:
                                         predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
                                     #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
                                     centroids = [cluster_centroids_upscaled[p] for p in predictions]
                                     #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
-                                    draw_prediction((int(feature[6]), int(feature[7])), centroids, frame)
+                                    draw_prediction((int(t.X), int(t.Y)), centroids, frame)
+                    """
+                    Parallel(n_jobs=18)(
+                        delayed(prediction_paralell)(
+                            t,
+                            model,
+                            frame,
+                            framewidth,
+                            frameheight,
+                            cluster_centroids,
+                            cluster_centroids_upscaled,
+                            VERSION_3
+                        )
+                        for t in history
+                    )
+                    """
                     #for d in t.history:
                         #if d.frameID == frameidx:
                         #    draw_prediction((int(d.X * framewidth / (framewidth/frameheight)), int(d.Y * frameheight)), cluster_centroids_upscaled[l], frame)
