@@ -145,9 +145,9 @@ def draw_prediction(detectionCoordinates: tuple, centroid: list[np.ndarray], ima
     X, Y = detectionCoordinates
     for i, c in enumerate(centroid):
         if i == 0:
-            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,255,0), 1)
+            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,255,0), 3)
         else:
-            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,0,255), 1)
+            cv.line(image, (X, Y), (int(c[0]), int(c[1])), (0,0,255), 3)
 
 def upscale_coordinates(p1, p2, image: np.ndarray):
     ratio = image.shape[1]/image.shape[0]
