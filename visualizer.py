@@ -43,7 +43,7 @@ def parseArgs():
     parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
     parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
     parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
-    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['2','3'], default='2')
+    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['1', '2','3'], default='2')
     
     args = parser.parse_args()
     return args

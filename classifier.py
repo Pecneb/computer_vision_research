@@ -6,6 +6,7 @@ from sklearn.utils import validation
 from sklearn import multiclass
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multiclass import check_is_fitted
+from sklearn.preprocessing import StandardScaler
 
 class BinaryClassifier(ClassifierMixin, BaseEstimator):
     """Base Binary Classifier
@@ -329,6 +330,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         # In cases where individual estimators are very fast to train setting
         # n_jobs > 1 in can results in slower performance due to the overhead
         # of spawning threads.  See joblib issue #112.
+        self.scaler_ = StandardScaler().fit(X)
+        X_scaled = self.scaler_.transform(X)
         if centroids is not None:
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
@@ -338,7 +341,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                                             centroids[i][0] - x[2], 
                                             centroids[i][1] - x[3], 
                                             centroids[i][0] - x[4], 
-                                            centroids[i][1] - x[5]]) for x in X]),
+                                            centroids[i][1] - x[5]]) for x in X_scaled]),
                     column,
                     classes=[
                         "not %s" % self.label_binarizer_.classes_[i],
@@ -351,7 +354,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
                     self.estimator,
-                    X,
+                    X_scaled,
                     column,
                     classes=[
                         "not %s" % self.label_binarizer_.classes_[i],
@@ -385,7 +388,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         """
         check_is_fitted(self)
         X = validation.check_array(X, ensure_2d=True)
-        
+        X_scaled = self.scaler_.transform(X)
 
         Y = numpy.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
@@ -397,9 +400,9 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     centroids[clr][1] - x[3], 
                     centroids[clr][0] - x[4], 
                     centroids[clr][1] - x[5]
-                ]) for x in X]))[:, 1]
+                ]) for x in X_scaled]))[:, 1]
             else:
-                Y[:, clr] = mdl.predict_proba(X)[:, 1]
+                Y[:, clr] = mdl.predict_proba(X_scaled)[:, 1]
         return Y 
 
     def predict(self, X: numpy.ndarray, top:int=1, centroids: dict = None):
@@ -425,6 +428,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         if top > len(self.classes_):
             print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+            raise ValueError
 
         # Get probability for all classes.
         if centroids is not None:
