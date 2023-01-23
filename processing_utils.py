@@ -643,12 +643,13 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
                                                 trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
                                                 trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
                                                 #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,]))
+                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
+                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
+                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
+                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
+                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
+                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,
+                                                ]))
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))

@@ -640,6 +640,8 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2_from_half"), binaryModel)
         elif argv['features_v3']:
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3"), binaryModel)
+        elif argv['features_v3_half']:
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3_from_half"), binaryModel)
         else:
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])), binaryModel)
     
@@ -874,7 +876,7 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False, ):
+def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False, ):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
@@ -1019,6 +1021,8 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
     top_3_table["Split"] = splits
     final_test_top_k["Top"] = final_test_top_k_idx
 
+    parameters_table = pd.DataFrame(parameters[estimator_params_set-1])
+
     # makeing top_k scorer callables, to be able to set their k parameter
     #top_1_scorer = make_scorer(top_k_accuracy_score, k=1)
     #top_2_scorer = make_scorer(top_k_accuracy_score, k=2)
@@ -1092,6 +1096,18 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
 
     print("\nTest set top k\n")
     print(final_test_top_k.to_markdown())
+
+    if outdir is not None:
+        with pd.ExcelWriter(outdir) as writer:
+            parameters_table.to_excel(writer, sheet_name="Classifier parameters")
+            basic_table.to_excel(writer, sheet_name="Cross Validation Basic scores")
+            balanced_table.to_excel(writer, sheet_name="Cross Validation Balanced scores")
+            top_1_table.to_excel(writer, sheet_name="Cross Validation Top 1 scores")
+            top_2_table.to_excel(writer, sheet_name="Cross Validation Top 2 scores")
+            top_3_table.to_excel(writer, sheet_name="Cross Validation Top 3 scores")
+            final_test_basic.to_excel(writer, sheet_name="Validation set Basic scores")
+            final_test_balanced.to_excel(writer, sheet_name="Validation set Balanced scores")
+            final_test_top_k.to_excel(writer, sheet_name="Validation set Top K scores")
 
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
@@ -1212,7 +1228,8 @@ def main():
             BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
                                              args.min_cluster_size, args.n_jobs, args.from_half)
     if args.cross_val:
-        cross_validate(args.database, args.train_ratio, 
+        cross_validate(args.database, args.outdir, 
+                        args.train_ratio, 
                         args.seed, n_jobs=args.n_jobs, 
                         estimator_params_set=args.param_set, 
                         from_half=args.from_half, 
