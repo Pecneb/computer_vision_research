@@ -58,6 +58,7 @@ The output have to be converted to a matrix of shape(number of detections, 3) wh
 
 ## Video dataset
 
+https://github.com/City-of-Bellevue/TrafficVideoDataset
 https://drive.google.com/drive/folders/1cR1VwoAvEjFLRaUzeYph-bxx4LoM6pOH
 https://drive.google.com/drive/folders/1irB6XKu2iM3BSJ2AEYH4kJl9nfG9j-yy
 https://drive.google.com/drive/folders/1IN6kwywddO3B3uHyC5S18vqf0KEWToJ_
