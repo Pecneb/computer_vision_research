@@ -640,6 +640,8 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2_from_half"), binaryModel)
         elif argv['features_v3']:
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3"), binaryModel)
+        elif argv['features_v3_half']:
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3_from_half"), binaryModel)
         else:
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])), binaryModel)
     

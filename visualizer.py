@@ -296,7 +296,7 @@ def main():
                             if t.isMoving:
                                 if feature is not None:
                                     if VERSION_3:
-                                        predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 3, centroids=cluster_centroids).reshape((-1))
+                                        predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 1, centroids=cluster_centroids).reshape((-1))
                                     else:
                                         predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
                                     #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
