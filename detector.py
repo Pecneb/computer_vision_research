@@ -30,7 +30,7 @@ import numpy as np
 from dataManagementClasses import Detection
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
 from predict import draw_history, draw_predictions, predictLinPoly, predictWeightedLinPoly 
-import databaseLogger
+import databaseLogger as databaseLogger
 import os
 import tqdm
 
@@ -144,9 +144,9 @@ def log_to_stdout(*args):
 def main():
     args = parseArgs()
     if args.yolov7:
-        import yolov7api 
+        import yolov7api as yolov7api 
     else:
-        import hldnapi
+        import hldnapi as hldnapi
         from darknet import class_colors
     input = args.input
     # check input source

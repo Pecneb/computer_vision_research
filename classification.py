@@ -876,7 +876,7 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False, ):
+def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False, ):
     """Calculate classification model accuracy with cross validation method.
 
     Args:
@@ -981,7 +981,7 @@ def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed
                     'KNN' : {'n_neighbors' : 3},
                     'GP' :  {},
                     'GNB' : {},
-                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
                     'SGD' : {'loss' : 'modified_huber'},
                     'SVM' : {'kernel' : 'linear', 'probability' : True},
                     'DT' : {} 
@@ -989,15 +989,15 @@ def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed
                     'KNN' : {'n_neighbors' : 1},
                     'GP' :  {},
                     'GNB' : {},
-                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
+                    'MLP' : {'max_iter' : 3000, 'solver' : 'sgd'},
                     'SGD' : {'loss' : 'modified_huber'},
                     'SVM' : {'kernel' : 'linear', 'probability' : True},
                     'DT' : {} 
                 }, {
-                    'KNN' : {'n_neighbors' : 15},
+                    'KNN' : {'n_neighbors' : 7},
                     'GP' :  {},
                     'GNB' : {},
-                    'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
+                    'MLP' : {'max_iter' : 4000, 'solver' : 'sgd'},
                     'SGD' : {'loss' : 'modified_huber'},
                     'SVM' : {'kernel' : 'rbf', 'probability' : True},
                     'DT' : {} 
@@ -1097,8 +1097,8 @@ def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed
     print("\nTest set top k\n")
     print(final_test_top_k.to_markdown())
 
-    if outdir is not None:
-        with pd.ExcelWriter(outdir) as writer:
+    if outputPath is not None:
+        with pd.ExcelWriter(outputPath) as writer:
             parameters_table.to_excel(writer, sheet_name="Classifier parameters")
             basic_table.to_excel(writer, sheet_name="Cross Validation Basic scores")
             balanced_table.to_excel(writer, sheet_name="Cross Validation Balanced scores")
@@ -1112,6 +1112,36 @@ def cross_validate(path2dataset: str, outdir: str = None, train_ratio=0.75, seed
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
     
+# submodule functions
+def train_binary_classifiers_submodule(args):
+    train_binary_classifiers(args.database, args.outdir, 
+                            min_samples=args.min_samples, 
+                            max_eps=args.max_eps,xi=args.xi, 
+                            min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
+                            threshold=args.threshold, from_half=args.from_half, 
+                            features_v2=args.features_v2, 
+                            features_v2_half=args.features_v2_half,
+                            features_v3=args.features_v3, 
+                            features_v3_half=args.features_v3_half)
+
+def cross_validation_submodule(args):
+    cross_validate(args.database, args.output, 
+                args.train_ratio, 
+                args.seed, n_jobs=args.n_jobs, 
+                estimator_params_set=args.param_set, 
+                from_half=args.from_half, 
+                features_v2=args.features_v2, 
+                features_v2_half=args.features_v2_half,
+                features_v3=args.features_v3, 
+                features_v3_half=args.features_v3_half)
+
+def investigate_renitent_features(args):
+    investigateRenitent(args.model, args.threshold, 
+                        min_samples=args.min_samples, 
+                        max_eps=args.max_eps, xi=args.xi, 
+                        min_cluster_size=args.min_samples, 
+                        n_jobs=args.n_jobs)
+
 def main():
     import argparse
     from classification import Classification, ClassificationWorker, CalibratedClassification, \
@@ -1119,29 +1149,71 @@ def main():
         validate_models, investigateRenitent
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use "
                                         "clustering on data stored in the database.")
-    argparser.add_argument("-db", "--database", help="Path to database file.")
-    argparser.add_argument("--train_binary_classifiers", default=False, action="store_true",
-                            help="Run Classification on dataset, but not as a multi class classification, rather do "
-                                                                            "binary classification for each cluster.")
-    argparser.add_argument("--outdir", "-o", help="Output directory path.", type=str)
-    argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that"
-                                                                        " filters out the best detections.")
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=1)
-    argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum "
-                                                                  "distance between two samples for one to be "
-                                                                  "considered as in the neighborhood of the other.")
-    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of "
-                                                                       "samples (or total weight) in a neighborhood "
-                                                                       "for a point to be considered as a core point.")
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be "
-                                             "considered as in the neighborhood of the other.", type=float, default=0.2)
-    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot "
-                                        "that constitutes a cluster boundary.", type=float, default=0.15)
-    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of "
-                                                                              "samples in an OPTICS cluster, expressed "
-                                                                              "as an absolute number or a fraction of "
-                                                                              "the number of samples (rounded to be at "
-                                                                              "least 2).")
+
+    submodule_parser = argparser.add_subparsers(help="Program functionalities.")
+
+    # add subcommands for training binary classifiers
+    train_binary_classifiers_parser = submodule_parser.add_parser(
+        "train_binary_classifiers",
+        help="Run Classification on dataset, but not as a multi class classification, rather do "
+             "binary classification for each cluster."
+    )
+    train_binary_classifiers_parser.add_argument("-db", "--database", help="Path to database file.", type=str)
+    train_binary_classifiers_parser.add_argument("--outdir", "-o", help="Output directory path.", type=str)
+    train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.5, help="Balanced accuracy threshold.")
+    train_binary_classifiers_parser.add_argument("--min_samples", default=10, type=int, 
+        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    train_binary_classifiers_parser.add_argument("--max_eps", type=float, default=0.2, 
+        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    train_binary_classifiers_parser.add_argument("--xi", type=float, default=0.15, 
+        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
+        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
+    train_binary_classifiers_parser.add_argument("--from_half", help="Use this flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
+    train_binary_classifiers_parser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
+    train_binary_classifiers_parser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
+    train_binary_classifiers_parser.add_argument("--features_v3", help="Use third version of feature vectors.", action="store_true", default=False)
+    train_binary_classifiers_parser.add_argument("--features_v3_half", help="Make third version feature vectors from half of the history.", action="store_true", default=False)
+    train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
+
+    # add subcommands for cross validating classifiers 
+    cross_validation_parser = submodule_parser.add_parser(
+        "cross-validation",
+        help="Run cross validation with given dataset."
+    )
+    cross_validation_parser.add_argument("-db", "--database", help="Path to database file.", type=str)
+    cross_validation_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
+    cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+    cross_validation_parser.add_argument("--from_half", help="Use this flag, if want to make feature vectors only from second half of trajectories history.", action="store_true", default=False)
+    cross_validation_parser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
+    cross_validation_parser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
+    cross_validation_parser.add_argument("--features_v3", help="Use third version of feature vectors.", action="store_true", default=False)
+    cross_validation_parser.add_argument("--features_v3_half", help="Make third version feature vectors from half of the history.", action="store_true", default=False)
+    cross_validation_parser.set_defaults(func=cross_validation_submodule)
+
+    # add subcommands for renitent investigation module
+    renitent_filter_parser = submodule_parser.add_parser(
+        "renitent-filter",
+        help="Look at detections, that cant be predicted above a given threshold value."
+    )
+    renitent_filter_parser.add_argument("--model", help="Trained classifier.", type=str)
+    renitent_filter_parser.add_argument("--threshold", type=float, default=0.5, help="Balanced accuracy threshold.")
+    renitent_filter_parser.add_argument("--min_samples", default=10, type=int, 
+        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    renitent_filter_parser.add_argument("--max_eps", type=float, default=0.2,
+        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    renitent_filter_parser.add_argument("--xi", type=float, default=0.15,
+        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    renitent_filter_parser.add_argument("--min_cluster_size", default=10, type=float, 
+        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction" 
+             "of the number of samples (rounded to be at least 2).")
+    renitent_filter_parser.set_defaults(func=investigate_renitent_features)
+
+    args = argparser.parse_args()
+
     """argparser.add_argument("--Classification", help="Train model with classification.", default=False,
                            choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
     argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.",
@@ -1151,25 +1223,20 @@ def main():
                            default=False, action="store_true")
     argparser.add_argument("--CalibratedClassificationWorker",
                            help="Runs all available Classifications calibrated and Validate them.",
-                           default=False, action="store_true")"""
+                           default=False, action="store_true")
     
-    """argparser.add_argument("--train_binary_classifier", help="Train model with binary classification.",
-                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])"""
-    argparser.add_argument("--from_half",
-                           help="Use this flag, if want to make feature vectors only from second half of trajectories "
-                                "history.", action="store_true", default=False)
-    argparser.add_argument("--model", help="Load classifier.", type=str, default=None)
-    argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.",
-                           action="store_true", default=False)
+    argparser.add_argument("--train_binary_classifier", help="Train model with binary classification.",
+                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
+
+    #argparser.add_argument("--model", help="Load classifier.", type=str, default=None)
+    #argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.",
+    #                       action="store_true", default=False)
     argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.",
                            action="store_true", default=False)
     argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
     argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.",
                            action="store_true", default=False)
-    argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
-    argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
-    argparser.add_argument("--features_v3", help="Use third version of feature vectors.", action="store_true", default=False)
-    argparser.add_argument("--features_v3_half", help="Make third version feature vectors from half of the history.", action="store_true", default=False)
+    
     argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
     argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
@@ -1192,13 +1259,13 @@ def main():
     #                                   min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
     if args.train_binary_classifiers:
         if args.outdir:
-            """BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
+            BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
                                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
                                             threshold=args.threshold, from_half=args.from_half, 
                                             features_v2=args.features_v2, 
                                             features_v2_half=args.features_v2_half,
                                             features_v3=args.features_v3, 
-                                            features_v3_half=args.features_v3_half)"""
+                                            features_v3_half=args.features_v3_half)
             train_binary_classifiers(args.database, args.outdir, min_samples=args.min_samples, max_eps=args.max_eps,
                                             xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
                                             threshold=args.threshold, from_half=args.from_half, 
@@ -1241,7 +1308,9 @@ def main():
         if args.model:
             plot_decision_tree(args.model)
         else:
-            argparser.print_help()
+            argparser.print_help()"""
+
+    args.func(args)
 
 
 if __name__ == "__main__":

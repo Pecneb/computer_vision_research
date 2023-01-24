@@ -840,7 +840,6 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
 def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False):
     from clustering import optics_on_featureVectors 
-    from visualizer import aoiextraction
 
     tracks = load_dataset(path2dataset)
 
