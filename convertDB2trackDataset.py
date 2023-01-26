@@ -8,7 +8,7 @@ def submodule_function(args):
     trackslabels2joblib(args.database[0], args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs)
 
 def submodule_function_2(args):
-    mergeDatasets(args.dataset)
+    mergeDatasets(args.database, args.output)
 
 def main():
     argparser = argparse.ArgumentParser()
@@ -27,6 +27,7 @@ def main():
     parser_training_dataset.set_defaults(func=submodule_function)
 
     parser_mergeDatasets = subparser.add_parser("merge", help="Merge two or more joblib datasets.")
+    parser_mergeDatasets.add_argument("--output", required=True, help="Output path and name of the file.")
     parser_mergeDatasets.set_defaults(func=submodule_function_2)
 
     args = argparser.parse_args()

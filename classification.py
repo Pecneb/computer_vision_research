@@ -905,7 +905,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.model_selection import cross_val_score, cross_validate
-    from sklearn.metrics import top_k_accuracy_score, make_scorer
+    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
     # load tracks from joblib file
@@ -1030,7 +1030,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     top_k_scorers = {
         'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
         'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
-        'top_3' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True) 
+        'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
     }
 
     
@@ -1052,49 +1052,55 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
 
         clf.fit(X_train, y_train, centroids=cluster_centroids)
 
-        final_balanced = clf.validate(X_test, y_test, threshold=0.5, centroids=cluster_centroids)
-        final_balanced_avg = np.average(final_balanced)
-        final_balanced_std = np.std(final_balanced)
-        final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
-        final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
+        y_pred = clf.predict(X_test)
+        y_pred_2 = clf.predict_proba(X_test)
+
+        #final_balanced = clf.validate(X_test, y_test, threshold=0.5, centroids=cluster_centroids)
+        #final_balanced_avg = np.average(final_balanced)
+        #final_balanced_std = np.std(final_balanced)
+        #final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
+        #final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
 
         final_top_k = []
         for i in range(1,4):
-            final_top_k.append(clf.validate_predictions(X_test, y_test, top=i, centroids=cluster_centroids))
+            final_top_k.append(top_k_accuracy_score(y_test, y_pred_2, k=i, labels=list(set(y_train))))
         final_test_top_k[m] = final_top_k
 
         final_basic = np.array([clf.score(X_test, y_test)])
         final_test_basic[m] = final_basic
 
+        final_balanced = balanced_accuracy_score(y_test, y_pred)
+        final_test_balanced[m] = np.array([final_balanced])
+
     t2 = time.time()
     td = t2 - t1
-    print("\nTime: %d s" % td)
+    print("\n*Time: %d s*" % td)
 
-    print("\nClassifier parameters\n")
+    print("\n#### Classifier parameters\n")
     print(parameters[estimator_params_set-1])
 
-    print("\nCross-val Basic accuracy\n")
+    print("\n#### Cross-val Basic accuracy\n")
     print(basic_table.to_markdown())
     
-    print("\nCross-val Balanced accuracy\n")
+    print("\n#### Cross-val Balanced accuracy\n")
     print(balanced_table.to_markdown())
 
-    print("\nCross-val Top 1 accuracy\n")
+    print("\n#### Cross-val Top 1 accuracy\n")
     print(top_1_table.to_markdown())
 
-    print("\nCross-val Top 2 accuracy\n")
+    print("\n#### Cross-val Top 2 accuracy\n")
     print(top_2_table.to_markdown())
 
-    print("\nCross-val Top 3 accuracy\n")
+    print("\n#### Cross-val Top 3 accuracy\n")
     print(top_3_table.to_markdown())
 
-    print("\nTest set basic\n")
+    print("\n#### Test set basic\n")
     print(final_test_basic.to_markdown())
 
-    print("\nTest set balanced\n")
+    print("\n#### Test set balanced\n")
     print(final_test_balanced.to_markdown())
 
-    print("\nTest set top k\n")
+    print("\n#### Test set top k\n")
     print(final_test_top_k.to_markdown())
 
     if outputPath is not None:

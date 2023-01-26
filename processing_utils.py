@@ -950,7 +950,7 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
             "class": labels[i] 
         })
 
-    filename = path2tracks.split('/')[-1].split('.')[0] + '_filtered.joblib' 
+    filename = path2tracks.split('/')[-1].split('.')[0] + '_clustered.joblib' 
     savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
 
     print("Saving: ", savepath)
@@ -1019,9 +1019,15 @@ def load_dataset(path2dataset: str):
 def mergeDatasets(datasets: list[str], output: str):
     if len(datasets) < 2:
         return load_joblib_tracks(datasets[0])
-    loaded_datasets = itertools.starmap(load_joblib_tracks, datasets) 
-    print(loaded_datasets)
-
+    #arglist = [itertools.repeat(dataset) for dataset in datasets]
+    #loaded_datasets = itertools.starmap(load_joblib_tracks, arglist) 
+    merged_dataset = np.array([])
+    for d in datasets:
+        to_merge = load_joblib_tracks(d)
+        print(len(to_merge))
+        merged_dataset = np.append(merged_dataset, to_merge)
+    print(len(merged_dataset))
+    joblib.dump(merged_dataset, output)
 
 def strfy_dict_params(params: dict):
     """Stringify params stored in dictionaries.
