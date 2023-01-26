@@ -65,6 +65,23 @@ https://drive.google.com/drive/folders/1IN6kwywddO3B3uHyC5S18vqf0KEWToJ_
 https://drive.google.com/drive/folders/17bn7l7Qm5s-r5DYoFQPhviFZ0jWY9qk5
 https://drive.google.com/drive/folders/16coOR8PlNzvmUm1vsaYJVF_bAOQGySa8
 
+Best OPTICS clustering parameters:
+- 0001_2 : 
+  - min_samples 10
+  - max_eps 0.2
+  - xi 0.15
+  - min_cluster_size 10 
+- 0002_2 : 
+  - min_samples 10
+  - max_eps 0.1 
+  - xi 0.15
+  - min_cluster_size 10 
+- Bellevue_150th_Newport__2017-09-11_07-08-31: 
+  - min_samples 20 
+  - max_eps 0.1 
+  - xi 0.15
+  - min_cluster_size 20 
+
 <a id="inst"/>
 
 ## Installation

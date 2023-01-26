@@ -25,6 +25,7 @@ import databaseLoader
 import tqdm
 import os
 import joblib 
+import itertools
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -1004,15 +1005,23 @@ def load_dataset(path2dataset: str):
     ext = path2dataset.split('.')[-1] # extension of dataset file
     if ext == "joblib":
         dataset = load_joblib_tracks(path2dataset)
-        if len(dataset[0]) == 1:
-            return dataset
-        elif len(dataset[0]) == 2:
+        if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset] 
             return ret_dataset
+        else:
+            return dataset
+            
     elif ext == "db":
         return preprocess_database_data_multiprocessed(path2dataset, n_jobs=None) # None for n_jobs to utilize all cpu threads
     print("Error: Bad file type.")
     return False 
+
+def mergeDatasets(datasets: list[str], output: str):
+    if len(datasets) < 2:
+        return load_joblib_tracks(datasets[0])
+    loaded_datasets = itertools.starmap(load_joblib_tracks, datasets) 
+    print(loaded_datasets)
+
 
 def strfy_dict_params(params: dict):
     """Stringify params stored in dictionaries.

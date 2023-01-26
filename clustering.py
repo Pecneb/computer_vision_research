@@ -823,12 +823,31 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
+def submodule_optics(args):
+    optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
 
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
-    argparser.add_argument("-db", "--database", help="Path to database file.")
+    argparser.add_argument("-db", "--database", help="Path to joblib dataset.")
     argparser.add_argument("--outdir", "-o", help="Output directory path.")
+    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+
+    subparser = argparser.add_subparsers(help="Chose from clustering methods.")
+
+    optics_parser = subparser.add_parser("optics", help="OPTICS clustering.")
+    optics_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    optics_parser.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    optics_parser.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    optics_parser.add_argument("--min_cluster_size", type=float, default=None, help="Minimum number of samples in an OPTICS cluster, expressed as an absolute number or" 
+                                                                              "a fraction of the number of samples (rounded to be at least 2). If flag not used," 
+                                                                              "then min_cluster_size = max_samples.")
+    optics_parser.set_defaults(func=submodule_optics)
+
+    args = argparser.parse_args() 
+    args.func(args)
+
+    """
     argparser.add_argument("--kmeans", help="Use kmeans flag to run kmeans clustering on detection data.", action="store_true", default=False)
     argparser.add_argument("--kmeans_batch_plot", help="Run batch plotter on kmeans clustering.", action="store_true", default=False)
     argparser.add_argument("--n_clusters", type=int, default=2, help="KMEANS, SPECTRAL parameter: number of clusters to make.")
@@ -839,15 +858,11 @@ def main():
     argparser.add_argument("--elbow_on_kmeans", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--elbow_on_spectral", type=str, choices=['silhouette', 'calinski-harabasz', 'davies-bouldin'], help="Choose which metric to score kmeans clustering.")
     argparser.add_argument("--plot_elbows", action='store_true', help="This function helps to plot all kinds of elbow diagrams and save them.")
-    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
     argparser.add_argument("--dbscan_batch_plot", help="Run batch plotter on dbscan clustering.", default=False, action="store_true")
     argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
-    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
     argparser.add_argument("--shuffle_dataset", default=False, action="store_true", help="DBSCAN parameter: Shuffle dataset for slightly different clustering results.")
     argparser.add_argument("--optics_batch_plot", help="Run batch plotter on optics clustering.", action="store_true", default=False)
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.", type=float, default=np.inf)
-    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.", type=float, default=0.15)
-    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
+    
     argparser.add_argument("--cluster_optics_dbscan_batch_plot", help="Run batch plot on optics and dbscan hybrid.", default=False, action="store_true")
     args = argparser.parse_args()
 
@@ -877,6 +892,7 @@ def main():
         elbow_plotter(args.database, args.threshold, model='spectral', metric=args.elbow_on_spectral, n_jobs=args.n_jobs)
     if args.plot_elbows:
         elbow_plot_worker(args.database, n_jobs=args.n_jobs)
+    """
 
 if __name__ == "__main__":
     main()

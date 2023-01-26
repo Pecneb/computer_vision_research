@@ -24,8 +24,8 @@ import argparse
 import tqdm
 import numpy as np
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from main import getTargets
-from main import draw_boxes
+from detector import getTargets
+from detector import draw_boxes
 from classifier import OneVSRestClassifierExtended
 from joblib import Parallel, delayed
 
