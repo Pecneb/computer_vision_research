@@ -68,11 +68,11 @@ def makeDetectionObject(darknetDetection: darknetDetection):
         darknetDetection.Height, darknetDetection.Height], 
         float(darknetDetection.confidence), [], darknetDetection)
 
-def updateHistory(history: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30):
+def updateHistory(trackedObjects: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30):
     """Update TrackedObject history
 
     Args:
-        history (list[TrackedObject]): the history of tracked objects 
+        trackedObjects (list[TrackedObject]): the history of tracked objects 
         Tracker (Tracker): deep_sort Tracker obj 
         detections (list[Detection]): list of new detections fresh from darknet 
         db_connection (sqlite3.Connection): Connection object to database, to log objects.
@@ -84,7 +84,7 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
     for track in Tracker.tracks:
         updated = False
         #prevTO = None
-        for trackedObject in history:
+        for trackedObject in trackedObjects:
             if track.track_id == trackedObject.objID:
                 if track.time_since_update == 0:
                     trackedObject.update(track.darknetDet, track.mean, historyDepth)
@@ -94,7 +94,7 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
                     # if arg in update is None, then time_since_update += 1
                     trackedObject.update()
                     if trackedObject.max_age <= trackedObject.time_since_update: # or trackedObject.max_age <= trackedObject.bugged:
-                        history.remove(trackedObject)
+                        trackedObjects.remove(trackedObject)
                 updated = True 
                 # prevTO = trackedObject
                 break
@@ -108,7 +108,7 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
         #            print(e)
         if not updated:
             newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
-            history.append(newTrack)
+            trackedObjects.append(newTrack)
             if db_connection is not None:
                 databaseLogger.logObject(db_connection, newTrack.objID, newTrack.label)
             

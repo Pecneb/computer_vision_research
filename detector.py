@@ -171,9 +171,10 @@ def main():
         print("Source cannot be opened.")
         exit(0)
     # forward declaration of history(list[TrackedObject])
-    history = []
+    trackedObjects = []
     # buffer to log at the end
     buffer2log = []
+    buffer2joblibTracks = []
     _, bufferedFrame = cap.read() 
     # generating colors for bounding boxes based on the class names of the neural net
     if args.yolov7:
@@ -227,12 +228,12 @@ def main():
             # filter detections, only return the ones given in the targetNames tuple
             targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
             # update track history
-            updateHistory(history, tracker, targets, db_connection, historyDepth=args.history)
+            updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history)
             # draw bounding boxes of filtered detections
             if args.show:
-                draw_boxes(history, frame, colors, frameNumber)
+                draw_boxes(trackedObjects, frame, colors, frameNumber)
             # run prediction algorithm and draw predictions on objects, that are in motion
-            for obj in history:
+            for obj in trackedObjects:
                 if obj.isMoving:
                     # calculate predictions
                     predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
@@ -271,7 +272,7 @@ def main():
             fps = int(1/(time.time() - prev_time))
             # print FPS to stdout
             # print("FPS: {}".format(fps,))
-            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(history)}", f"Number of objects: {len(history)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
             # press 'p' to pause playing the video
             if cv.waitKey(1) == ord('p'):
                 # press 'r' to resume
