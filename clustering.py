@@ -481,35 +481,50 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
         # make dir if not
         os.mkdir(dirpath)
     if n_clusters > 1:
+        hist_data_overall = np.array([])
+        fig_overall, axes_overall = plt.subplots(1,1,figsize=(20,10))
         for i in range(n_clusters):
-            fig, axes = plt.subplots(1,1,figsize=(10,10))
+            fig, axes = plt.subplots(1,2,figsize=(30,15))
             trajectory_x = []
             trajectory_y = []
+            hist_data = []
             n_tracks = 0
             for idx in range(len(featureVectors)):
                 if labels[idx]==i:
+                    hist_length = len(trackedObjects[idx].history)
+                    hist_data.append(hist_length)
                     n_tracks += 1
                     for k in range(1,len(trackedObjects[idx].history)):
                         trajectory_x.append(trackedObjects[idx].history[k].X)
                         trajectory_y.append(1-trackedObjects[idx].history[k].Y)
-            axes.scatter(trajectory_x, trajectory_y, s=2)
-            axes.set_xlim(0,2)
-            axes.set_ylim(0,2)   
-            axes.set_title(f"Axis of cluster number {i}, with {n_tracks} detections")
+            axes[0].scatter(trajectory_x, trajectory_y, s=2)
+            axes[0].set_xlim(0,2)
+            axes[0].set_ylim(0,2)   
+            axes[0].set_title(f"Axis of cluster number {i}, with {n_tracks} detections")
             enter_x = np.array([featureVectors[idx][0] for idx in range(len(featureVectors)) if labels[idx]==i])
             enter_y = np.array([1-featureVectors[idx][1] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes.scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+            axes[0].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
             exit_x = np.array([featureVectors[idx][2] for idx in range(len(featureVectors)) if labels[idx]==i])
             exit_y = np.array([1-featureVectors[idx][3] for idx in range(len(featureVectors)) if labels[idx]==i])
-            axes.scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
-            axes.legend()
-            axes.grid(True)
+            axes[0].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+            axes[0].legend()
+            axes[0].grid(True)
+            hist_data = np.array(hist_data)
+            hist_data_overall = np.append(hist_data_overall, hist_data)
+            axes[1].hist(hist_data, bins="auto")
+            axes[1].set_xlabel("Length of history")
+            axes[1].set_ylabel("Number of objects")
             if show:
                 plt.show()
             # create filename
             filename = f"n_cluster_{i}.png"
             # save plot with filename into dir
             fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+        hist_filename = "histogram.png"
+        axes_overall.hist(hist_data_overall, bins="auto")
+        axes_overall.set_xlabel("Length of history")
+        axes_overall.set_ylabel("Number of objects")
+        fig_overall.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     else:
         print("Warning: n_clusters cant be 1, use heatmap instead. python3 dataAnalyzer.py -db <path_to_database> -hm")
     return labels
