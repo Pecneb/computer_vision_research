@@ -863,7 +863,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     X = X[y > -1]
     y = y[y > -1]
 
-    X_train = []
+    """X_train = []
     y_train = []
     X_test = []
     y_test = []
@@ -879,8 +879,9 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
             X_train.append(X[i])
             y_train.append(y[i])
             metadata_train.append(metadata[i])
+    """
 
-    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test)
+    return np.array(X), np.array(y), np.array(metadata)
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.
@@ -909,7 +910,7 @@ def load_joblib_tracks(path2tracks: str):
         exit(1)
     return joblib.load(path2tracks)
 
-def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18):
+def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5):
     """Save training tracks with class numbers ordered to them.
 
     Args:
@@ -934,7 +935,7 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
         print("Error: Wrong file type.")
         return False
     
-    tracks_filtered = filter_out_edge_detections(tracks, 0.5)
+    tracks_filtered = filter_out_edge_detections(tracks, threshold=threshold)
     tracks_car_only = filter_tracks(tracks_filtered)
 
     cluster_features = makeFeatureVectorsNx4(tracks_car_only)

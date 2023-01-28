@@ -26,13 +26,14 @@ warnings.warn = warn
 import cv2 as cv
 import argparse
 import time
-import numpy as np
 from dataManagementClasses import Detection
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import draw_history, draw_predictions, predictLinPoly, predictWeightedLinPoly 
+from predict import draw_history, draw_predictions, predictLinPoly
 import databaseLogger as databaseLogger
 import os
 import tqdm
+from masker import masker
+from matplotlib import pyplot as plt
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -166,6 +167,9 @@ def main():
     path2db = os.path.join("research_data", vidname, db_name)
     # get video capture object
     cap = cv.VideoCapture(input)
+    _, img = cap.read()
+    # create mask, so only in the area of interest will be used in detection 
+    mask = masker(img)
     # exit if video cant be opened
     if not cap.isOpened():
         print("Source cannot be opened.")
@@ -222,9 +226,9 @@ def main():
             prev_time = time.time()
             # use darknet neural net to detects objects
             if args.yolov7:
-                detections = yolov7api.detect(frame) 
+                detections = yolov7api.detect(cv.bitwise_or(frame, frame, mask=mask)) 
             else:
-                detections = hldnapi.cvimg2detections(frame)
+                detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
             # filter detections, only return the ones given in the targetNames tuple
             targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
             # update track history

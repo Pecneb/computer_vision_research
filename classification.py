@@ -547,7 +547,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
                                                             features_v2_half=argv['features_v2_half'],
                                                             features_v3=argv['features_v3'])"""
 
-    X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = preprocess_dataset_for_training(
+    X, y, metadata = preprocess_dataset_for_training(
         path2dataset=path2dataset, 
         min_samples=argv['min_samples'], 
         max_eps=argv['max_eps'], 
@@ -559,7 +559,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         features_v2_half=argv['features_v2_half'],
         features_v3=argv['features_v3'],
         features_v3_half=argv['features_v3_half']
-    ) 
+    )
 
     dataset = load_joblib_tracks(path2tracks=path2dataset)
     if type(dataset[0]) != dict:
@@ -605,8 +605,9 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
         #binaryModel.init_models(models[clr])
 
-        binaryModel.fit(X_train, y_train, centroids=cluster_centroids)
+        binaryModel.fit(X, y, centroids=cluster_centroids)
 
+        """
         top_picks = []
         for i in range(1,4):
             top_picks.append(binaryModel.validate_predictions(X_valid, y_valid, top=i, centroids=cluster_centroids))
@@ -630,8 +631,8 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
             probability_over_time.to_excel(writer, sheet_name="Probability_over_time") # each feature vector
             table.to_excel(writer, sheet_name="Top_Picks") # top n accuracy
             table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
+        """
 
-        #TODO: somehow show in title which feature vectors were used for the tarining 
         if argv['from_half']:
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_from_half"), binaryModel) 
         elif argv['features_v2']:
