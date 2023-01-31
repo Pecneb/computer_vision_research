@@ -354,7 +354,7 @@ def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
         featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
     return np.array(featureVectors)
 
-def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
+def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
     """Create 4D feature vectors from tracks.
     The enter and exit coordinates are put in one vector. Creating 4D vectors.
     v = [enterX, enterY, exitX, exitY]
@@ -803,7 +803,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     """
     from clustering import optics_on_featureVectors 
 
-    featureVectors = makeFeatureVectorsNx4(model.tracks)
+    featureVectors = make_4D_feature_vectors(model.tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if from_half:
@@ -844,7 +844,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
 
     tracks = load_dataset(path2dataset)
 
-    featureVectors = makeFeatureVectorsNx4(tracks)
+    featureVectors = make_4D_feature_vectors(tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if from_half:
@@ -938,7 +938,7 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
     tracks_filtered = filter_out_edge_detections(tracks, threshold=threshold)
     tracks_car_only = filter_tracks(tracks_filtered)
 
-    cluster_features = makeFeatureVectorsNx4(tracks_car_only)
+    cluster_features = make_4D_feature_vectors(tracks_car_only)
     labels = optics_on_featureVectors(cluster_features, min_samples=min_samples, 
                                     max_eps=max_eps, xi=xi, 
                                     min_cluster_size=min_cluster_size, n_jobs=n_jobs)
