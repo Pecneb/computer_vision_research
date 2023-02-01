@@ -68,7 +68,7 @@ def makeDetectionObject(darknetDetection: darknetDetection):
         darknetDetection.Height, darknetDetection.Height], 
         float(darknetDetection.confidence), [], darknetDetection)
 
-def updateHistory(trackedObjects: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30):
+def updateHistory(trackedObjects: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30, joblibdb: list = None):
     """Update TrackedObject history
 
     Args:
@@ -89,11 +89,13 @@ def updateHistory(trackedObjects: list, Tracker: Tracker, detections: list, db_c
                 if track.time_since_update == 0:
                     trackedObject.update(track.darknetDet, track.mean, historyDepth)
                     if len(trackedObject.history) > historyDepth:
-                        trackedObject.history.remove(trackedObject.history[0])
+                        trackedObject.history.pop(0)
                 else:
                     # if arg in update is None, then time_since_update += 1
                     trackedObject.update()
                     if trackedObject.max_age <= trackedObject.time_since_update: # or trackedObject.max_age <= trackedObject.bugged:
+                        if joblibdb is not None:
+                            joblibdb.append(trackedObject)
                         trackedObjects.remove(trackedObject)
                 updated = True 
                 # prevTO = trackedObject

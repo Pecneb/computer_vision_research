@@ -20,20 +20,23 @@
 # disable sklearn warning
 def warn(*arg, **args):
     pass
+from joblib import dump
 import warnings
 warnings.warn = warn
-
 import cv2 as cv
 import argparse
 import time
 from dataManagementClasses import Detection
-from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from predict import draw_history, draw_predictions, predictLinPoly
+from deepsortTracking import (
+    initTrackerMetric, 
+    getTracker, 
+    updateHistory
+)
 import databaseLogger as databaseLogger
 import os
 import tqdm
 from masker import masker
-from matplotlib import pyplot as plt
+from processing_utils import downscale_TrackedObjects
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -42,11 +45,12 @@ def parseArgs():
         args.input: input video source given in command line argument
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="Path to video.")
-    parser.add_argument("--history", default=30, type=int, help="Length of history for regression input.")
-    parser.add_argument("--future", default=30, type=int, help="Length of predicted coordinate vector.")
-    parser.add_argument("--k_trainingpoints", default=30, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
-    parser.add_argument("--degree", default=2, type=int, help="Degree of polynomial features used for Polynom fitting.")
+    parser.add_argument("input", help="Path to video.")
+    parser.add_argument("joblib", help="Name of joblib database.")
+    parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
+    parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
+    parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
+    parser.add_argument("--degree", default=0, type=int, help="Degree of polynomial features used for Polynom fitting.")
     parser.add_argument("--max_cosine_distance", type=float, default=10.0,
                         help="Gating threshold for cosine distance metric (object appearance).")
     parser.add_argument("--nn_budget", type=float, default=100,
@@ -144,11 +148,13 @@ def log_to_stdout(*args):
 
 def main():
     args = parseArgs()
+
     if args.yolov7:
         import yolov7api as yolov7api 
     else:
         import hldnapi as hldnapi
         from darknet import class_colors
+
     input = args.input
     # check input source
     try:
@@ -163,34 +169,49 @@ def main():
         vidname = vidname.split('.')[0]
         db_name = vidname + ".db"
         databaseLogger.init_db(vidname) # initialize database for logging
+
     # path to datbase
     path2db = os.path.join("research_data", vidname, db_name)
+
     # get video capture object
     cap = cv.VideoCapture(input)
-    _, img = cap.read()
+
     # create mask, so only in the area of interest will be used in detection 
+    _, img = cap.read()
     mask = masker(img)
+
     # exit if video cant be opened
     if not cap.isOpened():
         print("Source cannot be opened.")
         exit(0)
+
     # forward declaration of history(list[TrackedObject])
     trackedObjects = []
+
     # buffer to log at the end
     buffer2log = []
-    buffer2joblibTracks = []
-    _, bufferedFrame = cap.read() 
+
     # generating colors for bounding boxes based on the class names of the neural net
     if args.yolov7:
         colors = yolov7api.COLORS 
     else:
         colors = hldnapi.colors
+
     # get frame width
     frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     # get frame height
     frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
+
     # create database connection
     db_connection = databaseLogger.getConnection(path2db)
+    
+    # If joblib database is already exists and video is requested to be resumed, 
+    # load existing data and continue detection where it was left off
+    if os.path.exists(args.joblib) and args.resume:
+        from processing_utils import load_joblib_tracks
+        buffer2joblibTracks = load_joblib_tracks(args.joblib) 
+    buffer2joblibTracks = []
+
     # log metadata to database
     if args.yolov7:
         yoloVersion = '7'
@@ -199,6 +220,7 @@ def main():
     # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
     databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
     databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
+
     # resume video where it was left off, if resume flag is set
     if args.resume:
         lastframeNum = databaseLogger.getLatestFrame(db_connection)
@@ -210,55 +232,46 @@ def main():
         lastframeNum = 0
         # DeepSortTracker without db_connection, starts objID count from 1
         tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
+
     # start main loop
     for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
         try:
             # things to log to stdout
             to_log = []
+
             # get current frame from video
             ret, frame = cap.read()
             if frame is None:
                 print("Video ended, closing player.")
                 break
+
             # get current frame number
             frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
+
             # time before computation
             prev_time = time.time()
-            # use darknet neural net to detects objects
+
+            # run yolo inference 
             if args.yolov7:
                 detections = yolov7api.detect(cv.bitwise_or(frame, frame, mask=mask)) 
             else:
                 detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
+
             # filter detections, only return the ones given in the targetNames tuple
             targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
+
             # update track history
-            updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history)
+            updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks)
+
             # draw bounding boxes of filtered detections
             if args.show:
                 draw_boxes(trackedObjects, frame, colors, frameNumber)
-            # run prediction algorithm and draw predictions on objects, that are in motion
+
+            # load moving objects into buffer, that will be saved to the sqlite db at exit 
             for obj in trackedObjects:
                 if obj.isMoving:
-                    # calculate predictions
-                    predictLinPoly(obj, degree=args.degree, k=args.k_trainingpoints, historyDepth=args.history, futureDepth=args.future)
-                    # draw predictions and tracking history
-                    if args.show:
-                        draw_predictions(obj, frame, frameNumber)
-                        draw_history(obj, frame, frameNumber)
                     # log to stdout
                     to_log.append(obj)
-                    # log detections to database
-                    #databaseLogger.logDetection(db_connection, 
-                    #                            frame, 
-                    #                            obj.objID, 
-                    #                            obj.history[-1].frameID, 
-                    #                            obj.history[-1].confidence, 
-                    #                            obj.X, obj.Y, 
-                    #                            obj.history[-1].Width, 
-                    #                            obj.history[-1].Height,
-                    #                            obj.VX, obj.VY, obj.AX, obj.AY)
-                    # log predictions to database
-                    #databaseLogger.logPredictions(db_connection, frame, obj.objID, frameNumber, obj.futureX, obj.futureY)
                     # save data in buffer
                     buffer2log.append([obj.objID, 
                                     obj.history[-1].frameID, 
@@ -269,14 +282,20 @@ def main():
                                     obj.VX, obj.VY, obj.AX, obj.AY, 
                                     obj.futureX, obj.futureY
                                     ])
+
             # show video frame
             if args.show:
-                cv.imshow("FRAME", frame)
+                cv.imshow("FRAME", cv.bitwise_or(frame, frame, mask=mask))
+
             # calculating fps from time before computation and time now
             fps = int(1/(time.time() - prev_time))
+
             # print FPS to stdout
             # print("FPS: {}".format(fps,))
-            log_to_stdout("FPS: {}".format(fps,), to_log[:], f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+
+            # print runtime logs
+            log_to_stdout("FPS: {}".format(fps,), to_log[:])#, f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+
             # press 'p' to pause playing the video
             if cv.waitKey(1) == ord('p'):
                 # press 'r' to resume
@@ -287,11 +306,20 @@ def main():
                 break
         except KeyboardInterrupt:
             break
+
     cap.release()
+
     if args.show:
         cv.destroyAllWindows()
-    databaseLogger.logBufferSpeedy(db_connection, bufferedFrame, buffer2log)
+
+    # log buffered detections in sqlite db
+    databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
     databaseLogger.closeConnection(db_connection)
+    
+    # save trackedObjects into joblib database
+    downscale_TrackedObjects(buffer2joblibTracks, img) 
+    dump(buffer2joblibTracks, args.joblib)
+    print("Joblib database succesfully saved!")
 
 if __name__ == "__main__":
     main()

@@ -25,6 +25,7 @@ import databaseLoader
 import tqdm
 import os
 import joblib 
+from joblib import Memory 
 import itertools
 
 def savePlot(fig: plt.Figure, name: str):
@@ -68,14 +69,19 @@ def trackedObjectFactory(detections: list) -> TrackedObject:
         TrackedObject:  trackedObject
     """
     tmpObj = TrackedObject(detections[0].objID, detections[0], len(detections))
+    tmpObj.label = detections[-1].label
+    tmpObj.history_X = np.array([])
+    tmpObj.history_Y = np.array([])
     for det in detections:
         tmpObj.history.append(det)
-        tmpObj.X = det.X
-        tmpObj.Y = det.Y
-        tmpObj.VX = det.VX
-        tmpObj.VY = det.VY
-        tmpObj.AX = det.AX
-        tmpObj.AY = det.AY
+        tmpObj.history_X = np.append(tmpObj.history_X, [det.X])
+        tmpObj.history_Y = np.append(tmpObj.history_Y, [det.Y])
+    tmpObj.X = detections[-1].X
+    tmpObj.Y = detections[-1].Y
+    tmpObj.VX = detections[-1].VX
+    tmpObj.VY = detections[-1].VY
+    tmpObj.AX = detections[-1].AX
+    tmpObj.AY = detections[-1].AY
     return tmpObj
 
 def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
@@ -286,6 +292,23 @@ def filter_out_false_positive_detections(trackedObjects: list, threshold: float)
             filteredTracks.append(obj)
     return filteredTracks
 
+def search_min_max_coordinates(trackedObjects: list[TrackedObject]):
+    max_y = 0 
+    min_y = 9999 
+    max_x = 0
+    min_x = 9999
+    coord = np.array([]).reshape((0,2))
+    X = np.array([])
+    Y = np.array([])
+    for obj in tqdm.tqdm(trackedObjects, desc="Looking for min max values."):
+        X = np.append(X, obj.history_X)
+        Y = np.append(Y, obj.history_Y)
+    min_x = np.min(X)
+    max_x = np.max(X)
+    min_y = np.min(Y)
+    max_y = np.max(Y)
+    return min_x, min_y, max_x, max_y
+
 def filter_out_edge_detections(trackedObjects: list, threshold: float):
     """Filter out objects, that enter and exit detections coordinates are in the threshold value.
 
@@ -296,23 +319,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     Returns:
         list: filtered list of tracks 
     """
-    max_y = 0 
-    min_y = 9999 
-    max_x = 0
-    min_x = 9999
-    for obj in tqdm.tqdm(trackedObjects, desc="Looking for min max values."):
-        local_min_x = np.min([det.X for det in obj.history])
-        local_max_x = np.max([det.X for det in obj.history])
-        local_min_y = np.min([det.Y for det in obj.history])
-        local_max_y = np.max([det.Y for det in obj.history])
-        if max_x < local_max_x:
-            max_x = local_max_x
-        if min_x > local_min_x:
-            min_x = local_min_x
-        if max_y < local_max_y:
-            max_y = local_max_y
-        if min_y > local_min_y:
-            min_y = local_min_y 
+    min_x, min_y, max_x, max_y = search_min_max_coordinates(trackedObjects)
     #print(f"\n Max X: {max_x}\n Min X: {min_x}\n Max Y: {max_y}\n Min Y: {min_y}\n")
     #print(f"\n Thresholds:\n Max X: {max_x-threshold}\n Min X: {min_x+threshold}\n Max Y: {max_y-threshold}\n Min Y: {min_y+threshold}\n")
     filteredTracks = []
@@ -366,6 +373,20 @@ def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
         np.ndarray: numpy array of feature vectors 
     """
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+
+def make_6D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 6D feature vectors from tracks.
+    The enter, middle and exit coordinates are put in one vector. Creating 6D vectors.
+    v = [enterX, enterY, exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[len(obj.history) // 2].X, obj.history[len(obj.history) // 2].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
 def shuffle_data(trackedObjects: list) -> list:
@@ -1023,12 +1044,12 @@ def mergeDatasets(datasets: list[str], output: str):
     #arglist = [itertools.repeat(dataset) for dataset in datasets]
     #loaded_datasets = itertools.starmap(load_joblib_tracks, arglist) 
     merged_dataset = np.array([])
-    for d in datasets:
+    for d in tqdm.tqdm(datasets, desc="Loaded dataset."):
         to_merge = load_joblib_tracks(d)
         print(len(to_merge))
         merged_dataset = np.append(merged_dataset, to_merge)
     print(len(merged_dataset))
-    joblib.dump(merged_dataset, output)
+    joblib.dump(merged_dataset, output, compress="lz4")
 
 def strfy_dict_params(params: dict):
     """Stringify params stored in dictionaries.
@@ -1046,3 +1067,37 @@ def strfy_dict_params(params: dict):
         ret_str += str("_"+p+"_"+str(params[p]))
     return ret_str
     
+def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarray):
+    aspect_ratio = img.shape[1] / img.shape[0]
+    for t in trackedObjects:
+        t.history_X = t.history_X / img.shape[1] * aspect_ratio 
+        t.history_Y = t.history_Y / img.shape[0]
+        for d in t.history:
+            d.X = d.X / img.shape[1] * aspect_ratio
+            d.Y = d.Y / img.shape[0]
+            d.VX = d.VX / img.shape[1] * aspect_ratio
+            d.VY = d.VY / img.shape[0]
+            d.AX = d.AX / img.shape[1] * aspect_ratio
+            d.AY = d.AY / img.shape[0]
+            d.Width = d.Width / img.shape[1] * aspect_ratio
+            d.Height = d.Height / img.shape[0]
+
+def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
+    new_trackedObjects = []
+    for t in trackedObjects:
+        tmp_obj = TrackedObject(t.objID, t.history[0])
+        tmp_obj.history = t.history
+        tmp_obj.history_X = np.array([d.X for d in t.history])
+        tmp_obj.history_Y = np.array([d.Y for d in t.history])
+        tmp_obj.X = t.X
+        tmp_obj.Y = t.Y
+        tmp_obj.VX = t.VX
+        tmp_obj.VY = t.VY
+        tmp_obj.AX = t.AX
+        tmp_obj.AY = t.AY
+        tmp_obj.futureX = t.futureX
+        tmp_obj.futureY = t.futureY
+        tmp_obj.isMoving = t.isMoving
+        tmp_obj.label = t.label
+        new_trackedObjects.append(tmp_obj)
+    return new_trackedObjects
