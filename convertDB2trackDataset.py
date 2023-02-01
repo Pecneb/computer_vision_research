@@ -1,5 +1,15 @@
-from processing_utils import tracks2joblib, trackslabels2joblib, mergeDatasets
+from processing_utils import (
+    tracks2joblib,
+    trackslabels2joblib, 
+    mergeDatasets,
+    downscale_TrackedObjects,
+    load_joblib_tracks,
+    trackedObjects_old_to_new
+)
 import argparse
+import cv2
+from joblib import dump
+import numpy as np
 
 def mainmodule_function(args): 
     tracks2joblib(args.database[0], args.n_jobs)
@@ -10,10 +20,27 @@ def submodule_function(args):
 def submodule_function_2(args):
     mergeDatasets(args.database, args.output)
 
+def submodule_function_3(args):
+    trackedObjects = load_joblib_tracks(args.database[0])
+    cap = cv2.VideoCapture(args.video)
+    if not cap.isOpened():
+        raise FileNotFoundError()
+    ret, img = cap.read()
+    if ret:
+        downscale_TrackedObjects(trackedObjects, img)
+        dump(trackedObjects, args.database[0], compress="lz4")
+    else:
+        raise IOError()
+
+def submodule_function_4(args):
+    trackedObjects = load_joblib_tracks(args.database[0])
+    new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
+    dump(new_trackedOjects, args.database[0])
+
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-db", "--database", help="Path to database.", type=str, nargs='+')
-    argparser.add_argument("--n_jobs", help="Paralell jobs to run.", type=int, default=16)
+    argparser.add_argument("--n_jobs", help="Paralell jobs to run.", type=int, default=16, required=True)
     argparser.set_defaults(func=mainmodule_function)
 
     subparser = argparser.add_subparsers(help="Submodules.")
@@ -21,8 +48,8 @@ def main():
     parser_training_dataset = subparser.add_parser("training", help="Extract the clustered track dataset with labels, for classifier training.")
     #argparser.add_argument("--training", help="Extract the filtered tracks with labels.", action="store_true", default=False)
     parser_training_dataset.add_argument("--min_samples", help="Parameter for optics clustering", default=10, type=int)
-    parser_training_dataset.add_argument("--max_eps", help="Parameter for optics clustering", default=0.2, type=float)
-    parser_training_dataset.add_argument("--xi", help="Parameter for optics clustering", default=0.15, type=float)
+    parser_training_dataset.add_argument("--max_eps", help="Parameter for optics clustering", default=np.inf, type=float)
+    parser_training_dataset.add_argument("--xi", help="Parameter for optics clustering", default=0.05, type=float)
     parser_training_dataset.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--threshold", help="Threshold for track filtering. The distance to the edges of the camera footage.", default=0.5, type=float)
     parser_training_dataset.set_defaults(func=submodule_function)
@@ -31,8 +58,14 @@ def main():
     parser_mergeDatasets.add_argument("--output", required=True, help="Output path and name of the file.")
     parser_mergeDatasets.set_defaults(func=submodule_function_2)
 
-    args = argparser.parse_args()
+    downscaler_parser = subparser.add_parser("downscale", help="Normalize trackedObjects dataset.")
+    downscaler_parser.add_argument("--video", help="Path to src video.")
+    downscaler_parser.set_defaults(func=submodule_function_3)
 
+    old_to_new_parser = subparser.add_parser("old2new", help="Update old TrackedObject dataset with history_X and history_Y fields.")
+    old_to_new_parser.set_defaults(func=submodule_function_4)
+
+    args = argparser.parse_args()
     args.func(args)
 
 if __name__ == '__main__':
