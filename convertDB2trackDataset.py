@@ -10,9 +10,11 @@ import argparse
 import cv2
 from joblib import dump
 import numpy as np
+from tqdm import tqdm
 
 def mainmodule_function(args): 
-    tracks2joblib(args.database[0], args.n_jobs)
+    for db in tqdm(args.database, desc="Database converted."):
+        tracks2joblib(db, args.n_jobs)
 
 def submodule_function(args):
     trackslabels2joblib(args.database[0], args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold)
@@ -33,9 +35,10 @@ def submodule_function_3(args):
         raise IOError()
 
 def submodule_function_4(args):
-    trackedObjects = load_joblib_tracks(args.database[0])
-    new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
-    dump(new_trackedOjects, args.database[0])
+    for db in tqdm(args.database, desc="Database converted."):
+        trackedObjects = load_joblib_tracks(db)
+        new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
+        dump(new_trackedOjects, db, compress="lz4")
 
 def main():
     argparser = argparse.ArgumentParser()

@@ -915,7 +915,7 @@ def tracks2joblib(path2db: str, n_jobs=18):
     filename =  path2db.split('/')[-1].split('.')[0] + '.joblib'
     savepath = os.path.join('research_data', path2db.split('/')[-1].split('.')[0])
     print('Saving: ', os.path.join(savepath, filename))
-    joblib.dump(tracks, os.path.join(savepath, filename))
+    joblib.dump(tracks, os.path.join(savepath, filename), compress="lz4")
 
 def load_joblib_tracks(path2tracks: str):
     """Load tracks from joblib file.
@@ -977,7 +977,7 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
 
     print("Saving: ", savepath)
 
-    return joblib.dump(tracks_classes, savepath)
+    return joblib.dump(tracks_classes, savepath, compress="lz4")
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
     """Shuffle track dataset, then split it into a train and test dataset.
@@ -1039,6 +1039,15 @@ def load_dataset(path2dataset: str):
     return False 
 
 def mergeDatasets(datasets: list[str], output: str):
+    """Merge two or more joblib dataset files into one.
+
+    Args:
+        datasets (list[str]): List of paths to the joblib dataset files. 
+        output (str): The output path of the merged file.
+
+    Returns:
+        list[TrackedObject]: The merged dataset is returned, after it is saved with the output path.
+    """
     if len(datasets) < 2:
         return load_joblib_tracks(datasets[0])
     #arglist = [itertools.repeat(dataset) for dataset in datasets]
@@ -1050,6 +1059,7 @@ def mergeDatasets(datasets: list[str], output: str):
         merged_dataset = np.append(merged_dataset, to_merge)
     print(len(merged_dataset))
     joblib.dump(merged_dataset, output, compress="lz4")
+    return merged_dataset
 
 def strfy_dict_params(params: dict):
     """Stringify params stored in dictionaries.
@@ -1068,6 +1078,12 @@ def strfy_dict_params(params: dict):
     return ret_str
     
 def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarray):
+    """Normalize the values of the detections with the given np.ndarray image.
+
+    Args:
+        trackedObjects (list[TrackedObject]): _description_
+        img (np.ndarray): _description_
+    """
     aspect_ratio = img.shape[1] / img.shape[0]
     for t in trackedObjects:
         t.history_X = t.history_X / img.shape[1] * aspect_ratio 
@@ -1084,7 +1100,7 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
 
 def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
     new_trackedObjects = []
-    for t in trackedObjects:
+    for t in tqdm.tqdm(trackedObjects, desc="TrackedObjects converted to new class structure."):
         tmp_obj = TrackedObject(t.objID, t.history[0])
         tmp_obj.history = t.history
         tmp_obj.history_X = np.array([d.X for d in t.history])
