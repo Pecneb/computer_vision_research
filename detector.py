@@ -46,13 +46,14 @@ def parseArgs():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Path to video.")
-    parser.add_argument("joblib", help="Name of joblib database.")
+    parser.add_argument("output", help="Path of database without extension.")
     parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
     parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
     parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
     parser.add_argument("--degree", default=0, type=int, help="Degree of polynomial features used for Polynom fitting.")
     parser.add_argument("--max_cosine_distance", type=float, default=10.0,
                         help="Gating threshold for cosine distance metric (object appearance).")
+    parser.add_argument("--max_iou_distance", default=0.7, type=float)
     parser.add_argument("--nn_budget", type=float, default=100,
                         help="Maximum size of the appearance descriptors gallery. If None, no budget is enforced.")
     #parser.add_argument("--min_detection_height", type=float, default=0,
@@ -149,6 +150,9 @@ def log_to_stdout(*args):
 def main():
     args = parseArgs()
 
+    outputdir = args.output[:args.output.rfind('/')] # get dirpath
+    outname = args.output.split('/')[-1].split('.')[0] # get filename w/o extension
+
     if args.yolov7:
         import yolov7api as yolov7api 
     else:
@@ -156,22 +160,14 @@ def main():
         from darknet import class_colors
 
     input = args.input
+
     # check input source
     try:
         input = int(input)
-        vidname = time.strftime("%Y%m%d_%H%M%S") # if input is camera source, then db name is the datetime
-        db_name = vidname + ".db"
-        databaseLogger.init_db(vidname)
+        path2db = databaseLogger.init_db(args.output)
     except ValueError:
         print("Input source is a Video.")
-        # extracting video name from input source path and creating database name from it
-        vidname = input.split('/', )[-1]
-        vidname = vidname.split('.')[0]
-        db_name = vidname + ".db"
-        databaseLogger.init_db(vidname) # initialize database for logging
-
-    # path to datbase
-    path2db = os.path.join("research_data", vidname, db_name)
+        path2db = databaseLogger.init_db(args.output)
 
     # get video capture object
     cap = cv.VideoCapture(input)
@@ -207,7 +203,7 @@ def main():
     
     # If joblib database is already exists and video is requested to be resumed, 
     # load existing data and continue detection where it was left off
-    if os.path.exists(args.joblib) and args.resume:
+    if os.path.exists((os.path.join(outputdir, outname)+".joblib")) and args.resume:
         from processing_utils import load_joblib_tracks
         buffer2joblibTracks = load_joblib_tracks(args.joblib) 
     buffer2joblibTracks = []
@@ -227,11 +223,11 @@ def main():
         if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
             cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
         # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
-        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection)
+        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection, max_iou_distance=args.max_iou_distance)
     else:
         lastframeNum = 0
         # DeepSortTracker without db_connection, starts objID count from 1
-        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
+        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
     # start main loop
     for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
@@ -258,7 +254,7 @@ def main():
                 detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
 
             # filter detections, only return the ones given in the targetNames tuple
-            targets = getTargets(detections, frameNumber, targetNames=("person", "car"))
+            targets = getTargets(detections, frameNumber, targetNames=("car"))
 
             # update track history
             updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks)
@@ -318,7 +314,7 @@ def main():
     
     # save trackedObjects into joblib database
     downscale_TrackedObjects(buffer2joblibTracks, img) 
-    dump(buffer2joblibTracks, args.joblib)
+    dump(buffer2joblibTracks, os.path.join(outputdir, (outname+".joblib")))
     print("Joblib database succesfully saved!")
 
 if __name__ == "__main__":
