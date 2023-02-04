@@ -17,7 +17,7 @@ def mainmodule_function(args):
         tracks2joblib(db, args.n_jobs)
 
 def submodule_function(args):
-    trackslabels2joblib(args.database[0], args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold)
+    trackslabels2joblib(args.database[0], args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.cluster_dimensions)
 
 def submodule_function_2(args):
     mergeDatasets(args.database, args.output)
@@ -55,6 +55,7 @@ def main():
     parser_training_dataset.add_argument("--xi", help="Parameter for optics clustering", default=0.05, type=float)
     parser_training_dataset.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--threshold", help="Threshold for track filtering. The distance to the edges of the camera footage.", default=0.5, type=float)
+    parser_training_dataset.add_argument("--cluster_dimensions", choices=["4D", "6D"], help="Choose feature vector type for clustering.", default="6D")
     parser_training_dataset.set_defaults(func=submodule_function)
 
     parser_mergeDatasets = subparser.add_parser("merge", help="Merge two or more joblib datasets.")

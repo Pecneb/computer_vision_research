@@ -677,6 +677,56 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
+def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_stride: int, labels: np.ndarray):
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in enumerate(trackedObjects):
+        stride = 3
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(t.history_X.shape[0]-max_stride):
+            if stride < max_stride:
+                midx = stride // 2 
+                end_idx = stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[0], t.history_Y[0], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                stride += 1
+            else:
+                midx = j + (stride // 2)
+                end_idx = j + stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[j], t.history_Y[j], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
+
+def iter_minibatches(X: np.ndarray, y: np.ndarray, batch_size: int):
+    """Generate minibatches for training.
+
+    Args:
+        X (np.ndarray): Feature vectors shape(n_samples, n_features) 
+        y (np.ndarray): Labels of vectors shape(n_samples,) 
+    """
+    current_batch_size = batch_size
+    X_batch, y_batch = X[:current_batch_size], y[:current_batch_size]
+    while X.shape[0] - current_batch_size >= batch_size:
+        yield X_batch, y_batch
+        X_batch, y_batch = X[:current_batch_size], y[:current_batch_size]
+        current_batch_size += batch_size
+    else:
+        last_batch_size = X.shape[0] % batch_size
+        yield X[:last_batch_size], y[:last_batch_size]
+
 def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False):
     """Preprocess database data for classification.
     Load, filter, run clustering on dataset then extract feature vectors from dataset.
@@ -860,26 +910,33 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
-def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False, features_v3_half=False):
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", classification_features_version: str = "v1", stride: int = 15):
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
 
-    featureVectors = make_4D_feature_vectors(tracks)
+    if cluster_features_version == "4D":
+        featureVectors = make_4D_feature_vectors(tracks)
+    elif cluster_features_version == "6D":
+        featureVectors = make_6D_feature_vectors(tracks)
+
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
-    if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
-    elif features_v2:
-        X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
-    elif features_v2_half:
-        X, y, metadata = make_feature_vectors_version_two_half(tracks, 6, labels)
-    elif features_v3:
-        X, y, metadata = make_feature_vectors_version_three(tracks, 6, labels)
-    elif features_v3_half:
-        X, y, metadata = make_feature_vectors_version_three_half(tracks, 6, labels)
-    else:
+    if classification_features_version == "v1":
         X, y, metadata = make_features_for_classification_velocity_time(tracks, 6, labels)
+    elif classification_features_version == "v1_half":
+        X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
+    elif classification_features_version == "v2":
+        X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
+    elif classification_features_version == "v2_half":
+        X, y, metadata = make_feature_vectors_version_two_half(tracks, 6, labels)
+    elif classification_features_version == "v3":
+        X, y, metadata = make_feature_vectors_version_three(tracks, 6, labels)
+    elif classification_features_version == "v3_half":
+        X, y, metadata = make_feature_vectors_version_three_half(tracks, 6, labels)
+    elif classification_features_version == "v4":
+        X, y, metadata = make_feature_vectors_version_four(tracks, stride, labels)
+
 
     X = X[y > -1]
     y = y[y > -1]
@@ -902,7 +959,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
             metadata_train.append(metadata[i])
     """
 
-    return np.array(X), np.array(y), np.array(metadata)
+    return np.array(X), np.array(y), np.array(metadata), tracks, labels
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.
@@ -917,7 +974,7 @@ def tracks2joblib(path2db: str, n_jobs=18):
     print('Saving: ', os.path.join(savepath, filename))
     joblib.dump(tracks, os.path.join(savepath, filename), compress="lz4")
 
-def load_joblib_tracks(path2tracks: str):
+def load_joblib_tracks(path2tracks: str) -> list[TrackedObject]:
     """Load tracks from joblib file.
 
     Args:
@@ -931,7 +988,7 @@ def load_joblib_tracks(path2tracks: str):
         exit(1)
     return joblib.load(path2tracks)
 
-def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5):
+def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5, cluster_dimensions: str = "6D"):
     """Save training tracks with class numbers ordered to them.
 
     Args:
@@ -959,10 +1016,15 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
     tracks_filtered = filter_out_edge_detections(tracks, threshold=threshold)
     tracks_car_only = filter_tracks(tracks_filtered)
 
-    cluster_features = make_4D_feature_vectors(tracks_car_only)
-    labels = optics_on_featureVectors(cluster_features, min_samples=min_samples, 
-                                    max_eps=max_eps, xi=xi, 
-                                    min_cluster_size=min_cluster_size, n_jobs=n_jobs)
+    if cluster_dimensions == "6D":
+        cluster_features = make_6D_feature_vectors(tracks_car_only)
+    else:
+        cluster_features = make_4D_feature_vectors(tracks_car_only)
+    labels = optics_on_featureVectors(
+        cluster_features, min_samples=min_samples, 
+        max_eps=max_eps, xi=xi, 
+        min_cluster_size=min_cluster_size, n_jobs=n_jobs
+    )
     
     # order labels to tracks, store it in a list[dictionary] format
     tracks_classes = []
