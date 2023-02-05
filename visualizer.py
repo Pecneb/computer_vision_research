@@ -249,7 +249,7 @@ def main():
 
     dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
-    history = [] # TrackedObjects
+    history: list[TrackedObject] = [] # TrackedObjects
 
     frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 

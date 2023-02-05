@@ -1,4 +1,4 @@
-from dataManagementClasses import TrackedObject
+from dataManagementClasses import TrackedObject, Detection
 from processing_utils import load_joblib_tracks
 from argparse import ArgumentParser
 import cv2
@@ -36,23 +36,34 @@ def bbox2points(bbox):
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
 
-def drawbbox(bbox: tuple, image: np.ndarray):
+def drawbbox(detection: Detection, image: np.ndarray):
     """Draw bounding box of an object to the given image.
 
     Args:
         detection (Detection): Detection object. 
         image (np.ndarray): OpenCV image object.
     """
+    aspect_ratio = image.shape[1] / image.shape[0]
+    bbox = (
+        detection.X,
+        detection.Y,
+        detection.Width,
+        detection.Height
+        )
     ret_img = image.copy()
     bboxUpscaled = upscalebbox(bbox, image.shape[1], image.shape[0])
     left, top, right, bottom = bbox2points(bboxUpscaled)
     cv2.rectangle(ret_img, (left, top), (right, bottom), (0,255,0), 1)
+    cv2.putText(ret_img, "{} [{:.2f}] VX: {:.2f} VY: {:.2f} AX: {:.2f} AY: {:.2f}".format(detection.label, float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
+                (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                (0,255,0), 2)
     return ret_img
 
 def database_is_joblib(path: str):
     return path.split('.')[-1] == "joblib"
 
 def draw_trajectory(img, track: TrackedObject, upscale: bool = True):
+    linesize = 3
     X = track.history_X
     Y = track.history_Y
     if upscale:
@@ -62,6 +73,15 @@ def draw_trajectory(img, track: TrackedObject, upscale: bool = True):
     ret_img = img.copy()
     pts = np.column_stack((X, Y)).astype(int) 
     cv2.polylines(ret_img, [pts], False, (0,255,0))
+    for i in range(X.shape[0]):
+        if i == 0:
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,255,0), -1)
+        elif i == X.shape[0]-1:
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,0,255), -1)
+        elif i == X.shape[0]//2:
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,255,255), -1)
+        else:
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (255,0,0), -1)
     return ret_img
 
 def next_frame_id(i_frame: int, max_i: int):
@@ -108,31 +128,40 @@ def examine_tracks(args):
             raise IOError("Can not open video.")
 
         start_frame = tracks[i_track].history[0].frameID
-        video.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-        act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)
+        video.set(cv2.CAP_PROP_POS_FRAMES, start_frame-1)
+        act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)+1
 
         if act_start_frame == start_frame:
             window_name = f"Object ID{tracks[i_track].objID}"
             cv2.namedWindow(window_name)
             i_det = 0
-            while i_det < tracks[i_track].history_X.shape[0]:
+            i_frame = 0
+            while i_frame < tracks[i_track].history[-1].frameID-tracks[i_track].history[0].frameID and i_frame >= 0:
                 ret, frame = video.read()
                 if not ret:
                     break
 
+                act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
                 frame_traj = draw_trajectory(frame, tracks[i_track])
-                frame_traj = drawbbox(
-                    (tracks[i_track].history_X[i_det],
-                    tracks[i_track].history_Y[i_det],
-                    tracks[i_track].history[i_det].Width,
-                    tracks[i_track].history[i_det].Height),
-                    frame_traj
-                )
+                if act_frame_num == tracks[i_track].history[i_det].frameID:
+                    frame_traj = drawbbox(
+                        tracks[i_track].history[i_det],
+                        frame_traj
+                    )
+                    i_det += 1
+
                 cv2.imshow(window_name, frame_traj)
-                i_det += 1
+
+                i_frame += 1
+
                 key_2 =cv2.waitKey(0)
                 if  key_2 == ord('s'):
                     continue
+                """if key_2 == ord('r'):
+                    if i_frame - 1 >= 0:
+                        video.set(cv2.CAP_PROP_POS_FRAMES, act_frame_num-2)
+                        i_frame -= 1
+                    continue"""
                 if key_2 == ord('b') or key_2 == ord('q') or key_2 == ord('n'):
                     break
         else:
