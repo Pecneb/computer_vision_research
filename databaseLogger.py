@@ -122,7 +122,7 @@ def prediction2float(img0: numpy.ndarray, x: float, y: float):
     aspect_ratio = img0.shape[1] / img0.shape[0]
     return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0] 
 
-def init_db(video_name: str):
+def init_db(outpath: str):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
     DB_name will be the name of the database. If directory does not exists,
     then create one. Creates database from given schema.
@@ -131,13 +131,13 @@ def init_db(video_name: str):
         video_name (str): The video source's name is the dir name.
         db_name (str): Database name.
     """
-    if not os.path.isdir(os.path.join("research_data", video_name)):
+    dirpath = outpath[:outpath.rfind('/')]
+    if not os.path.isdir(os.path.join(dirpath)):
         # chekc if directory already exists, if not create one
-        os.mkdir(os.path.join("research_data", video_name))
-    db_name = video_name + ".db" # database name is the video name with .db appended at the end
-    db_path = os.path.join("research_data", video_name, db_name)
+        os.makedirs(dirpath)
+    db_name = outpath.split('/')[-1].split('.')[0] + ".db"
     try:
-        conn = getConnection(db_path)
+        conn = getConnection(os.path.join(dirpath, db_name))
         print("SQLite version %s", sqlite3.version)
     except Error as e:
         print(e)
@@ -147,6 +147,7 @@ def init_db(video_name: str):
             conn.commit()
             conn.close()
             print("Detections table created!")
+    return os.path.join(dirpath, db_name)
 
 def getConnection(db_path: str) -> sqlite3.Connection:
     """Creates connection to the database.

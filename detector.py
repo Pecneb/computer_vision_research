@@ -152,6 +152,7 @@ def main():
 
     outputdir = args.output[:args.output.rfind('/')] # get dirpath
     outname = args.output.split('/')[-1].split('.')[0] # get filename w/o extension
+    path2joblib = os.path.join(outputdir, outname) + ".joblib"
 
     if args.yolov7:
         import yolov7api as yolov7api 
@@ -168,7 +169,8 @@ def main():
     except ValueError:
         print("Input source is a Video.")
         path2db = databaseLogger.init_db(args.output)
-
+    print(f"SQL DB path: {path2db}")
+    print(f"Joblib DB path: {path2joblib}")
     # get video capture object
     cap = cv.VideoCapture(input)
 
@@ -203,9 +205,9 @@ def main():
     
     # If joblib database is already exists and video is requested to be resumed, 
     # load existing data and continue detection where it was left off
-    if os.path.exists((os.path.join(outputdir, outname)+".joblib")) and args.resume:
+    if os.path.exists(path2joblib) and args.resume:
         from processing_utils import load_joblib_tracks
-        buffer2joblibTracks = load_joblib_tracks(args.joblib) 
+        buffer2joblibTracks = load_joblib_tracks(path2joblib) 
     buffer2joblibTracks = []
 
     # log metadata to database
@@ -229,6 +231,7 @@ def main():
         # DeepSortTracker without db_connection, starts objID count from 1
         tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
+    print(f"Starting video from frame number: {lastframeNum}")
     # start main loop
     for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
         try:
@@ -314,7 +317,7 @@ def main():
     
     # save trackedObjects into joblib database
     downscale_TrackedObjects(buffer2joblibTracks, img) 
-    dump(buffer2joblibTracks, os.path.join(outputdir, (outname+".joblib")))
+    dump(buffer2joblibTracks, path2joblib)
     print("Joblib database succesfully saved!")
 
 if __name__ == "__main__":

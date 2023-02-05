@@ -237,10 +237,12 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        if len(self.history) >= 10 and (self.VX > 0.0 or self.VY > 0.0):
+        if (self.VX > 0.0 or self.VY > 0.0) and len(self.history) >= 5:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
-            self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
+            self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (self.history[-5].Y-self.history[-1].Y)**2)**(1/2) > 5.0  
+        else:
+            self.isMoving = False
         # this is a fix for a specific problem, when an track is stuck, and showed as moving object
         # this is just a hack for now, TODO: find real solution
         #if len(self.history) == 2:
