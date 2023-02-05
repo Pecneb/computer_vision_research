@@ -713,10 +713,13 @@ def clustering_on_feature_vectors(X: np.ndarray, estimator, n_jobs: int = -1, **
     Returns:
         ndarray: The labels ordered to the X features. 
     """
-    cls = estimator(n_jobs=n_jobs, **estkwargs).fit(X)
+    try:
+        cls = estimator(n_jobs=n_jobs, **estkwargs).fit(X)
+    except:
+        cls = estimator(**estkwargs).fit(X)
     return cls, cls.labels_
 
-def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, threshold: float = None, **estkwargs):
+def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
@@ -746,7 +749,7 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     print(f"Labels: {labels}")
 
     # Generate dirname for plots
-    dirpath = os.path.join(outdir, f"{fitted_estimator}_n_clusters-{n_clusters}_4D-feature-vectors-{X.shape[0]}_threshold-{threshold}")
+    dirpath = os.path.join(outdir, f"{fitted_estimator}_n_clusters-{n_clusters}_4D-feature-vectors-{X.shape[0]}_threshold-{filter_threshold}")
     # Create dir if it does not exists
     if not os.path.isdir(dirpath):
         os.mkdir(dirpath)
@@ -835,7 +838,7 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     plt.close()
 
-def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, threshold: float = None, **estkwargs):
+def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 6 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
@@ -865,7 +868,7 @@ def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     print(f"Labels: {labels}")
 
     # Generate dirname for plots
-    dirpath = os.path.join(outdir, f"{fitted_estimator}_n_clusters-{n_clusters}_6D-feature-vectors-{X.shape[0]}_threshold-{threshold}")
+    dirpath = os.path.join(outdir, f"{fitted_estimator}_n_clusters-{n_clusters}_6D-feature-vectors-{X.shape[0]}_threshold-{filter_threshold}")
     # Create dir if it does not exists
     if not os.path.isdir(dirpath):
         os.mkdir(dirpath)
@@ -960,7 +963,7 @@ def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     plt.close()
 
-def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -968,9 +971,9 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     # Create 
     progress = 1
     thres_interval = 0.1
-    max_progress = int(threshold[1] / thres_interval)
-    thres = threshold[0]
-    while thres <= threshold[1]:
+    max_progress = int(filter_threshold[1] / thres_interval)
+    thres = filter_threshold[0]
+    while thres <= filter_threshold[1]:
         filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_4D_feature_vectors(
@@ -978,7 +981,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
                 trackedObjects=filteredTrackedObjects,
                 outdir=outdir,
                 n_jobs=n_jobs,
-                threshold=thres,
+                filter_threshold=thres,
                 **estkwargs
             )
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -986,7 +989,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
         print(f"Threshold value: {thres}")
         thres += thres_interval 
 
-def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: str, threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -994,9 +997,9 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
     # Create 
     progress = 1
     thres_interval = 0.1
-    max_progress = int(threshold[1] / thres_interval)
-    thres = threshold[0]
-    while thres <= threshold[1]:
+    max_progress = int(filter_threshold[1] / thres_interval)
+    thres = filter_threshold[0]
+    while thres <= filter_threshold[1]:
         filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_6D_feature_vectors(
@@ -1004,7 +1007,7 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
                 trackedObjects=filteredTrackedObjects,
                 outdir=outdir,
                 n_jobs=n_jobs,
-                threshold=thres,
+                filter_threshold=thres,
                 **estkwargs
             )
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -1188,6 +1191,29 @@ def submodule_optics(args):
             min_cluster_size=args.min_cluster_size
         )
 
+def submodule_birch(args):
+    from sklearn.cluster import Birch 
+    if args.dimensions == "4D":
+        clustering_search_on_4D_feature_vectors(
+            estimator=Birch, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            threshold=args.threshold,
+            branching_factor=args.branching,
+            n_clusters=args.n_clusters
+        )
+    if args.dimensions == "6D":
+        clustering_search_on_6D_feature_vectors(
+            estimator=Birch, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            threshold=args.threshold,
+            branching_factor=args.branching,
+            n_clusters=args.n_clusters
+        )
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1206,6 +1232,18 @@ def main():
                                                                               "a fraction of the number of samples (rounded to be at least 2). If flag not used," 
                                                                               "then min_cluster_size = max_samples.")
     optics_parser.set_defaults(func=submodule_optics)
+
+    birch_parser = subparser.add_parser("birch", help="Birch clustering.")
+    birch_parser.add_argument("--threshold", type=float, default=0.5, help="The radius of the subcluster obtained by merging a new sample and the closest subcluster should be lesser than the threshold." 
+                                                                           "Otherwise a new subcluster is started. Setting this value to be very low promotes splitting and vice-versa.")
+    birch_parser.add_argument("--branching", type=int, default=50,
+        help="Maximum number of CF subclusters in each node. If a new samples enters such that the number of subclusters exceed the branching_factor then that node is split into two nodes" 
+             "with the subclusters redistributed in each. The parent subcluster of that node is removed and two new subclusters are added as parents of the 2 split nodes."
+    )
+    birch_parser.add_argument("--n_clusters", type=int, default=None, 
+        help="Number of clusters after the final clustering step, which treats the subclusters from the leaves as new samples."
+    )
+    birch_parser.set_defaults(func=submodule_birch)
 
     args = argparser.parse_args() 
     args.func(args)
