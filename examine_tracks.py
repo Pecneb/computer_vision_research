@@ -157,11 +157,12 @@ def examine_tracks(args):
                 key_2 =cv2.waitKey(0)
                 if  key_2 == ord('s'):
                     continue
-                """if key_2 == ord('r'):
-                    if i_frame - 1 >= 0:
-                        video.set(cv2.CAP_PROP_POS_FRAMES, act_frame_num-2)
-                        i_frame -= 1
-                    continue"""
+                if key_2 == ord('r'):
+                    if i_det - 1 >= 0:
+                        i_det -= 2 
+                        video.set(cv2.CAP_PROP_POS_FRAMES, tracks[i_track].history[i_det].frameID-1)
+                        i_frame = tracks[i_track].history[i_det].frameID - tracks[i_track].history[0].frameID
+                    continue
                 if key_2 == ord('b') or key_2 == ord('q') or key_2 == ord('n'):
                     break
         else:
@@ -194,7 +195,11 @@ def examine_tracks(args):
 
 def main():
     argparser = ArgumentParser(
-        prog="Program to examine trajectories individually.",
+        prog="Program to examine trajectories individually.\n"
+             "\tStep between objects with 'n' to move forward 'b' to move backward.\n"
+             "\tStep between frames and detections with 's' to step forward 'r' to"
+             "step backward.\n"
+             "\tPress 'q' to exit.\n"
     )
     argparser.add_argument(
         "-db", "--database",
