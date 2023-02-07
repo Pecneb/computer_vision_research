@@ -62,7 +62,7 @@ def drawbbox(detection: Detection, image: np.ndarray):
 def database_is_joblib(path: str):
     return path.split('.')[-1] == "joblib"
 
-def draw_trajectory(img, track: TrackedObject, upscale: bool = True):
+def draw_trajectory(img, track: TrackedObject, upscale: bool = True, actual_detection_id: int = None):
     linesize = 3
     X = track.history_X
     Y = track.history_Y
@@ -82,6 +82,8 @@ def draw_trajectory(img, track: TrackedObject, upscale: bool = True):
             cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,255,255), -1)
         else:
             cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (255,0,0), -1)
+    if actual_detection_id is not None:
+        cv2.circle(ret_img, (int(X[actual_detection_id]), int(Y[actual_detection_id])), linesize, (255,255,0), -1)
     return ret_img
 
 def next_frame_id(i_frame: int, max_i: int):
@@ -116,6 +118,17 @@ def previous_frame_id(i_frame: int, min_i: int):
         return -1
     return ret_i
 
+def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray):
+    aspect_ratio = img.shape[1] / img.shape[0]
+    print("\nDetection number: {:3} X: {:10.6f}, Y: {:10.6f}, VX: {:10.6f}, VY: {:10.6f}, AX: {:10.6f}, AY: {:10.6f}".format(
+        i_det,
+        obj.history_X[i_det] * img.shape[1] / aspect_ratio, 
+        obj.history_Y[i_det] * img.shape[0], 
+        obj.history_VX_calculated[i_det] * img.shape[1] / aspect_ratio, 
+        obj.history_VY_calculated[i_det] * img.shape[0], 
+        obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio, 
+        obj.history_AY_calculated[i_det] * img.shape[0]))
+
 def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
@@ -142,13 +155,17 @@ def examine_tracks(args):
                     break
 
                 act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
-                frame_traj = draw_trajectory(frame, tracks[i_track])
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
+                    print_object_info(tracks[i_track], i_det, frame)
+                    frame_traj = draw_trajectory(frame, tracks[i_track], actual_detection_id=i_det)
                     frame_traj = drawbbox(
                         tracks[i_track].history[i_det],
                         frame_traj
                     )
+
                     i_det += 1
+                else:
+                    frame_traj = draw_trajectory(frame, tracks[i_track])
 
                 cv2.imshow(window_name, frame_traj)
 
