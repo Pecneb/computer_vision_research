@@ -45,8 +45,8 @@ def parseArgs():
         args.input: input video source given in command line argument
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Path to video.")
-    parser.add_argument("output", help="Path of database without extension.")
+    parser.add_argument("input", nargs='+', help="Path to video.")
+    parser.add_argument("--output", help="Path of database without extension.", required=True)
     parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
     parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
     parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
@@ -154,34 +154,15 @@ def main():
     outname = args.output.split('/')[-1].split('.')[0] # get filename w/o extension
     path2joblib = os.path.join(outputdir, outname) + ".joblib"
 
+    path2db = databaseLogger.init_db(args.output) # initialize database
+    print(f"SQL DB path: {path2db}")
+    print(f"Joblib DB path: {path2joblib}")
+
     if args.yolov7:
         import yolov7api as yolov7api 
     else:
         import hldnapi as hldnapi
         from darknet import class_colors
-
-    input = args.input
-
-    # check input source
-    try:
-        input = int(input)
-        path2db = databaseLogger.init_db(args.output)
-    except ValueError:
-        print("Input source is a Video.")
-        path2db = databaseLogger.init_db(args.output)
-    print(f"SQL DB path: {path2db}")
-    print(f"Joblib DB path: {path2joblib}")
-    # get video capture object
-    cap = cv.VideoCapture(input)
-
-    # create mask, so only in the area of interest will be used in detection 
-    _, img = cap.read()
-    mask = masker(img)
-
-    # exit if video cant be opened
-    if not cap.isOpened():
-        print("Source cannot be opened.")
-        exit(0)
 
     # forward declaration of history(list[TrackedObject])
     trackedObjects = []
@@ -194,11 +175,6 @@ def main():
         colors = yolov7api.COLORS 
     else:
         colors = hldnapi.colors
-
-    # get frame width
-    frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
-    # get frame height
-    frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
     # create database connection
     db_connection = databaseLogger.getConnection(path2db)
@@ -219,97 +195,117 @@ def main():
     databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
     databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
 
-    # resume video where it was left off, if resume flag is set
-    if args.resume:
-        lastframeNum = databaseLogger.getLatestFrame(db_connection)
-        if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
-            cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
-        # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
-        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection, max_iou_distance=args.max_iou_distance)
-    else:
-        lastframeNum = 0
-        # DeepSortTracker without db_connection, starts objID count from 1
-        tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
+    cap = cv.VideoCapture(args.input[0]) # retrieve an initial image from video to create mask
 
-    print(f"Starting video from frame number: {lastframeNum}")
-    # start main loop
-    for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
-        try:
-            # things to log to stdout
-            to_log = []
+    # create mask, so only in the area of interest will be used in detection 
+    _, img = cap.read()
+    mask = masker(img)
 
-            # get current frame from video
-            ret, frame = cap.read()
-            if frame is None:
-                print("Video ended, closing player.")
+    for input in tqdm.tqdm(args.input, desc="Videos"):
+        # get video capture object
+        cap = cv.VideoCapture(input)
+
+        # get frame width
+        frameWidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
+        # get frame height
+        frameHeight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
+
+        # exit if video cant be opened
+        if not cap.isOpened():
+            print("Source cannot be opened.")
+            exit(0)
+
+        # resume video where it was left off, if resume flag is set
+        if args.resume:
+            lastframeNum = databaseLogger.getLatestFrame(db_connection)
+            if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
+                cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
+            # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
+            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection, max_iou_distance=args.max_iou_distance)
+        else:
+            lastframeNum = 0
+            # DeepSortTracker without db_connection, starts objID count from 1
+            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
+
+        print(f"Starting video from frame number: {lastframeNum}")
+        # start main loop
+        for frameIDX in tqdm.tqdm(range(int(cap.get(cv.CAP_PROP_FRAME_COUNT))), initial=lastframeNum):
+            try:
+                # things to log to stdout
+                to_log = []
+
+                # get current frame from video
+                ret, frame = cap.read()
+                if frame is None:
+                    print("Video ended, closing player.")
+                    break
+
+                # get current frame number
+                frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
+
+                # time before computation
+                prev_time = time.time()
+
+                # run yolo inference 
+                if args.yolov7:
+                    detections = yolov7api.detect(cv.bitwise_or(frame, frame, mask=mask)) 
+                else:
+                    detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
+
+                # filter detections, only return the ones given in the targetNames tuple
+                targets = getTargets(detections, frameNumber, targetNames=("car"))
+
+                # update track history
+                updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks)
+
+                # draw bounding boxes of filtered detections
+                if args.show:
+                    draw_boxes(trackedObjects, frame, colors, frameNumber)
+
+                # load moving objects into buffer, that will be saved to the sqlite db at exit 
+                for obj in trackedObjects:
+                    if obj.isMoving:
+                        # log to stdout
+                        to_log.append(obj)
+                        # save data in buffer
+                        buffer2log.append([obj.objID, 
+                                        obj.history[-1].frameID, 
+                                        obj.history[-1].confidence, 
+                                        obj.X, obj.Y, 
+                                        obj.history[-1].Width, 
+                                        obj.history[-1].Height,
+                                        obj.VX, obj.VY, obj.AX, obj.AY, 
+                                        obj.futureX, obj.futureY
+                                        ])
+
+                # show video frame
+                if args.show:
+                    cv.imshow("FRAME", cv.bitwise_or(frame, frame, mask=mask))
+
+                # calculating fps from time before computation and time now
+                fps = int(1/(time.time() - prev_time))
+
+                # print FPS to stdout
+                # print("FPS: {}".format(fps,))
+
+                # print runtime logs
+                log_to_stdout("FPS: {}".format(fps,), to_log[:])#, f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+
+                # press 'p' to pause playing the video
+                if cv.waitKey(1) == ord('p'):
+                    # press 'r' to resume
+                    if cv.waitKey(0) == ord('r'):
+                        continue
+                # press 'q' to stop playing video
+                if cv.waitKey(10) == ord('q'):
+                    break
+            except KeyboardInterrupt:
                 break
 
-            # get current frame number
-            frameNumber = cap.get(cv.CAP_PROP_POS_FRAMES)
+        cap.release()
 
-            # time before computation
-            prev_time = time.time()
-
-            # run yolo inference 
-            if args.yolov7:
-                detections = yolov7api.detect(cv.bitwise_or(frame, frame, mask=mask)) 
-            else:
-                detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
-
-            # filter detections, only return the ones given in the targetNames tuple
-            targets = getTargets(detections, frameNumber, targetNames=("car"))
-
-            # update track history
-            updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks)
-
-            # draw bounding boxes of filtered detections
-            if args.show:
-                draw_boxes(trackedObjects, frame, colors, frameNumber)
-
-            # load moving objects into buffer, that will be saved to the sqlite db at exit 
-            for obj in trackedObjects:
-                if obj.isMoving:
-                    # log to stdout
-                    to_log.append(obj)
-                    # save data in buffer
-                    buffer2log.append([obj.objID, 
-                                    obj.history[-1].frameID, 
-                                    obj.history[-1].confidence, 
-                                    obj.X, obj.Y, 
-                                    obj.history[-1].Width, 
-                                    obj.history[-1].Height,
-                                    obj.VX, obj.VY, obj.AX, obj.AY, 
-                                    obj.futureX, obj.futureY
-                                    ])
-
-            # show video frame
-            if args.show:
-                cv.imshow("FRAME", cv.bitwise_or(frame, frame, mask=mask))
-
-            # calculating fps from time before computation and time now
-            fps = int(1/(time.time() - prev_time))
-
-            # print FPS to stdout
-            # print("FPS: {}".format(fps,))
-
-            # print runtime logs
-            log_to_stdout("FPS: {}".format(fps,), to_log[:])#, f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
-
-            # press 'p' to pause playing the video
-            if cv.waitKey(1) == ord('p'):
-                # press 'r' to resume
-                if cv.waitKey(0) == ord('r'):
-                    continue
-            # press 'q' to stop playing video
-            if cv.waitKey(10) == ord('q'):
-                break
-        except KeyboardInterrupt:
-            break
-
-    cap.release()
-
-    if args.show:
-        cv.destroyAllWindows()
+        if args.show:
+            cv.destroyAllWindows()
 
     # log buffered detections in sqlite db
     databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
