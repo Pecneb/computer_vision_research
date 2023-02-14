@@ -1,4 +1,4 @@
-#This file may be used to create an environment using:
+# This file may be used to create an environment using:
 # $ conda create --name <env> --file <this file>
 # platform: linux-64
 _libgcc_mutex=0.1=main
@@ -93,6 +93,7 @@ libuuid=1.41.5=h5eee18b_0
 libwebp=1.2.4=h11a3e52_0
 libwebp-base=1.2.4=h5eee18b_0
 llvmlite=0.39.1=pypi_0
+lz4=4.3.2=pypi_0
 lz4-c=1.9.4=h6a678d5_0
 matplotlib=3.6.2=pypi_0
 mkl=2021.4.0=h06a4308_640
@@ -131,6 +132,7 @@ seaborn=0.12.1=pypi_0
 setuptools=65.5.0=py310h06a4308_0
 six=1.16.0=pyhd3eb1b0_1
 sqlite=3.40.0=h5082296_0
+tabulate=0.9.0=pypi_0
 threadpoolctl=3.1.0=pypi_0
 tk=8.6.12=h1ccaba5_0
 torchaudio=0.13.0=py310_cu116
@@ -143,4 +145,3 @@ wheel=0.37.1=pyhd3eb1b0_0
 xz=5.2.8=h5eee18b_0
 zlib=1.2.13=h5eee18b_0
 zstd=1.5.2=ha4553b6_0
-

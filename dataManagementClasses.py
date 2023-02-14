@@ -33,19 +33,20 @@ class Detection:
         Width(int): width of the bounding box
         Height(int): height of the bounding box
         frameID(int): the number of the frame, the detection is oqqured
+        VX(int)
     """
     label: str
     confidence: float
-    X: int
-    Y: int
-    Width: int
-    Height: int
+    X: float 
+    Y: float 
+    Width: float 
+    Height: float 
     frameID: int
     # These variables are optional, not needed in the main loop. These are used in the analyzer script and databaseLoader script.
-    VX: int = field(init=False,)
-    VY: int = field(init=False)
-    AX: int = field(init=False)
-    AY: int = field(init=False)
+    VX: float = field(init=False,)
+    VY: float = field(init=False)
+    AX: float = field(init=False)
+    AY: float = field(init=False)
     objID: int = field(init=False)
 
     def __repr__(self) -> str:
@@ -78,7 +79,13 @@ class TrackedObject():
     label: int = field(init=False)
     futureX: list = field(init=False)
     futureY: list = field(init=False)
-    history: list
+    history: np.ndarray 
+    history_X: np.ndarray = field(init=False) 
+    history_Y: np.ndarray = field(init=False) 
+    history_VX_calculated: np.ndarray = field(init=False) 
+    history_VY_calculated: np.ndarray = field(init=False) 
+    history_AX_calculated: np.ndarray = field(init=False) 
+    history_AY_calculated: np.ndarray = field(init=False) 
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
@@ -95,6 +102,12 @@ class TrackedObject():
     def __init__(self, id, first, max_age=30):
         self.objID = id
         self.history = [first]
+        self.history_X = np.array([first.X])
+        self.history_Y = np.array([first.Y])
+        self.history_VX_calculated = np.array([])
+        self.history_VY_calculated = np.array([])
+        self.history_AX_calculated = np.array([])
+        self.history_AY_calculated = np.array([])
         self.X = first.X
         self.Y = first.Y
         self.VX = 0 
@@ -115,7 +128,7 @@ class TrackedObject():
         #self.bugged = 0 
     
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, len(self.history))
+        return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, len(self.history))
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
@@ -200,6 +213,26 @@ class TrackedObject():
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
                         self.history[n].VY])
 
+    def update_velocity(self):
+        """Calculate velocity from X,Y coordinates.
+        """
+        if self.history_X.shape[0] <= 1:
+            self.history_VX_calculated = np.array([0]) 
+            self.history_VY_calculated = np.array([0]) 
+        else:
+            self.history_VX_calculated = np.append(self.history_VX_calculated, [self.history_X[-1]-self.history_X[-2]]) 
+            self.history_VY_calculated = np.append(self.history_VY_calculated, [self.history_Y[-1]-self.history_Y[-2]])  
+
+    def update_accel(self):
+        """Calculate velocity from X,Y coordinates.
+        """
+        if self.history_VX_calculated.shape[0] <= 1:
+            self.history_AX_calculated = np.array([0]) 
+            self.history_AY_calculated = np.array([0]) 
+        else:
+            self.history_AX_calculated = np.append(self.history_AX_calculated, [self.history_VX_calculated[-1]-self.history_VX_calculated[-2]]) 
+            self.history_AY_calculated = np.append(self.history_AY_calculated, [self.history_VY_calculated[-1]-self.history_VY_calculated[-2]])  
+
     def update(self, detection=None, mean=None, historyDepth = 30):
         """Update tracking
 
@@ -209,9 +242,13 @@ class TrackedObject():
         """
         if detection is not None and mean is not None:
             self.history.append(detection)
+            self.history_X = np.append(self.history_X, [detection.X])
+            self.history_Y = np.append(self.history_Y, [detection.Y])
+            self.update_velocity()
+            self.update_accel()
             self.mean = mean 
-            self.X = mean[0]
-            self.Y = mean[1]
+            self.X = detection.X 
+            self.Y = detection.Y
             VX_old = self.VX
             VY_old = self.VY
             self.VX = mean[4]
@@ -231,10 +268,12 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        #if len(self.history) > historyDepth:
+        if (self.VX > 0.0 or self.VY > 0.0) and len(self.history) >= 5:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
-        self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
+            self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (self.history[-5].Y-self.history[-1].Y)**2)**(1/2) > 5.0  
+        else:
+            self.isMoving = False
         # this is a fix for a specific problem, when an track is stuck, and showed as moving object
         # this is just a hack for now, TODO: find real solution
         #if len(self.history) == 2:

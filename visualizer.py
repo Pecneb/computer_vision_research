@@ -24,10 +24,10 @@ import argparse
 import tqdm
 import numpy as np
 from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from main import getTargets
-from main import draw_boxes
+from detector import getTargets
+from detector import draw_boxes
 from classifier import OneVSRestClassifierExtended
-from joblib import Parallel, delayed
+from masker import masker
 
 def parseArgs():
     """Handle command line arguments.
@@ -42,6 +42,7 @@ def parseArgs():
     parser.add_argument("--all_tracks", help="Not only the tracks used for model training, rather all detections.", type=str)
     parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
     parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
+    parser.add_argument("--max_iou_distance", type=float, default=0.7)
     parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
     parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['1', '2','3'], default='2')
     
@@ -225,6 +226,10 @@ def main():
 
     cap = cv.VideoCapture(args.video)
 
+    # create mask, so only in the area of interest will be used in detection 
+    _, img = cap.read()
+    mask = masker(img)
+
     framewidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
@@ -242,9 +247,9 @@ def main():
     # upscale the coordinates of the centroids to the video's scale
     cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
 
-    dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history)
+    dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
-    history = [] # TrackedObjects
+    history: list[TrackedObject] = [] # TrackedObjects
 
     frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 
@@ -260,9 +265,11 @@ def main():
             if frame is None:
                 print("Video enden, closing player.")
                 break
+            
+            masked_frame = cv.bitwise_and(frame, frame, mask=mask)
 
             frameNum = cap.get(cv.CAP_PROP_POS_FRAMES)
-            yoloDetections = detect(frame) # get detections from yolo nn
+            yoloDetections = detect(masked_frame) # get detections from yolo nn
             targetDetections = getTargets(yoloDetections, frameNum, targetNames=("car")) # get target detections and make Detection() objects
             updateHistory(history, dsTracker, targetDetections, historyDepth=args.history) # update track history and update tracker
 

@@ -65,6 +65,23 @@ https://drive.google.com/drive/folders/1IN6kwywddO3B3uHyC5S18vqf0KEWToJ_
 https://drive.google.com/drive/folders/17bn7l7Qm5s-r5DYoFQPhviFZ0jWY9qk5
 https://drive.google.com/drive/folders/16coOR8PlNzvmUm1vsaYJVF_bAOQGySa8
 
+Best OPTICS clustering parameters:
+- 0001_2 : 
+  - min_samples 10
+  - max_eps 0.2
+  - xi 0.15
+  - min_cluster_size 10 
+- 0002_2 : 
+  - min_samples 10
+  - max_eps 0.1 
+  - xi 0.15
+  - min_cluster_size 10 
+- Bellevue_150th_Newport__2017-09-11_07-08-31: 
+  - min_samples 20 
+  - max_eps 0.1 
+  - xi 0.15
+  - min_cluster_size 20 
+
 <a id="inst"/>
 
 ## Installation
@@ -703,7 +720,7 @@ def makeFeatureVectorsNx4(trackedObjects: list) -> np.ndarray:
 Where $s(i, k)$ is the similarity between samples $i$ and $k$. The availability of sample $k$ to be the exemplar of sample $i$ is given by: $$a(i, k) \leftarrow min [0, r(k, k) + \sum_{i'~s.t.~i' \notin \{i, k\}}{r(i', k)}]$$  
 To begin with, all values for $r$ and $a$ are set to zero, and the calculation of each iterates until convergence. As discussed above, in order to avoid numerical oscillations when updating the messages, the damping factor $\lambda$ is introduced to iteration process: $$r_{t+1}(i, k) = \lambda\cdot r_{t}(i, k) + (1-\lambda)\cdot r_{t+1}(i, k)$$ $$a_{t+1}(i, k) = \lambda\cdot a_{t}(i, k) + (1-\lambda)\cdot a_{t+1}(i, k)$$ where $t$ indicates the iteration times.  
 
-16. Although affinity propagation does not require initial cluster number, it seems that the results are not usable, because it finds too meny clusters. Other algorithm should be tested ex.: K-Mean, Spectral. For better results, detections should be filtered out, because of false positive detections. Standing objects were detected, so those should be filtered out. The algorithm to filter out only the best data to run clustering on is based on the euclidean distance between enter and exit point pairs. $$d(p,q) = \sqrt{\sum_{i=1}^{n}{(p_i - q_i)^2}}$$
+16. Although affinity propagation does not require initial cluster number, it seems that the results are not usable, because it finds too many clusters. Other algorithm should be tested ex.: K-Mean, Spectral. For better results, detections should be filtered out, because of false positive detections. Standing objects were detected, so those should be filtered out. The algorithm to filter out only the best data to run clustering on is based on the euclidean distance between enter and exit point pairs. $$d(p,q) = \sqrt{\sum_{i=1}^{n}{(p_i - q_i)^2}}$$
 
  
 <figure>
@@ -748,6 +765,10 @@ Optics clustering with parameters of min_samples = 20, max_eps = 2.0, xi = 0.1, 
 ![Cluster number 6](research_data/0001_2_308min/optics_on_nx4_min_samples_20_max_eps_0.2_xi_0.1_min_cluster_size_0.05_n_cluster_7_threshold_0.4_dets_5477/0001_2_308min_n_cluster_6.png)
 
 26. The results of the clustering are the classes used in classification. There are many classification algorithm, ex.: [KNN](https://scikit-learn.org/stable/modules/neighbors.html#nearest-neighbors-classification), [GaussianNB](https://scikit-learn.org/stable/modules/naive_bayes.html#gaussian-naive-bayes), [StochasticGradientDescent](https://scikit-learn.org/stable/modules/sgd.html#classification), etc... [Neural Network Models](https://scikit-learn.org/stable/modules/neural_networks_supervised.html#classification) also can be used for classification.
+
+27. Based on the results of the clustering algorithms OPTICS clustering performs the best. Manual examination of the clustering results is still needed, although implementation of elbow diagrams; these cannot tell if the clustering is a success or not. With the tuning of the hyperparameters the optimal clusters can be found, that will serve as the ground truth for the classification models.
+
+28. Classification models...
 
 <a id="classresfeatv1"/>
 
@@ -2043,6 +2064,10 @@ Classifier parameters
 |  2 | Top_3 | 0.983193 | 0.988796 | 0.969188 | 0.985994 | 0.910364 | 0.991597 | 0.887955 |
 
 <a id="ref"/>
+
+# Research data
+
+https://drive.google.com/drive/folders/1OVgMHfInUQ8JfWMALURHPvEBddDnDzDz?usp=sharing
 
 # References
 
