@@ -32,8 +32,8 @@ def submodule_function_3(args):
         raise FileNotFoundError()
     ret, img = cap.read()
     if ret:
-        downscale_TrackedObjects(trackedObjects, img)
-        dump(trackedObjects, args.database[0], compress="lz4")
+        downscaled = downscale_TrackedObjects(trackedObjects, img)
+        dump(downscaled, args.database[0], compress="lz4")
     else:
         raise IOError()
 
@@ -43,54 +43,6 @@ def submodule_function_4(args):
         new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
         dump(new_trackedOjects, db, compress="lz4")
 
-def diff(x1, x2, h):
-    if h == 0:
-        return 0
-    return (x2-x1) / h
-
-def dt(t1, t2):
-    return t2-t1
-
-def diffmap(a: np.array, t: np.array, k: int):
-    X = np.array([])
-    T = np.array([])
-    if a.shape[0] < k:
-        for i in range(a.shape[0]-1):
-            T = np.append(T, [t[i]])
-            X = np.append(X, [0])
-    else:
-        for i in range(0, k-1):
-            T = np.append(T, [t[i]])
-            X = np.append(X, [0])
-        for i in range(k, a.shape[0]):
-            dt_ = dt(t[i], t[i-k])
-            T = np.append(T, t[i])
-            X = np.append(X, diff(a[i], a[i-k], dt_))
-    return X, T 
-
-def submodule_function_5(args):
-    if len(args.database) != len(args.output):
-        print("Input and output arguments must be the same lenght.")
-        raise ValueError()
-    for db, out in tqdm(zip(args.database, args.output)):
-        trackedObjects = load_joblib_tracks(db)
-        trackedObjects_new = []
-        for obj in trackedObjects:
-            tmp = deepcopy(obj)
-            T = np.array([d.frameID for d in tmp.history])
-            tmp.history_VX_calculated, tmp.history_VT= diffmap(tmp.history_X, T, args.k_velocity)
-            tmp.history_VY_calculated, _ = diffmap(tmp.history_Y, T, args.k_velocity)
-            tmp.history_AX_calculated, _ = diffmap(tmp.history_VX_calculated, tmp.history_VT, args.k_accel)
-            tmp.history_AY_calculated, _ = diffmap(tmp.history_VY_calculated, tmp.history_VT, args.k_accel)
-
-            tmp.history_VX_calculated = np.insert(tmp.history_VX_calculated, 0, [0])
-            tmp.history_VY_calculated = np.insert(tmp.history_VY_calculated, 0, [0])
-            tmp.history_AX_calculated = np.insert(tmp.history_AX_calculated, 0, [0,0])
-            tmp.history_AY_calculated = np.insert(tmp.history_AY_calculated, 0, [0,0])
-
-            trackedObjects_new.append(tmp)
-        dump(trackedObjects_new, out, compress="lz4")
-
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-db", "--database", help="Path to database.", type=str, nargs='+')
@@ -99,7 +51,7 @@ def main():
 
     subparser = argparser.add_subparsers(help="Submodules.")
     
-    parser_training_dataset = subparser.add_parser("training", help="Extract the clustered track dataset with labels, for classifier training.")
+    parser_training_dataset = subparser.add_parser("optics-cluster", help="Extract the clustered track dataset with labels, for classifier training.")
     #argparser.add_argument("--training", help="Extract the filtered tracks with labels.", action="store_true", default=False)
     parser_training_dataset.add_argument("--min_samples", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--max_eps", help="Parameter for optics clustering", default=np.inf, type=float)
@@ -119,12 +71,6 @@ def main():
 
     old_to_new_parser = subparser.add_parser("old2new", help="Update old TrackedObject dataset with history_X and history_Y fields.")
     old_to_new_parser.set_defaults(func=submodule_function_4)
-
-    velacc_parser = subparser.add_parser("updateVelocityAccelarationVectors", help="Update old TrackedObject dataset with history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated fields.")
-    velacc_parser.add_argument("--k_velocity", type=int, default=10, help="Stepsize for x, y derivation.")
-    velacc_parser.add_argument("--k_accel", type=int, default=2, help="Stepsize for vx, vy derivation.")
-    velacc_parser.add_argument("--output", nargs='+', type=str, help="Output path of joblib file.")
-    velacc_parser.set_defaults(func=submodule_function_5)
 
     args = argparser.parse_args()
     args.func(args)

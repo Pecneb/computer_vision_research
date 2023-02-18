@@ -27,6 +27,7 @@ import os
 import joblib 
 from joblib import Memory 
 import itertools
+from copy import deepcopy
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -1146,8 +1147,10 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
         trackedObjects (list[TrackedObject]): list of tracked objects 
         img (np.ndarray): image to downscale from 
     """
+    ret_trackedObjects = []
     aspect_ratio = img.shape[1] / img.shape[0]
-    for t in trackedObjects:
+    for o in trackedObjects:
+        t = deepcopy(o)
         t.history_X = t.history_X / img.shape[1] * aspect_ratio 
         t.history_Y = t.history_Y / img.shape[0]
         t.history_VX_calculated = t.history_VX_calculated / img.shape[1] * aspect_ratio 
@@ -1163,8 +1166,64 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
             d.AY = d.AY / img.shape[0]
             d.Width = d.Width / img.shape[1] * aspect_ratio
             d.Height = d.Height / img.shape[0]
+        ret_trackedObjects.append(t)
+    return ret_trackedObjects
 
-def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
+def diff(x_1: float, x_2: float, dt: float) -> float:
+    """Differentiate with function x_(i+1) - x_i / dt
+
+    Args:
+        x_1 (float): x_i 
+        x_2 (float): x_(i+1) 
+        dt (float): dt 
+
+    Returns:
+        float: dx
+    """
+    if dt == 0:
+        return 0
+    return (x_2-x_1) / dt 
+
+def dt(t1: float, t2: float) -> float:
+    """Calculate dt
+
+    Args:
+        t1 (float): t_i 
+        t2 (float): t_(i+1) 
+
+    Returns:
+        float: dt 
+    """
+    return t2-t1
+
+def diffmap(a: np.array, t: np.array, k: int):
+    """Differentiate an array `a` with time vector `t`, and `k` i+k in the function x_(i+k) - x_i / t_(i+k) - t_i
+
+    Args:
+        a (np.array): array of values to differentiate 
+        t (np.array): times to differentiate with 
+        k (int): stepsize 
+
+    Returns:
+        np.array, np.array: Return dX and t timestamps of dX with the logic dx_i, t_i+k 
+    """
+    X = np.array([])
+    T = np.array([])
+    if a.shape[0] < k:
+        for i in range(a.shape[0]-1):
+            T = np.append(T, [t[i]])
+            X = np.append(X, [0])
+    else:
+        for i in range(0, k-1):
+            T = np.append(T, [t[i]])
+            X = np.append(X, [0])
+        for i in range(k, a.shape[0]):
+            dt_ = dt(t[i], t[i-k])
+            T = np.append(T, t[i])
+            X = np.append(X, diff(a[i], a[i-k], dt_))
+    return X, T 
+
+def trackedObjects_old_to_new(trackedObjects: list[TrackedObject], k_velocity: int = 10, k_accel: int = 2):
     """Depracated function. Archived.
 
     Args:
@@ -1189,5 +1248,14 @@ def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
         tmp_obj.futureY = t.futureY
         tmp_obj.isMoving = t.isMoving
         tmp_obj.label = t.label
+        T = np.array([d.frameID for d in tmp_obj.history])
+        tmp_obj.history_VX_calculated, tmp_obj.history_VT= diffmap(tmp_obj.history_X, T, k_velocity)
+        tmp_obj.history_VY_calculated, _ = diffmap(tmp_obj.history_Y, T, k_velocity)
+        tmp_obj.history_AX_calculated, _ = diffmap(tmp_obj.history_VX_calculated, tmp_obj.history_VT, k_accel)
+        tmp_obj.history_AY_calculated, _ = diffmap(tmp_obj.history_VY_calculated, tmp_obj.history_VT, k_accel)
+        tmp_obj.history_VX_calculated = np.insert(tmp_obj.history_VX_calculated, 0, [0])
+        tmp_obj.history_VY_calculated = np.insert(tmp_obj.history_VY_calculated, 0, [0])
+        tmp_obj.history_AX_calculated = np.insert(tmp_obj.history_AX_calculated, 0, [0,0])
+        tmp_obj.history_AY_calculated = np.insert(tmp_obj.history_AY_calculated, 0, [0,0])
         new_trackedObjects.append(tmp_obj)
     return new_trackedObjects
