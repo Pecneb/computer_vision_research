@@ -989,7 +989,7 @@ def load_joblib_tracks(path2tracks: str) -> list[TrackedObject]:
         exit(1)
     return joblib.load(path2tracks)
 
-def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5, cluster_dimensions: str = "6D"):
+def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5, cluster_dimensions: str = "6D"):
     """Save training tracks with class numbers ordered to them.
 
     Args:
@@ -1035,12 +1035,12 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
             "class": labels[i] 
         })
 
-    filename = path2tracks.split('/')[-1].split('.')[0] + '_clustered.joblib' 
-    savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
+    #filename = path2tracks.split('/')[-1].split('.')[0] + '_clustered.joblib' 
+    #avepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
 
-    print("Saving: ", savepath)
+    print("Saving: ", output)
 
-    return joblib.dump(tracks_classes, savepath, compress="lz4")
+    return joblib.dump(tracks_classes, output, compress="lz4")
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
     """Shuffle track dataset, then split it into a train and test dataset.
