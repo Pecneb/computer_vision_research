@@ -1143,13 +1143,17 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
     """Normalize the values of the detections with the given np.ndarray image.
 
     Args:
-        trackedObjects (list[TrackedObject]): _description_
-        img (np.ndarray): _description_
+        trackedObjects (list[TrackedObject]): list of tracked objects 
+        img (np.ndarray): image to downscale from 
     """
     aspect_ratio = img.shape[1] / img.shape[0]
     for t in trackedObjects:
         t.history_X = t.history_X / img.shape[1] * aspect_ratio 
         t.history_Y = t.history_Y / img.shape[0]
+        t.history_VX_calculated = t.history_VX_calculated / img.shape[1] * aspect_ratio 
+        t.history_VY_calculated = t.history_VY_calculated / img.shape[0]
+        t.history_AX_calculated = t.history_AX_calculated / img.shape[1] * aspect_ratio 
+        t.history_AY_calculated = t.history_AY_calculated / img.shape[0]
         for d in t.history:
             d.X = d.X / img.shape[1] * aspect_ratio
             d.Y = d.Y / img.shape[0]
@@ -1161,6 +1165,14 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
             d.Height = d.Height / img.shape[0]
 
 def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
+    """Depracated function. Archived.
+
+    Args:
+        trackedObjects (list[TrackedObject]): tracked objects. 
+
+    Returns:
+        list: list of converted tracked objects 
+    """
     new_trackedObjects = []
     for t in tqdm.tqdm(trackedObjects, desc="TrackedObjects converted to new class structure."):
         tmp_obj = TrackedObject(t.objID, t.history[0])
