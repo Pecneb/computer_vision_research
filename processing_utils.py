@@ -911,10 +911,12 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
-def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", classification_features_version: str = "v1", stride: int = 15):
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15):
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
+    tracks = filter_tracks(tracks)
+    tracks = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
 
     if cluster_features_version == "4D":
         featureVectors = make_4D_feature_vectors(tracks)
