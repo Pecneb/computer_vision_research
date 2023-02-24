@@ -549,7 +549,6 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     tracks_filtered = [t for i, t in enumerate(tracks) if labels[i] > -1] 
     labels_filtered = [l for l in labels if l > -1]  
 
-
     cluster_centroids = None
     if argv['classification_features_version'] == 'v3' or argv['classification_features_version'] == 'v3_half':
         cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
@@ -582,11 +581,14 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         # if batch size is given, use partial_fit() method and train with minibatches
         if argv['batch_size'] is not None:
             try:
-                print(f"\nTraining with batchsize: {batch_size:10d}.\n")
+                iteration = 1
                 for X_batch, y_batch in iter_minibatches(X, y, batch_size):
+                    print(f"Iteration {iteration} started")
                     binaryModel.partial_fit(X_batch, y_batch, classes=all_classes, centroids=cluster_centroids)
+                    iteration+=1
+                print(f"\nTraining with batchsize: {batch_size:10d}.\n")
             except:
-                print("\nClassifier does not have partial_fit() method, cant train with minibatches.")
+                print(f"\nClassifier {clr} does not have partial_fit() method, cant train with minibatches.")
                 print(f"Training without minibatches. Batchsize is: {X.shape[0]:10d}\n")
                 binaryModel.fit(X, y, centroids=cluster_centroids)            
         else:
@@ -931,7 +933,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
         #'GP' : GaussianProcessClassifier,
         #'GNB' : GaussianNB,
         #'MLP' : MLPClassifier,
-        #'SGD' : SGDClassifier,
+        #'SGD_modified_huber' : SGDClassifier,
+        #'SGD_log_loss' : SGDClassifier,
         'SVM' : SVC,
         #'DT' : DecisionTreeClassifier
     }
@@ -941,7 +944,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
                     #'GP' :  {},
                     #'GNB' : {},
                     #'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    #'SGD' : {'loss' : 'modified_huber'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber'},
+                    #'SGD_log_loss' : {'loss' : 'log_loss'},
                     'SVM' : {'kernel' : 'rbf', 'probability' : True},
                     #'DT' : {} 
                 }, {
@@ -949,7 +953,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
                     #'GP' :  {},
                     #'GNB' : {},
                     #'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
-                    #'SGD' : {'loss' : 'modified_huber'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 2000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 2000},
                     'SVM' : {'kernel' : 'linear', 'probability' : True},
                     #'DT' : {} 
                 }, {
@@ -957,7 +962,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
                     #'GP' :  {},
                     #'GNB' : {},
                     #'MLP' : {'max_iter' : 3000, 'solver' : 'sgd'},
-                    #'SGD' : {'loss' : 'modified_huber'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 3000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 3000},
                     'SVM' : {'kernel' : 'linear', 'probability' : True},
                     #'DT' : {} 
                 }, {
@@ -965,7 +971,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
                     #'GP' :  {},
                     #'GNB' : {},
                     #'MLP' : {'max_iter' : 4000, 'solver' : 'sgd'},
-                    #'SGD' : {'loss' : 'modified_huber'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 16000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 16000},
                     'SVM' : {'kernel' : 'rbf', 'probability' : True},
                     #'DT' : {} 
                 }]

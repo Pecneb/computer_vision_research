@@ -463,7 +463,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_features_for_classification_velocity_time(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -493,7 +493,7 @@ def make_features_for_classification_velocity_time(trackedObjects: list, k: int,
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
     return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
 
-def make_features_for_classification_velocity_time_second_half(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -508,7 +508,7 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
     newLabels = []
     track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
     #TODO remove time vector, use track_history_metadata instead
-    for j in range(len(trackedObjects)):
+    for j in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[j].history)//2)//k
         if step > 0:
             midstep = step//2
@@ -538,7 +538,7 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
     X_featurevectors = [] # [history[0].X, history[0]. Y,history[0].VX, history[0].VY,history[mid].X, history[mid].Y,history[end].X, history[end]. Y,history[end].VX, history[end].VY]
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i, track in enumerate(trackedObjects):
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         step = (len(track.history))//k
         if step >= 2:
             for j in range(step, len(track.history), step):
@@ -568,7 +568,7 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i, track in enumerate(trackedObjects):
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
@@ -600,7 +600,7 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
     y_newLabels = []
     cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)):
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range(step, len(trackedObjects[i].history), step):
@@ -656,7 +656,7 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     y_newLabels = []
     cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)):
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
@@ -682,7 +682,7 @@ def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_s
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
     metadata = []
-    for i, t in enumerate(trackedObjects):
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         stride = 3
         if stride > t.history_X.shape[0]:
             continue
@@ -752,7 +752,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
 
     if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(filteredTracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(filteredTracks, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
     elif features_v2_half:
@@ -760,7 +760,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     elif features_v3:
         X, y, metadata = make_feature_vectors_version_three(filteredTracks, 6, labels)
     else:
-        X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(filteredTracks, 6, labels)
 
     X = X[y > -1]
     y = y[y > -1]
@@ -879,7 +879,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(model.tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(model.tracks, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(model.tracks, 6, labels)
     elif features_v2_half:
@@ -887,7 +887,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     elif features_v3:
         X, y, metadata = make_feature_vectors_version_three(model.tracks, 6, labels)
     else:
-        X, y, metadata = make_features_for_classification_velocity_time(model.tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(model.tracks, 6, labels)
 
     X = X[y > -1]
     y = y[y > -1]
@@ -926,9 +926,9 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if classification_features_version == "v1":
-        X, y, metadata = make_features_for_classification_velocity_time(tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(tracks, 6, labels)
     elif classification_features_version == "v1_half":
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(tracks, 6, labels)
     elif classification_features_version == "v2":
         X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
     elif classification_features_version == "v2_half":
