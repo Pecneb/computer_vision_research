@@ -1261,3 +1261,40 @@ def trackedObjects_old_to_new(trackedObjects: list[TrackedObject], k_velocity: i
         tmp_obj.history_AY_calculated = np.insert(tmp_obj.history_AY_calculated, 0, [0,0])
         new_trackedObjects.append(tmp_obj)
     return new_trackedObjects
+
+def level_features(X: np.ndarray, y: np.ndarray):
+    """Level out the nuber of features.
+
+    Args:
+        X (np.ndarray): features of shape(n_samples, n_features) 
+        y (np.ndarray): labels of shape(n_samples,) 
+
+    Raises:
+        ValueError: If the length of axis 0 of both X and y are not equal raise ValueError. 
+
+    Returns:
+        np.ndarray, np.ndarray: Numpy array of leveled out X and y.
+    """
+    if X.shape[0] != y.shape[0]:
+        raise ValueError("Number of samples and number of labels should be equal.")
+    labels = list(set(y))
+    label_counts = np.zeros(shape=(len(labels)), dtype=int) # init counter vector
+    for y_ in y:
+        label_counts[y_] += 1
+    min_sample_count = np.min(label_counts) # find min count
+    # init X and y vectors that will be filled and returned
+    X_leveled = np.array([], dtype=float) 
+    y_leveled = np.array([], dtype=int)
+    for l in tqdm.tqdm(labels):
+        i = 0
+        j = 0
+        while i != min_sample_count:
+            if y[j] == l:
+                if X_leveled.shape == (0,):
+                    X_leveled = np.array([X[j]], dtype=float) 
+                else:
+                    X_leveled = np.append(X_leveled, [X[j]], axis=0)
+                y_leveled = np.append(y_leveled, [y[j]])
+                i+=1
+            j+=1
+    return X_leveled, y_leveled
