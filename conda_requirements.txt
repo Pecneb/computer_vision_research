@@ -3,6 +3,7 @@
 # platform: linux-64
 _libgcc_mutex=0.1=main
 _openmp_mutex=5.1=1_gnu
+attrs=22.2.0=pypi_0
 blas=1.0=mkl
 brotlipy=0.7.0=py310h7f8727e_1002
 bzip2=1.0.8=h7b6447c_0
@@ -45,6 +46,7 @@ cuda-tools=11.6.1=0
 cuda-visual-tools=11.6.1=0
 cycler=0.11.0=pypi_0
 et-xmlfile=1.1.0=pypi_0
+exceptiongroup=1.1.0=pypi_0
 ffmpeg=4.3=hf484d3e_0
 flit-core=3.6.0=pyhd3eb1b0_0
 fonttools=4.38.0=pypi_0
@@ -55,6 +57,7 @@ gmp=6.2.1=h295c915_3
 gnutls=3.6.15=he1e5248_0
 gputil=1.4.0=pypi_0
 idna=3.4=py310h06a4308_0
+iniconfig=2.0.0=pypi_0
 intel-openmp=2021.4.0=h06a4308_3561
 joblib=1.2.0=pypi_0
 jpeg=9e=h7f8727e_0
@@ -113,10 +116,12 @@ packaging=22.0=pypi_0
 pandas=1.5.2=pypi_0
 pillow=9.2.0=py310hace64e9_1
 pip=22.3.1=py310h06a4308_0
+pluggy=1.0.0=pypi_0
 pycparser=2.21=pyhd3eb1b0_0
 pyopenssl=22.0.0=pyhd3eb1b0_0
 pyparsing=3.0.9=pypi_0
 pysocks=1.7.1=py310h06a4308_0
+pytest=7.2.1=pypi_0
 python=3.10.8=h7a1cb2a_1
 python-dateutil=2.8.2=pypi_0
 pytorch=1.13.0=py3.10_cuda11.6_cudnn8.3.2_0
@@ -135,6 +140,7 @@ sqlite=3.40.0=h5082296_0
 tabulate=0.9.0=pypi_0
 threadpoolctl=3.1.0=pypi_0
 tk=8.6.12=h1ccaba5_0
+tomli=2.0.1=pypi_0
 torchaudio=0.13.0=py310_cu116
 torchvision=0.14.0=py310_cu116
 tqdm=4.64.1=pypi_0
