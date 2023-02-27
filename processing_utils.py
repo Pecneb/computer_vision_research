@@ -27,6 +27,7 @@ import os
 import joblib 
 from joblib import Memory 
 import itertools
+from copy import deepcopy
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -462,7 +463,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_features_for_classification_velocity_time(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -492,7 +493,7 @@ def make_features_for_classification_velocity_time(trackedObjects: list, k: int,
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
     return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
 
-def make_features_for_classification_velocity_time_second_half(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -507,7 +508,7 @@ def make_features_for_classification_velocity_time_second_half(trackedObjects: l
     newLabels = []
     track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
     #TODO remove time vector, use track_history_metadata instead
-    for j in range(len(trackedObjects)):
+    for j in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[j].history)//2)//k
         if step > 0:
             midstep = step//2
@@ -537,7 +538,7 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
     X_featurevectors = [] # [history[0].X, history[0]. Y,history[0].VX, history[0].VY,history[mid].X, history[mid].Y,history[end].X, history[end]. Y,history[end].VX, history[end].VY]
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i, track in enumerate(trackedObjects):
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         step = (len(track.history))//k
         if step >= 2:
             for j in range(step, len(track.history), step):
@@ -567,7 +568,7 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i, track in enumerate(trackedObjects):
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
@@ -599,7 +600,7 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
     y_newLabels = []
     cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)):
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range(step, len(trackedObjects[i].history), step):
@@ -655,7 +656,7 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     y_newLabels = []
     cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
-    for i in range(len(trackedObjects)):
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
@@ -681,7 +682,7 @@ def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_s
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
     metadata = []
-    for i, t in enumerate(trackedObjects):
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
         stride = 3
         if stride > t.history_X.shape[0]:
             continue
@@ -692,6 +693,41 @@ def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_s
                 X_feature_vectors = np.append(X_feature_vectors, np.array([
                     t.history_X[0], t.history_Y[0], # enter coordinates
                     t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                stride += 1
+            else:
+                midx = j + (stride // 2)
+                end_idx = j + stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[j], t.history_Y[j], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
+
+def make_feature_vectors_version_five(trackedObjects: list[TrackedObject], max_stride: int, labels: np.ndarray):
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = 3
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(t.history_X.shape[0]-max_stride):
+            if stride < max_stride:
+                midx = stride // 2 
+                end_idx = stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[0], t.history_Y[0], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[midx], t.history_Y[end_idx-2],
+                    t.history_X[midx], t.history_Y[end_idx-1],
                     t.history_X[end_idx], t.history_Y[end_idx] # exit
                 ])).reshape(-1, 6)
                 metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
@@ -751,7 +787,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
 
     if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(filteredTracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(filteredTracks, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
     elif features_v2_half:
@@ -759,7 +795,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     elif features_v3:
         X, y, metadata = make_feature_vectors_version_three(filteredTracks, 6, labels)
     else:
-        X, y, metadata = make_features_for_classification_velocity_time(filteredTracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(filteredTracks, 6, labels)
 
     X = X[y > -1]
     y = y[y > -1]
@@ -878,7 +914,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if from_half:
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(model.tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(model.tracks, 6, labels)
     elif features_v2:
         X, y, metadata = make_feature_vectors_version_two(model.tracks, 6, labels)
     elif features_v2_half:
@@ -886,7 +922,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     elif features_v3:
         X, y, metadata = make_feature_vectors_version_three(model.tracks, 6, labels)
     else:
-        X, y, metadata = make_features_for_classification_velocity_time(model.tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(model.tracks, 6, labels)
 
     X = X[y > -1]
     y = y[y > -1]
@@ -910,10 +946,12 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
-def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", classification_features_version: str = "v1", stride: int = 15):
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: bool = False):
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
+    tracks = filter_tracks(tracks)
+    tracks = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
 
     if cluster_features_version == "4D":
         featureVectors = make_4D_feature_vectors(tracks)
@@ -923,9 +961,9 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
 
     if classification_features_version == "v1":
-        X, y, metadata = make_features_for_classification_velocity_time(tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one(tracks, 6, labels)
     elif classification_features_version == "v1_half":
-        X, y, metadata = make_features_for_classification_velocity_time_second_half(tracks, 6, labels)
+        X, y, metadata = make_feature_vectors_version_one_half(tracks, 6, labels)
     elif classification_features_version == "v2":
         X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
     elif classification_features_version == "v2_half":
@@ -940,6 +978,9 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
 
     X = X[y > -1]
     y = y[y > -1]
+
+    if level:
+        X, y = level_features(X, y)
 
     """X_train = []
     y_train = []
@@ -988,7 +1029,7 @@ def load_joblib_tracks(path2tracks: str) -> list[TrackedObject]:
         exit(1)
     return joblib.load(path2tracks)
 
-def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5, cluster_dimensions: str = "6D"):
+def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold=0.5, cluster_dimensions: str = "6D"):
     """Save training tracks with class numbers ordered to them.
 
     Args:
@@ -1034,12 +1075,12 @@ def trackslabels2joblib(path2tracks: str, min_samples = 10, max_eps = 0.2, xi = 
             "class": labels[i] 
         })
 
-    filename = path2tracks.split('/')[-1].split('.')[0] + '_clustered.joblib' 
-    savepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
+    #filename = path2tracks.split('/')[-1].split('.')[0] + '_clustered.joblib' 
+    #avepath = os.path.join("research_data", path2tracks.split('/')[-1].split('.')[0], filename) 
 
-    print("Saving: ", savepath)
+    print("Saving: ", output)
 
-    return joblib.dump(tracks_classes, savepath, compress="lz4")
+    return joblib.dump(tracks_classes, output, compress="lz4")
 
 def random_split_tracks(dataset: list, train_percentage: float, seed: int):
     """Shuffle track dataset, then split it into a train and test dataset.
@@ -1143,13 +1184,19 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
     """Normalize the values of the detections with the given np.ndarray image.
 
     Args:
-        trackedObjects (list[TrackedObject]): _description_
-        img (np.ndarray): _description_
+        trackedObjects (list[TrackedObject]): list of tracked objects 
+        img (np.ndarray): image to downscale from 
     """
+    ret_trackedObjects = []
     aspect_ratio = img.shape[1] / img.shape[0]
-    for t in trackedObjects:
+    for o in tqdm.tqdm(trackedObjects, desc="Downscale"):
+        t = deepcopy(o)
         t.history_X = t.history_X / img.shape[1] * aspect_ratio 
         t.history_Y = t.history_Y / img.shape[0]
+        t.history_VX_calculated = t.history_VX_calculated / img.shape[1] * aspect_ratio 
+        t.history_VY_calculated = t.history_VY_calculated / img.shape[0]
+        t.history_AX_calculated = t.history_AX_calculated / img.shape[1] * aspect_ratio 
+        t.history_AY_calculated = t.history_AY_calculated / img.shape[0]
         for d in t.history:
             d.X = d.X / img.shape[1] * aspect_ratio
             d.Y = d.Y / img.shape[0]
@@ -1159,8 +1206,72 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
             d.AY = d.AY / img.shape[0]
             d.Width = d.Width / img.shape[1] * aspect_ratio
             d.Height = d.Height / img.shape[0]
+        ret_trackedObjects.append(t)
+    return ret_trackedObjects
 
-def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
+def diff(x_1: float, x_2: float, dt: float) -> float:
+    """Differentiate with function x_(i+1) - x_i / dt
+
+    Args:
+        x_1 (float): x_i 
+        x_2 (float): x_(i+1) 
+        dt (float): dt 
+
+    Returns:
+        float: dx
+    """
+    if dt == 0:
+        return 0
+    return (x_2-x_1) / dt 
+
+def dt(t1: float, t2: float) -> float:
+    """Calculate dt
+
+    Args:
+        t1 (float): t_i 
+        t2 (float): t_(i+1) 
+
+    Returns:
+        float: dt 
+    """
+    return t2-t1
+
+def diffmap(a: np.array, t: np.array, k: int):
+    """Differentiate an array `a` with time vector `t`, and `k` i+k in the function x_(i+k) - x_i / t_(i+k) - t_i
+
+    Args:
+        a (np.array): array of values to differentiate 
+        t (np.array): times to differentiate with 
+        k (int): stepsize 
+
+    Returns:
+        np.array, np.array: Return dX and t timestamps of dX with the logic dx_i, t_i+k 
+    """
+    X = np.array([])
+    T = np.array([])
+    if a.shape[0] < k:
+        for i in range(a.shape[0]-1):
+            T = np.append(T, [t[i]])
+            X = np.append(X, [0])
+    else:
+        for i in range(0, k-1):
+            T = np.append(T, [t[i]])
+            X = np.append(X, [0])
+        for i in range(k, a.shape[0]):
+            dt_ = dt(t[i], t[i-k])
+            T = np.append(T, t[i])
+            X = np.append(X, diff(a[i], a[i-k], dt_))
+    return X, T 
+
+def trackedObjects_old_to_new(trackedObjects: list[TrackedObject], k_velocity: int = 10, k_accel: int = 2):
+    """Depracated function. Archived.
+
+    Args:
+        trackedObjects (list[TrackedObject]): tracked objects. 
+
+    Returns:
+        list: list of converted tracked objects 
+    """
     new_trackedObjects = []
     for t in tqdm.tqdm(trackedObjects, desc="TrackedObjects converted to new class structure."):
         tmp_obj = TrackedObject(t.objID, t.history[0])
@@ -1177,5 +1288,52 @@ def trackedObjects_old_to_new(trackedObjects: list[TrackedObject]):
         tmp_obj.futureY = t.futureY
         tmp_obj.isMoving = t.isMoving
         tmp_obj.label = t.label
+        T = np.array([d.frameID for d in tmp_obj.history])
+        tmp_obj.history_VX_calculated, tmp_obj.history_VT= diffmap(tmp_obj.history_X, T, k_velocity)
+        tmp_obj.history_VY_calculated, _ = diffmap(tmp_obj.history_Y, T, k_velocity)
+        tmp_obj.history_AX_calculated, _ = diffmap(tmp_obj.history_VX_calculated, tmp_obj.history_VT, k_accel)
+        tmp_obj.history_AY_calculated, _ = diffmap(tmp_obj.history_VY_calculated, tmp_obj.history_VT, k_accel)
+        tmp_obj.history_VX_calculated = np.insert(tmp_obj.history_VX_calculated, 0, [0])
+        tmp_obj.history_VY_calculated = np.insert(tmp_obj.history_VY_calculated, 0, [0])
+        tmp_obj.history_AX_calculated = np.insert(tmp_obj.history_AX_calculated, 0, [0,0])
+        tmp_obj.history_AY_calculated = np.insert(tmp_obj.history_AY_calculated, 0, [0,0])
         new_trackedObjects.append(tmp_obj)
     return new_trackedObjects
+
+def level_features(X: np.ndarray, y: np.ndarray):
+    """Level out the nuber of features.
+
+    Args:
+        X (np.ndarray): features of shape(n_samples, n_features) 
+        y (np.ndarray): labels of shape(n_samples,) 
+
+    Raises:
+        ValueError: If the length of axis 0 of both X and y are not equal raise ValueError. 
+
+    Returns:
+        np.ndarray, np.ndarray: Numpy array of leveled out X and y.
+    """
+    if X.shape[0] != y.shape[0]:
+        raise ValueError("Number of samples and number of labels should be equal.")
+    labels = list(set(y))
+    label_counts = np.zeros(shape=(len(labels)), dtype=int) # init counter vector
+    y = y.astype(int)
+    for y_ in y:
+        label_counts[y_] += 1
+    min_sample_count = np.min(label_counts) # find min count
+    # init X and y vectors that will be filled and returned
+    X_leveled = np.array([], dtype=float) 
+    y_leveled = np.array([], dtype=int)
+    for l in tqdm.tqdm(labels):
+        i = 0
+        j = 0
+        while i != min_sample_count:
+            if y[j] == l:
+                if X_leveled.shape == (0,):
+                    X_leveled = np.array([X[j]], dtype=float) 
+                else:
+                    X_leveled = np.append(X_leveled, [X[j]], axis=0)
+                y_leveled = np.append(y_leveled, [y[j]])
+                i+=1
+            j+=1
+    return X_leveled, y_leveled

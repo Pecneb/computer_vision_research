@@ -11,7 +11,7 @@ from yolov7.utils.torch_utils import select_device, load_classifier
 
 CONFIG = "yolov7/cfg/deploy/yolov7.yaml"
 WEIGHTS = "yolov7/yolov7.pt"
-IMGSZ = 320 
+IMGSZ = 640 
 STRIDE = 32
 DEVICE = "0" 
 CLASSIFY = False 

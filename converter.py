@@ -13,13 +13,14 @@ import numpy as np
 from tqdm import tqdm
 from dataManagementClasses import TrackedObject
 from copy import deepcopy
+from itertools import starmap
 
 def mainmodule_function(args): 
     for db in tqdm(args.database, desc="Database converted."):
         tracks2joblib(db, args.n_jobs)
 
 def submodule_function(args):
-    trackslabels2joblib(args.database[0], args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.cluster_dimensions)
+    trackslabels2joblib(args.database[0], args.output, args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.cluster_dimensions)
 
 def submodule_function_2(args):
     mergeDatasets(args.database, args.output)
@@ -31,8 +32,8 @@ def submodule_function_3(args):
         raise FileNotFoundError()
     ret, img = cap.read()
     if ret:
-        downscale_TrackedObjects(trackedObjects, img)
-        dump(trackedObjects, args.database[0], compress="lz4")
+        downscaled = downscale_TrackedObjects(trackedObjects, img)
+        dump(downscaled, args.database[0], compress="lz4")
     else:
         raise IOError()
 
@@ -42,23 +43,6 @@ def submodule_function_4(args):
         new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
         dump(new_trackedOjects, db, compress="lz4")
 
-def submodule_function_5(args):
-    for db in tqdm(args.database):
-        trackedObjects = load_joblib_tracks(db)
-        trackedObjects_new = []
-        for obj in trackedObjects:
-            tmp = deepcopy(obj)
-            tmp.history_VX_calculated = np.diff(tmp.history_X)
-            tmp.history_VX_calculated = np.insert(tmp.history_VX_calculated, 0, [0])
-            tmp.history_VY_calculated = np.diff(tmp.history_Y)
-            tmp.history_VY_calculated = np.insert(tmp.history_VY_calculated, 0, [0])
-            tmp.history_AX_calculated = np.diff(tmp.history_VX_calculated)
-            tmp.history_AX_calculated = np.insert(tmp.history_AX_calculated, 0, [0,0])
-            tmp.history_AY_calculated = np.diff(tmp.history_VY_calculated)
-            tmp.history_AY_calculated = np.insert(tmp.history_AY_calculated, 0, [0,0])
-            trackedObjects_new.append(tmp)
-        dump(trackedObjects_new, db, compress="lz4")
-
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-db", "--database", help="Path to database.", type=str, nargs='+')
@@ -67,7 +51,7 @@ def main():
 
     subparser = argparser.add_subparsers(help="Submodules.")
     
-    parser_training_dataset = subparser.add_parser("training", help="Extract the clustered track dataset with labels, for classifier training.")
+    parser_training_dataset = subparser.add_parser("optics-cluster", help="Extract the clustered track dataset with labels, for classifier training.")
     #argparser.add_argument("--training", help="Extract the filtered tracks with labels.", action="store_true", default=False)
     parser_training_dataset.add_argument("--min_samples", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--max_eps", help="Parameter for optics clustering", default=np.inf, type=float)
@@ -75,6 +59,7 @@ def main():
     parser_training_dataset.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--threshold", help="Threshold for track filtering. The distance to the edges of the camera footage.", default=0.5, type=float)
     parser_training_dataset.add_argument("--cluster_dimensions", choices=["4D", "6D"], help="Choose feature vector type for clustering.", default="6D")
+    parser_training_dataset.add_argument("--output", type=str, help="Output path.")
     parser_training_dataset.set_defaults(func=submodule_function)
 
     parser_mergeDatasets = subparser.add_parser("merge", help="Merge two or more joblib datasets.")
@@ -87,9 +72,6 @@ def main():
 
     old_to_new_parser = subparser.add_parser("old2new", help="Update old TrackedObject dataset with history_X and history_Y fields.")
     old_to_new_parser.set_defaults(func=submodule_function_4)
-
-    velacc_parser = subparser.add_parser("updateVelocityAccelarationVectors", help="Update old TrackedObject dataset with history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated fields.")
-    velacc_parser.set_defaults(func=submodule_function_5)
 
     args = argparser.parse_args()
     args.func(args)

@@ -44,7 +44,7 @@ def parseArgs():
     parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
     parser.add_argument("--max_iou_distance", type=float, default=0.7)
     parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
-    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['1', '2','3'], default='2')
+    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['1', '2','3', '4'], default='2')
     
     args = parser.parse_args()
     return args
@@ -174,23 +174,6 @@ def feature_at_idx(track: TrackedObject, frameidx: int):
     vy_2 = track.history[lastidx].VY
     return np.array([x_0, y_0, vx_0, vy_0, x_1, y_1, x_2, y_2, vx_2, vy_2])
 
-def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
-        """Rescale normalized coordinates with the given frame sizes.
-
-        Args:
-            featureVector (np.ndarray): Feature vector of the track.
-            framewidth/ratio (int): Width of the video frame. 
-            frameheight (int): Height of the video frame. 
-
-        Returns:
-            np.ndarray: upscaled feature vector
-        """
-        ratio = framewidth / frameheight
-        return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], framewidth/ratio*featureVector[2],
-                        frameheight*featureVector[3], framewidth/ratio*featureVector[4], frameheight*featureVector[5],
-                        framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
-                        frameheight*featureVector[9]])
-
 def prediction_paralell(t: TrackedObject, model: OneVSRestClassifierExtended, frame: np.ndarray, framewidth: int, frameheight: int, cluster_centroids: dict, cluster_centroids_upscaled: dict, feature_v3: bool = False):
     """Prediction algorithm for paralellism.
 
@@ -234,7 +217,10 @@ def main():
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
     model = load_model(args.model)
+    model.n_jobs = 18
     dataset = load_joblib_tracks(args.train_tracks) 
+    if type(dataset[0]) != dict:
+        raise TypeError("Bad type of dataset file. The train_tracks dataset should contain clustered data. List containing dicts with keys: track, class.")
     if args.all_tracks:
         all_tracks = load_joblib_tracks(args.all_tracks)
 
@@ -293,13 +279,18 @@ def main():
                             feature = feature_at_idx(t, frameidx)
                             if feature is not None:
                                 predictions = model.predict(np.array([feature]))
-                                upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
+                                upscaledFeature = t.upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
                                 centroids = [cluster_centroids_upscaled[p[0]] for p in predictions]
                                 draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
                 else:
                     for t in history:
                             # feature = feature_at_idx(t, frameidx)
-                            feature = t.feature_(VERSION_3)
+                            if args.feature_version == '3':
+                                feature = t.feature_v3_()
+                            if args.feature_version == '4':
+                                feature = t.feature_v4_()
+                            else:
+                                feature = t.feature_()
                             if t.isMoving:
                                 if feature is not None:
                                     if VERSION_3:
