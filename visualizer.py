@@ -217,6 +217,7 @@ def main():
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
     model = load_model(args.model)
+    model.n_jobs = 18
     dataset = load_joblib_tracks(args.train_tracks) 
     if type(dataset[0]) != dict:
         raise TypeError("Bad type of dataset file. The train_tracks dataset should contain clustered data. List containing dicts with keys: track, class.")

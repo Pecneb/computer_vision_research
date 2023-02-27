@@ -314,8 +314,8 @@ def main():
     databaseLogger.closeConnection(db_connection)
     
     # save trackedObjects into joblib database
-    downscale_TrackedObjects(buffer2joblibTracks, img) 
-    dump(buffer2joblibTracks, path2joblib)
+    downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img) 
+    dump(downscaled_tracks, path2joblib)
     print("Joblib database succesfully saved!")
 
 if __name__ == "__main__":

@@ -711,6 +711,41 @@ def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_s
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
 
+def make_feature_vectors_version_five(trackedObjects: list[TrackedObject], max_stride: int, labels: np.ndarray):
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = 3
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(t.history_X.shape[0]-max_stride):
+            if stride < max_stride:
+                midx = stride // 2 
+                end_idx = stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[0], t.history_Y[0], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[midx], t.history_Y[end_idx-2],
+                    t.history_X[midx], t.history_Y[end_idx-1],
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                stride += 1
+            else:
+                midx = j + (stride // 2)
+                end_idx = j + stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[j], t.history_Y[j], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
+
 def iter_minibatches(X: np.ndarray, y: np.ndarray, batch_size: int):
     """Generate minibatches for training.
 
@@ -911,7 +946,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
-def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15):
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: bool = False):
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
@@ -943,6 +978,9 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
 
     X = X[y > -1]
     y = y[y > -1]
+
+    if level:
+        X, y = level_features(X, y)
 
     """X_train = []
     y_train = []
@@ -1151,7 +1189,7 @@ def downscale_TrackedObjects(trackedObjects: list[TrackedObject], img: np.ndarra
     """
     ret_trackedObjects = []
     aspect_ratio = img.shape[1] / img.shape[0]
-    for o in trackedObjects:
+    for o in tqdm.tqdm(trackedObjects, desc="Downscale"):
         t = deepcopy(o)
         t.history_X = t.history_X / img.shape[1] * aspect_ratio 
         t.history_Y = t.history_Y / img.shape[0]
@@ -1279,6 +1317,7 @@ def level_features(X: np.ndarray, y: np.ndarray):
         raise ValueError("Number of samples and number of labels should be equal.")
     labels = list(set(y))
     label_counts = np.zeros(shape=(len(labels)), dtype=int) # init counter vector
+    y = y.astype(int)
     for y_ in y:
         label_counts[y_] += 1
     min_sample_count = np.min(label_counts) # find min count
