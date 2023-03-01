@@ -1,17 +1,28 @@
 \documentclass{article}
 \usepackage{graphicx}
+\usepackage[numbers]{natbib}
 
 \begin{titlepage}
     \title{Járművek mozgásának előrejelzése gépi tanulási módszerrel}
     \author{Peter Bence}
     \date{2023 Februar}
-
 \end{titlepage}
 
 
 \begin{document}
+    \bibliographystyle{plainnat}
     \maketitle
     \begin{abstract}
-        Járművek mozgásának előrejelzése kereszteződésekben egy komplex feladat. Matematikai, fizikai, statisztikai és neurális háló modellekkel való megoldások születtek erre a problémára.
+        Járművek mozgásának előrejelzése kereszteződésekben egy komplex és fontos feladat gépi látás 
+        és gépi tanulás téren. Matematikai, fizikai, statisztikai és neurális háló modellekkel való 
+        megoldások születtek erre a problémára.\cite{1238912}\cite{6696982}\cite{8186191}\cite{8317943} 
+        Önvezetés téren is sokan kutatnak e probléma megoldása miatt. 
+        Én egy kicsit más szemszögből közelítettem meg ezt a problémát. Madártávlatból felvett felvételekből
+        nyertem ki járművek trajektóriájit YOLO konvolúciós neurális háló\cite{wang2022yolov7} és 
+        DeepSORT\cite{Wojke2018deep}\cite{Wojke2017simple} objektum követő algoritmus segítségével.
+        Klaszterezéssel felfedtem a szabályos-ságokat, majd ezek szabályosságok alapján klasszifikációs
+        modelleket taní-tottam be.
     \end{abstract}
+    \tableofcontents
+    \bibliography{biblio}
 \end{document}
