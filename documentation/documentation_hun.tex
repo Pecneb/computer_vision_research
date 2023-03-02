@@ -1,27 +1,41 @@
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage[numbers]{natbib}
+\usepackage{float}
 
 \begin{titlepage}
     \title{Járművek mozgásának előrejelzése gépi tanulási módszerrel}
-    \author{Peter Bence}
-    \date{2023 Februar}
+    \author{Péter Bence\\Mérnökinformatika BSc}
+    \date{2023 Február}
 \end{titlepage}
 
 
 \begin{document}
     \bibliographystyle{plainnat}
     \maketitle
+    \begin{figure}[H]\centering
+        \includegraphics[width=1\columnwidth]{sze_givk_logo.png}
+    \end{figure}
+    \newpage
     \begin{abstract}
-        Járművek mozgásának előrejelzése kereszteződésekben egy komplex és fontos feladat gépi látás 
-        és gépi tanulás téren. Matematikai, fizikai, statisztikai és neurális háló modellekkel való 
-        megoldások születtek erre a problémára.\cite{1238912}\cite{6696982}\cite{8186191}\cite{8317943} 
-        Önvezetés téren is sokan kutatnak e probléma megoldása miatt. 
-        Én egy kicsit más szemszögből közelítettem meg ezt a problémát. Madártávlatból felvett felvételekből
-        nyertem ki járművek trajektóriájit YOLO konvolúciós neurális háló\cite{wang2022yolov7} és 
-        DeepSORT\cite{Wojke2018deep}\cite{Wojke2017simple} objektum követő algoritmus segítségével.
-        Klaszterezéssel felfedtem a szabályos-ságokat, majd ezek szabályosságok alapján klasszifikációs
-        modelleket taní-tottam be.
+        Ebben a kutatásban gépi tanulási módszerrel törekszünk megoldani
+        járművek trajektóriájának előrejelzését komplex forgalmi helyzetekben.
+        Madártávlatból felvett felvételekből nyertünk ki járművek trajektóriájit 
+        YOLO\cite{wang2022yolov7} konvolúciós neurális háló és DeepSORT\cite{Wojke2018deep} 
+        objektum követő algoritmus segítségével. Különböző klaszterezése algoritmusokat 
+        tesztel-tünk, többfajta tulajdonság vektorral, hogy minél pontosabban kategorizálni 
+        tudjuk a járművek mozgását. Ezek kategóriák felhasználásával klasszifikációs modelleket 
+        tanítottunk be, több fajta tulajdonság vektorral, amiknek pontosságát megmértük 
+        és összehasonlítottuk. Kutatásunk során a teljes tanítási és tesztelési folyamat 
+        gyorsítására és automatizálásá-ra nagy hangsúlyt fektettünk, ennek megoldására egy 
+        keretrendszert fejlesztettünk ki. A kutatásból azt a tanulságot tudjuk leszűrni,
+        hogy a klaszterezési folyamatot nehéz automatizálni, mivel a klaszterezéshez
+        használt modellek hiperparamétereit nem lehet univerzálisan minden ke-reszteződésre 
+        felhasználni. A klasszifikációhoz használt modellek nem csak pontosnak,
+        hanem gyorsnak is kell lennie, ha valós időben akarjuk használni.
+        A detektálásnál felhasznált DeepSORT\cite{Wojke2018deep} objektum követő algoritmus
+        hiperparamétereit is gondosan meg kell választani, hogy ne legyenek anomáliák a tanító
+        adathalmazban.
     \end{abstract}
     \tableofcontents
     \bibliography{biblio}
