@@ -3,13 +3,13 @@
 \usepackage[numbers]{natbib}
 \usepackage{float}
 \usepackage{hyperref}
+\usepackage{comment}
 
 \begin{titlepage}
-    \title{Járművek mozgásának előrejelzése gépi tanulási módszerrel}
+    \title{Járművek trajektóriájinak előrejelzése machine learning módszerrel}
     \author{Péter Bence\\Mérnökinformatika BSc}
     \date{2023 Február}
 \end{titlepage}
-
 
 \begin{document}
     \bibliographystyle{plainnat}
@@ -19,25 +19,46 @@
     \end{figure}
     \newpage
     \begin{abstract}
-        Ebben a kutatásban gépi tanulási módszerrel törekszünk megoldani
-        járművek trajektóriájának előrejelzését komplex forgalmi helyzetekben.
-        Madártávlatból felvett felvételekből nyertünk ki járművek trajektóriájit 
-        YOLO\cite{wang2022yolov7} konvolúciós neurális háló és DeepSORT\cite{Wojke2018deep} 
-        objektum követő algoritmus segítségével. Különböző klaszterezése algoritmusokat 
-        tesztel-tünk, többfajta tulajdonság vektorral, hogy minél pontosabban kategorizálni 
-        tudjuk a járművek mozgását. Ezek kategóriák felhasználásával klasszifikációs modelleket 
-        tanítottunk be, több fajta tulajdonság vektorral, amiknek pontosságát megmértük 
-        és összehasonlítottuk. Kutatásunk során a teljes tanítási és tesztelési folyamat 
-        gyorsítására és automatizálásá-ra nagy hangsúlyt fektettünk, ennek megoldására egy 
-        keretrendszert fejlesztettünk ki. A kutatásból azt a tanulságot tudjuk leszűrni,
-        hogy a klaszterezési folyamatot nehéz automatizálni, mivel a klaszterezéshez
-        használt modellek hiperparamétereit nem lehet univerzálisan minden ke-reszteződésre 
-        felhasználni. A klasszifikációhoz használt modellek nem csak pontosnak,
-        hanem gyorsnak is kell lennie, ha valós időben akarjuk használni.
-        A detektálásnál felhasznált DeepSORT\cite{Wojke2018deep} objektum követő algoritmus
-        hiperparamétereit is gondosan meg kell választani, hogy ne legyenek anomáliák a tanító
-        adathalmazban. A forráskód megtalálható ebben a github repositoriban \url{https://www.github.com/Pecneb/computer_vision_research}
+        Az ITS (intelligent transportation system) egyre nagyobb teret 
+        hódít napjainkban és rengeteg különböző területen alkalmazzák 
+        ezeket a rendszereket. A közlekedési csomópontok elemzése egy 
+        frekventált terület az ITS alkalmazásában. Ebben a kutatásban 
+        egy trajektória osztályozó módszert ismertetünk, amely objektum 
+        detektálás és objektumkövetés segítségével elemezi a közlekedési 
+        csomópontokban elhaladó járművek mozgását. A mozgásuk alapján 
+        automatikusan klaszterezi a trajektóriákat, majd gépi tanulás 
+        segítségével predikciót ad az újonnan belépő járművek kilépési 
+        pontjára. A módszerhez 5 különböző közlekedési csomópontban 
+        készített saját videó adatbázisunkat használtuk fel.
+        A tesztelt klaszterezési mód-szerek közül az OPTICS algoritmus 
+        bizonyult legjobbnak trajektórák klasz-terezésére.
+        Összehasonlítottunk több különböző klasszifikációs módszert 
+        a legpontosabb predikció eléréséhez, amelyek: KNN, SVM, GP, DT, 
+        GNB, MLP, SGD. A tanul-mányban bemutatott eljárások közül az 
+        SVM adta a legpontosabb 90\%-os eredményt.
+        
+        A forráskód megtalálható ebben a github repositoriban 
+        \url{https://www.github.com/Pecneb/computer_vision_research}
+        
+        %Ebben a kutatásban gépi tanulási módszerrel törekszünk megoldani
+        %járművek trajektóriájának előrejelzését komplex forgalmi helyzetekben.
+        %Madártávlatból felvett felvételekből nyertünk ki járművek trajektóriájit 
+        %YOLO konvolúciós neurális háló és DeepSORT objektum követő algoritmus segítségével. 
+        %Különböző klaszterezése algoritmusokat 
+        %tesztel-tünk, többfajta feature vectorral, hogy minél pontosabban kategorizálni 
+        %tudjuk a járművek mozgását. Ezek kategóriák felhasználásával klasszifikációs modelleket 
+        %tanítottunk be, több fajta feature vectorral, amik-nek pontosságát megmértük 
+        %és összehasonlítottuk. Kutatásunk során a teljes tanítási és tesztelési folyamat 
+        %gyorsítására és automatizálására nagy hang-súlyt fektettünk, ennek megoldására egy 
+        %keretrendszert fejlesztettünk ki. A kutatásból azt a tanulságot tudjuk leszűrni,
+        %hogy a klaszterezési folyamatot nehéz automatizálni, mivel a klaszterezéshez
+        %használt modellek hiperparamétereit nem lehet univerzálisan minden ke-reszteződésre 
+        %felhasználni. A klasszifikációhoz használt modellek nem csak pontosnak,
+        %hanem gyorsnak is kell lennie, ha valós időben akarjuk használni.
+        %A detektálásnál felhasznált DeepSORT objektum követő algoritmus
+        %hiperparamétereit is gondosan meg kell választani, hogy ne legyenek anomáliák a tanító
+        %adathalmazban. A forráskód megtalálható ebben a github repositoriban \url{https://www.github.com/Pecneb/computer_vision_research}
     \end{abstract}
-    \tableofcontents
-    \bibliography{biblio}
+    %\tableofcontents
+    %\bibliography{biblio}
 \end{document}
