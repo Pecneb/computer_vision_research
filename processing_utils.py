@@ -46,8 +46,8 @@ def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x
         height (float): Height of the bounging box of the object. 
         vx (float): Velocity on the X axis. 
         vy (float): Velocity on the Y axis. 
-        ax (float): Accelaration on the X axis. 
-        ay (float): Accelaration on the Y axis. 
+        ax (float): Acceleration on the X axis. 
+        ay (float): Acceleration on the Y axis. 
 
     Returns:
         Detection: The Detection object, which is to be returned. 
@@ -60,7 +60,7 @@ def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x
     retDet.AY = ay
     return retDet
 
-def trackedObjectFactory(detections: list) -> TrackedObject:
+def trackedObjectFactory(detections: tuple) -> TrackedObject:
     """Create trackedObject object from list of detections
 
     Args:
@@ -69,20 +69,22 @@ def trackedObjectFactory(detections: list) -> TrackedObject:
     Returns:
         TrackedObject:  trackedObject
     """
-    tmpObj = TrackedObject(detections[0].objID, detections[0], len(detections))
-    tmpObj.label = detections[-1].label
-    tmpObj.history_X = np.array([])
-    tmpObj.history_Y = np.array([])
-    for det in detections:
-        tmpObj.history.append(det)
-        tmpObj.history_X = np.append(tmpObj.history_X, [det.X])
-        tmpObj.history_Y = np.append(tmpObj.history_Y, [det.Y])
-    tmpObj.X = detections[-1].X
-    tmpObj.Y = detections[-1].Y
-    tmpObj.VX = detections[-1].VX
-    tmpObj.VY = detections[-1].VY
-    tmpObj.AX = detections[-1].AX
-    tmpObj.AY = detections[-1].AY
+    history, history_X, history_Y, history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated = detections
+    tmpObj = TrackedObject(history[0].objID, history[0], len(detections))
+    tmpObj.label = detections[0][-1].label
+    tmpObj.history = history
+    tmpObj.history_X = history_X
+    tmpObj.history_Y = history_Y
+    tmpObj.history_VX_calculated = history_VX_calculated
+    tmpObj.history_VY_calculated = history_VY_calculated
+    tmpObj.history_AX_calculated = history_AX_calculated
+    tmpObj.history_AY_calculated = history_AY_calculated
+    tmpObj.X = detections[0][-1].X
+    tmpObj.Y = detections[0][-1].Y
+    tmpObj.VX = detections[0][-1].VX
+    tmpObj.VY = detections[0][-1].VY
+    tmpObj.AX = detections[0][-1].AX
+    tmpObj.AY = detections[0][-1].AY
     return tmpObj
 
 def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
@@ -96,20 +98,31 @@ def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
     """
     return 1 - Y
 
-def detectionParser(rawDetectionData) -> list:
-    """Parse raw detection data loaded from database.
-    Returns a list of detections. 
+def detectionParser(rawDetectionData) -> tuple:
+    """Convert raw detection data loaded from db to class Detection and numpy arrays.
 
     Args:
-        rawDetectionData (list): list of raw detection entries
+        rawDetectionData (list): Raw values loaded from db 
 
     Returns:
-        detections: list of parsed detections 
+        tuple: tuple containing detections, and all the history numpy arrays  
     """
     detections = []
+    history_X = np.array([])
+    history_X = np.array([])
+    history_VX_calculated = np.array([])
+    history_VY_calculated = np.array([])
+    history_AX_calculated = np.array([])
+    history_AY_calculated = np.array([])
     for entry in rawDetectionData:
         detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
-    return detections 
+        history_X = np.append(history_X, [entry[3]])
+        history_Y = np.append(history_Y, [entry[4]])
+        history_VX_calculated = np.append(history_VX_calculated, [entry[12]])
+        history_VY_calculated = np.append(history_VY_calculated, [entry[13]])
+        history_AX_calculated = np.append(history_AX_calculated, [entry[14]])
+        history_AY_calculated = np.append(history_AY_calculated, [entry[15]])
+    return (detections, history_X, history_Y, history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated)
 
 def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
     """Takes an objID and the path 2 database, then returns a trackedObject object if detections can be assigned to the object.
@@ -123,7 +136,7 @@ def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
     """
     rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObjID)
     if len(rawDets) > 0:
-        return trackedObjectFactory(detectionParser(rawDets))
+        retTO = trackedObjectFactory(detectionParser(rawDets))
     else:
         return False
 
@@ -586,7 +599,7 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
 def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
-    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+    this last detection reaches the end of the history.
 
     Args:
         trackedObjects (list): Tracked objects. 
@@ -595,44 +608,18 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
     Returns:
         tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
     """
-    from visualizer import aoiextraction
     X_featurevectors = []
     y_newLabels = []
-    cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
     for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
         if step >= 2:
             for j in range(step, len(trackedObjects[i].history), step):
                 midx = j//2
-                """ X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
-                                                #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
-                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
-                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
-                                                #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
-                                                cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
-                                                cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,])) """
                 fv = np.array([
                             trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
-                            #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
                             trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
-                            trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
-                            #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
-                            ])
-                """for c in cluster_centroids:
-                    fv = np.append(fv, [
-                                        cluster_centroids[c][0] - trackedObjects[i].history[0].X, 
-                                        cluster_centroids[c][1] - trackedObjects[i].history[0].Y, 
-                                        cluster_centroids[c][0] - trackedObjects[i].history[midx].X, 
-                                        cluster_centroids[c][1] - trackedObjects[i].history[midx].Y,
-                                        cluster_centroids[c][0] - trackedObjects[i].history[j].X, 
-                                        cluster_centroids[c][1] - trackedObjects[i].history[j].Y,
-                                        ]
-                                    )"""
+                            trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y])
                 X_featurevectors.append(fv)
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
@@ -642,7 +629,7 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
 def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
-    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+    this last detection reaches the end of the history. 
 
     Args:
         trackedObjects (list): Tracked objects. 
@@ -654,7 +641,6 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     from visualizer import aoiextraction
     X_featurevectors = []
     y_newLabels = []
-    cluster_centroids = aoiextraction(trackedObjects, labels)
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
     for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
         step = (len(trackedObjects[i].history))//k
@@ -662,23 +648,24 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
             for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
                 midx = j//2
                 X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
-                                                #trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
                                                 trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
-                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
-                                                #trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY
-                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[0].X, 
-                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[0].Y, 
-                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[midx].X, 
-                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[midx].Y,
-                                                #cluster_centroids[labels[i]][0] - trackedObjects[i].history[j].X, 
-                                                #cluster_centroids[labels[i]][1] - trackedObjects[i].history[j].Y,
-                                                ]))
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y]))
                 y_newLabels.append(labels[i])
                 featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_stride: int, labels: np.ndarray):
+def make_feature_vectors_version_four(trackedObjects: list, max_stride: int, labels: np.ndarray):
+    """Make multiple feature vectors from one object's history. When max_stride is reached, use sliding window method to create the vectors.
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+        max_stride (int): max window size 
+        labels (np.ndarray): cluster label of each tracked object 
+
+    Returns:
+        _type_: _description_
+    """
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
     metadata = []
@@ -711,7 +698,25 @@ def make_feature_vectors_version_four(trackedObjects: list[TrackedObject], max_s
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
 
-def make_feature_vectors_version_five(trackedObjects: list[TrackedObject], max_stride: int, labels: np.ndarray):
+def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X: np.ndarray, Y: np.ndarray, start_insert_idx: int, feature_vector: np.ndarray):
+    """Insert coordinates into feature vector starting from the start_insert_idx index.
+
+    Args:
+        start (int): first index of inserted coordinates 
+        stop (int): stop index of coordinate vectors, which will not be inserted, this is the open end of the limits
+        n_weights (int): number of weights to be inserted
+        X (ndarray): x coordinate array
+        Y (ndarray): y coordinate array
+        start_insert_idx (int): the index where the coordinates will be inserted into the feature vector 
+    """
+    retv = feature_vector.copy()
+    insert_idx = start_insert_idx
+    for widx in range(start, stop, (stop-start)//n_weights):
+        retv = np.insert(retv, insert_idx, [X[widx], Y[widx]])
+        insert_idx += 2
+    return retv 
+
+def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, max_stride: int, n_weights: int):
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
     metadata = []
@@ -721,30 +726,28 @@ def make_feature_vectors_version_five(trackedObjects: list[TrackedObject], max_s
             continue
         for j in range(t.history_X.shape[0]-max_stride):
             if stride < max_stride:
-                midx = stride // 2 
+                midx = stride // 2
                 end_idx = stride-1
-                X_feature_vectors = np.append(X_feature_vectors, np.array([
-                    t.history_X[0], t.history_Y[0], # enter coordinates
-                    t.history_X[midx], t.history_Y[midx], # mid 
-                    t.history_X[midx], t.history_Y[end_idx-2],
-                    t.history_X[midx], t.history_Y[end_idx-1],
-                    t.history_X[end_idx], t.history_Y[end_idx] # exit
-                ])).reshape(-1, 6)
+                feature_vector = np.array([t.history_X[0], t.history_Y[0],
+                                        t.history_X[end_idx], t.history_Y[end_idx]])
+                feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
                 metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
                                             t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]))
                 stride += 1
             else:
                 midx = j + (stride // 2)
                 end_idx = j + stride-1
-                X_feature_vectors = np.append(X_feature_vectors, np.array([
-                    t.history_X[j], t.history_Y[j], # enter coordinates
-                    t.history_X[midx], t.history_Y[midx], # mid 
-                    t.history_X[end_idx], t.history_Y[end_idx] # exit
-                ])).reshape(-1, 6)
+                feature_vector = np.array([t.history_X[j], t.history_Y[j],
+                                        t.history_X[end_idx], t.history_Y[end_idx]])
+                feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
+                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]))
                 metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
                                             t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
             y_new_labels = np.append(y_new_labels, labels[i])
-    return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
+    return np.array(X_feature_vectors).reshape((-1, 4+n_weights*2)), np.array(y_new_labels, dtype=int), np.array(metadata)
 
 def iter_minibatches(X: np.ndarray, y: np.ndarray, batch_size: int):
     """Generate minibatches for training.

@@ -47,7 +47,7 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs='+', help="Path to video.")
     parser.add_argument("--k_velocity", type=int, default=10, help="K value for differentiation of velocity.")
-    parser.add_argument("--k_accelaration", type=int, default=2, help="K value for differentiation of accelaration.")
+    parser.add_argument("--k_acceleration", type=int, default=2, help="K value for differentiation of acceleration.")
     parser.add_argument("--output", help="Path of database without extension.", required=True)
     parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
     parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
@@ -258,7 +258,7 @@ def main():
                 targets = getTargets(detections, frameNumber, targetNames=("car"))
 
                 # update track history
-                updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks, k_velocity=args.k_velocity, k_accelaration=args.k_accelaration)
+                updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks, k_velocity=args.k_velocity, k_acceleration=args.k_acceleration)
 
                 # draw bounding boxes of filtered detections
                 if args.show:
@@ -277,6 +277,8 @@ def main():
                                         obj.history[-1].Width, 
                                         obj.history[-1].Height,
                                         obj.VX, obj.VY, obj.AX, obj.AY, 
+                                        obj.history_VX_calculated[-1], obj.history_VY_calculated[-1],
+                                        obj.history_AX_calculated[-1], obj.history_AY_calculated[-1],
                                         obj.futureX, obj.futureY
                                         ])
 

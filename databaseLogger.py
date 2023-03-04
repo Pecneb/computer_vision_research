@@ -23,16 +23,16 @@ import os
 from string import ascii_uppercase
 import numpy
 
-INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold)
-                    VALUES(?,?,?,?,?,?,?,?)"""
+INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold, k_velocity, k_acceleration)
+                    VALUES(?,?,?,?,?,?,?,?,?,?)"""
 
 INSERT_REGRESSION = """INSERT INTO regression (linearFunction, polynomFunction, polynomDegree, trainingPoints)
                     VALUES(?,?,?,?)"""
 
 INSERT_OBJECT = """INSERT INTO objects (objID, label) VALUES(?,?)"""
 
-INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy, ax, ay)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?)"""
+INSERT_DETECTION = """INSERT INTO detections (objID, frameNum, confidence, x, y, width, height, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
 
 INSERT_PREDICTION = """INSERT INTO predictions (objID, frameNum, idx, x, y)
                     VALUES(?,?,?,?,?)"""
@@ -61,6 +61,10 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 vy REAL NOT NULL,
                                 ax REAL NOT NULL,
                                 ay REAL NOT NULL,
+                                vx_c REAL NOT NULL,
+                                vy_c REAL NOT NULL,
+                                ax_c REAL NOT NULL,
+                                ay_c REAL NOT NULL,
                                 FOREIGN KEY(objID) REFERENCES objects(objID)
                             );
             CREATE TABLE IF NOT EXISTS predictions (
@@ -78,7 +82,9 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS objects (
                                 imgsize INTEGER NOT NULL,
                                 stride INTEGER NOT NULL,
                                 confidence_threshold REAL NOT NULL,
-                                iou_threshold REAL NOT NULL
+                                iou_threshold REAL NOT NULL,
+                                k_velocity REAL NOT NULL,
+                                k_acceleration REAL NOT NULL
                             );
             CREATE TABLE IF NOT EXISTS regression (
                                 linearFunction TEXT NOT NULL,
@@ -92,24 +98,54 @@ QUERY_LASTFRAME = """SELECT frameNum
                      ORDER BY frameNum DESC
                      LIMIT 1"""
 
-def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float, ax: float, ay: float):
-    """Downscale img0 bbox values to number between 0.0 - 1.0. 
-    The output of this function should be the input of logDetection().
-    Downscales coordinates, bbox width and height to floats with img0.shape.
+def dowscalecoord(scalenum: float, coord: float, a: float):
+    """Downscale coordinate number with given scale number and aspect ratio.
 
     Args:
-        x (int): center x coord
-        y (int): center y coord
-        w (int): width of bbox
-        h (int): height of bbox
-        vx (float) : velocity x
-        vy (float) : velocity y
-        
-    Return:
-        return x, y, w, h, vx, vy
+        scalenum (float): number to scale the coordinate number with
+        coord (float): coordinate 
+        a (float): aspect ratio 
+
+    Returns:
+        float: downscaled value
+    """
+    return ((coord / scalenum) * a)
+
+def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float, ax: float, ay: float, vx_c: float, vy_c: float, ax_c: float, ay_c: float):
+    """Downscale bounding box values to with given image's width and height using aspect ratio.
+
+    Args:
+        img0 (numpy.ndarray): 3D numpy array containing BGR values shape(height, width, 3)
+        x (int): coordinate x 
+        y (int): coordinate y 
+        w (int): width of the bounding box 
+        h (int): height of the bounding box 
+        vx (float): velocity of dimesion x 
+        vy (float): velocity of dimesion y
+        ax (float): acceleration of dimension x 
+        ay (float): acceleration of dimension y
+        vx_c (float): differentiation of x
+        vy_c (float): differentiation of y
+        ax_c (float): differentitation if vx_c 
+        ay_c (float): differentiation of vy_c
+
+    Returns:
+        tuple: tuple of downscaled values 
     """
     aspect_ratio = img0.shape[1] / img0.shape[0]
-    return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0],  (w / img0.shape[1]) * aspect_ratio, h / img0.shape[0], (vx / img0.shape[1]) * aspect_ratio, vy / img0.shape[0], (ax / img0.shape[1]) * aspect_ratio, ay / img0.shape[0]
+    rettup = (dowscalecoord(img0.shape[1], x, aspect_ratio), 
+              dowscalecoord(img0.shape[0], y, 1), 
+              dowscalecoord(img0.shape[1], w, aspect_ratio), 
+              dowscalecoord(img0.shape[0], h, 1), 
+              dowscalecoord(img0.shape[1], vx, aspect_ratio), 
+              dowscalecoord(img0.shape[0], vy, 1), 
+              dowscalecoord(img0.shape[1], ax, aspect_ratio), 
+              dowscalecoord(img0.shape[0], ay, 1),
+              dowscalecoord(img0.shape[1], vx_c, aspect_ratio),
+              dowscalecoord(img0.shape[0], vy_c, 1),
+              dowscalecoord(img0.shape[1], ax_c, aspect_ratio),
+              dowscalecoord(img0.shape[0], ay_c, 1))
+    return rettup 
 
 def prediction2float(img0: numpy.ndarray, x: float, y: float):
     """Downscale prediction coordinates to floats.
@@ -178,8 +214,12 @@ def closeConnection(conn : sqlite3.Connection):
     except Error as e:
         print(e)
 
-def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
-    confidence: float, x_coord: int, y_coord: int, width: int, height: int, x_vel: float, y_vel: float, x_acc: float, y_acc: float):
+def logDetection(
+        conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
+        confidence: float, x_coord: int, y_coord: int, width: int, height: int, 
+        x_vel: float, y_vel: float, x_acc: float, y_acc: float, x_vel_calc: float, 
+        y_vel_calc: float, x_acc_calc: float, y_acc_calc: float
+        ):
     """Logging detections to the database. Downscale bbox coordinates to floats. 
     Insert entry to database if there is no similar entry found.
 
@@ -199,8 +239,8 @@ def logDetection(conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, fra
     if not detectionExists(conn, objID, frameNum):
         try:
             cur = conn.cursor()
-            x, y, w, h, vx, vy, ax, ay = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel, x_acc, y_acc)
-            cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy, ax, ay))
+            x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel, x_acc, y_acc, x_vel_calc, y_vel_calc, x_acc_calc, y_acc_calc)
+            cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c))
             conn.commit()
             # print("Detection added to database.")
         except Error as e:
@@ -356,11 +396,13 @@ def logBuffer(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
     import tqdm
     for idx in tqdm.tqdm(range(len(buffer)), desc="Do not interrupt! Logging buffer to database!"):
         logDetection(conn, frame, 
-        buffer[idx][0], buffer[idx][1], buffer[idx][2], 
-        buffer[idx][3], buffer[idx][4], buffer[idx][5], 
-        buffer[idx][6], buffer[idx][7], buffer[idx][8], 
-        buffer[idx][9], buffer[idx][10])
-        logPredictions(conn, frame, buffer[idx][0], buffer[idx][1], buffer[idx][11], buffer[idx][12])
+            buffer[idx][0], buffer[idx][1], buffer[idx][2],                 # objID, frameID, confidence 
+            buffer[idx][3], buffer[idx][4],                                 # X, Y 
+            buffer[idx][5], buffer[idx][6],                                 # W, H 
+            buffer[idx][7], buffer[idx][8], buffer[idx][9], buffer[idx][10],# VX, VY, AX, AY
+            buffer[idx][11], buffer[idx][12],                               # VX_calculated, VY_calculated
+            buffer[idx][13], buffer[idx][14])                               # AX_calculated, AY_calculated 
+        #logPredictions(conn, frame, buffer[idx][0], buffer[idx][1], buffer[idx][15], buffer[idx][16])
 
 def logBufferSpeedy(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
     """Log buffer to the database after main loop is ended. 
@@ -382,17 +424,17 @@ def logBufferSpeedy(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list
     print("Dont interrupt! Logging buffer to database!")
     detections2log = []
     for buf in buffer:
-        x,y,w,h,vx,vy,ax,ay = bbox2float(frame, buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10])
-        detections2log.append((buf[0], buf[1], buf[2], x,y,w,h,vx,vy,ax,ay))
-    predictions2log = []
-    for i in range(len(buffer)):
-        for j in range(len(buffer[i][11])):
-            x,y = prediction2float(frame, buffer[i][11][j], buffer[i][12][j])
-            predictions2log.append((buffer[i][0], buffer[i][1], j, x, y))
+        x,y,w,h,vx,vy,ax,ay,vx_c,vy_c,ax_c,ay_c = bbox2float(frame, buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14])
+        detections2log.append((buf[0], buf[1], buf[2], x,y,w,h,vx,vy,ax,ay,vx_c,vy_c,ax_c,ay_c))
+    #predictions2log = []
+    #for i in range(len(buffer)):
+    #    for j in range(len(buffer[i][11])):
+    #        x,y = prediction2float(frame, buffer[i][11][j], buffer[i][12][j])
+    #        predictions2log.append((buffer[i][0], buffer[i][1], j, x, y))
     try:
         cur = conn.cursor()
         cur.executemany(INSERT_DETECTION, detections2log)
-        cur.executemany(INSERT_PREDICTION, predictions2log)
+        # cur.executemany(INSERT_PREDICTION, predictions2log)
         conn.commit()
         print("Buffer to database successfully logged!")
     except Error as e:

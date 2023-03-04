@@ -54,26 +54,36 @@ class Detection:
 
 @dataclass
 class TrackedObject():
-    """Class for storing a detected object's tracking history
-    
-       Fields:
-        objID(int): a unique identification number of the detected object
-        label(str): the label of detected object ex. car, person, etc.
-        history(list of Detections): list of Detection that are propably the same object 
-        futureX(int): the predicrted X position
-        futureY(int): the predicted Y position
-        isMoving(bool): True if object is in motion
-        time_since_update(int): keeping track of missed detections of the object
-        max_age(int): when time_since_update hits max_age, tracking is deleted
-        mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
-        X(int): last detected x coord of the object
-        Y(int): last detected y coord of the object
-        VX(float): last calculated velocity of X
-        VY(float): last calculated velocity of Y
-        bugged(int): int value to count stuck tracks, this happens when the program is running for a long time, this is a bit hacky but necessary, still dont know what causes this problem
-        Methods:
-         avgArea(): returns the average bbox area of all the detections in the history
-         update(): called when tracking can be updated
+    """This class is used to represent a tracked objects lifetime.
+
+
+    Attributes
+    ----------
+    objID : int
+        unique identification number of the object
+    label : str
+        class label of the object ie. car, person, etc.
+    futureX : list 
+        predicted X coordinates, this attribute is not used anymore, it is being held, due to compatibility reasons
+    futureY : list 
+        predicted Y coordinates, this attribute is not used anymore, it is being held, due to compatibility reasons
+    history : ndarray
+        a list of previous detections of the object        
+    history_X : ndarray
+        numpy array of previous X coordintates
+    history_Y : ndarray
+        numpy array of previous Y coordintates
+    history_VX_calculated : ndarray
+        the velocity of dimension X calculated from the history_X numpy array
+    history_VY_calculated : ndarray
+        the velocity of dimension Y calculated from the history_Y numpy array
+    history_AX_calculated : ndarray
+        the acceleration of dimension X calculated from the history_VX_calculated numpy array
+    history_VY_calculated : ndarray
+        the acceleration of dimension Y calculated from the history_VY_calculated numpy array
+
+    Returns:
+        _type_: _description_
     """
     objID: int
     label: int = field(init=False)
@@ -136,8 +146,8 @@ class TrackedObject():
         return np.average(areas)
     
     def updateAccel(self, new_vx, old_vx, new_vy, old_vy):
-        """Calculate accelaration based on kalman filters velocity.
-        Normal accelaration calculation (new_v - old_v) / (new_time - old_time).
+        """Calculate acceleration based on kalman filters velocity.
+        Normal acceleration calculation (new_v - old_v) / (new_time - old_time).
         The time between the two detection is the (new_time-old_time).
 
         Args:
@@ -264,8 +274,6 @@ class TrackedObject():
                         self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y])
 
-    #TODO: think about time delta, how to calculate it for the accelaration if we use -k for the velocity
-
     def update_velocity(self, k: int = 10):
         """Calculate velocity from X,Y coordinates.
         """
@@ -302,7 +310,7 @@ class TrackedObject():
             self.history_AX_calculated = np.append(self.history_AX_calculated, [dvx]) 
             self.history_AY_calculated = np.append(self.history_AY_calculated, [dvy])  
 
-    def update(self, detection=None, mean=None, k_velocity=10, k_accelaration=2, historyDepth = 30):
+    def update(self, detection=None, mean=None, k_velocity=10, k_acceleration=2, historyDepth = 30):
         """Update tracking
 
         Args:
@@ -313,8 +321,8 @@ class TrackedObject():
             self.history.append(detection)
             self.history_X = np.append(self.history_X, [detection.X])
             self.history_Y = np.append(self.history_Y, [detection.Y])
-            self.update_velocity()
-            self.update_accel()
+            self.update_velocity(k=k_velocity)
+            self.update_accel(k=k_acceleration)
             self.mean = mean 
             self.X = detection.X 
             self.Y = detection.Y
