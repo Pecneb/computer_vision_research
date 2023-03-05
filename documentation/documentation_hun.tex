@@ -13,11 +13,12 @@
 
 \begin{document}
     \bibliographystyle{plainnat}
-    \maketitle
-    \begin{figure}[H]\centering
-        \includegraphics[width=1\columnwidth]{sze_givk_logo.png}
-    \end{figure}
-    \newpage
+    \begin{titlepage}
+        \maketitle
+        \begin{figure}[H]\centering
+            \includegraphics[width=1\columnwidth]{sze_givk_logo.png}
+        \end{figure}
+    \end{titlepage}
     \begin{abstract}
         Az ITS (intelligent transportation system) egyre nagyobb teret 
         hódít napjainkban és rengeteg különböző területen alkalmazzák 
@@ -30,13 +31,12 @@
         segítségével predikciót ad az újonnan belépő járművek kilépési 
         pontjára. A módszerhez 5 különböző közlekedési csomópontban 
         készített saját videó adatbázisunkat használtuk fel.
-        A tesztelt klaszterezési mód-szerek közül az OPTICS algoritmus 
-        bizonyult legjobbnak trajektórák klasz-terezésére.
-        Összehasonlítottunk több különböző klasszifikációs módszert 
+        A tesztelt klaszterezési mód-szerek közül (OPTICS, BIRCH, KMeans, DBSCAN)
+        az OPTICS algoritmus bizonyult legjobbnak trajektórák klasz-terezésére.
+        Összehasonlí-tottunk több különböző klasszifikációs módszert 
         a legpontosabb predikció eléréséhez, amelyek: KNN, SVM, GP, DT, 
         GNB, MLP, SGD. A tanul-mányban bemutatott eljárások közül az 
         SVM adta a legpontosabb 90\%-os eredményt.
-        
         A forráskód megtalálható ebben a github repositoriban 
         \url{https://www.github.com/Pecneb/computer_vision_research}
         
@@ -60,5 +60,6 @@
         %adathalmazban. A forráskód megtalálható ebben a github repositoriban \url{https://www.github.com/Pecneb/computer_vision_research}
     \end{abstract}
     %\tableofcontents
+
     %\bibliography{biblio}
 \end{document}
