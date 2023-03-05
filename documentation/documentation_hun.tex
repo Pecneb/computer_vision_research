@@ -4,6 +4,7 @@
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{comment}
+\usepackage{ragged2e}
 
 \begin{titlepage}
     \title{Járművek trajektóriájinak előrejelzése machine learning módszerrel}
@@ -23,9 +24,11 @@
         Az ITS (intelligent transportation system) egyre nagyobb teret 
         hódít napjainkban és rengeteg különböző területen alkalmazzák 
         ezeket a rendszereket. A közlekedési csomópontok elemzése egy 
-        frekventált terület az ITS alkalmazásában. Ebben a kutatásban 
-        egy trajektória osztályozó módszert ismertetünk, amely objektum 
-        detektálás és objektumkövetés segítségével elemezi a közlekedési 
+        frekventált terület az ITS alkalmazásában.
+        Célunk, gépi látás és gépi tanulás felhasználásá-val, közlekedési
+        csomópontok elemzésének automatizálása és felgyorsítása. 
+        Ebben a kutatásban egy trajektória osztályozó módszert ismertetünk, amely objektum 
+        detektálás és objektumkövetés segítségével elemezi a közle-kedési 
         csomópontokban elhaladó járművek mozgását. A mozgásuk alapján 
         automatikusan klaszterezi a trajektóriákat, majd gépi tanulás 
         segítségével predikciót ad az újonnan belépő járművek kilépési 
@@ -37,6 +40,10 @@
         a legpontosabb predikció eléréséhez, amelyek: KNN, SVM, GP, DT, 
         GNB, MLP, SGD. A tanul-mányban bemutatott eljárások közül az 
         SVM adta a legpontosabb 90\%-os eredményt.
+        Ezt a pontosságot valós idejű futás közben 5 fps mellett érte el.
+        Ebből azt a következtetést lehet levonni, hogy jobb sebesség elérése
+        érdekében, vagy a feature vectorok dimenzióját kell csökkenteni, vagy
+        érdemes neurális hálót alkalmazni a klasszifikációhoz.
         A forráskód megtalálható ebben a github repositoriban 
         \url{https://www.github.com/Pecneb/computer_vision_research}
         
