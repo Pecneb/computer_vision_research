@@ -698,7 +698,7 @@ def make_feature_vectors_version_four(trackedObjects: list, max_stride: int, lab
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
 
-def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X: np.ndarray, Y: np.ndarray, start_insert_idx: int, feature_vector: np.ndarray):
+def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X: np.ndarray, Y: np.ndarray, insert_idx: int, feature_vector: np.ndarray):
     """Insert coordinates into feature vector starting from the start_insert_idx index.
 
     Args:
@@ -710,10 +710,14 @@ def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X:
         start_insert_idx (int): the index where the coordinates will be inserted into the feature vector 
     """
     retv = feature_vector.copy()
-    insert_idx = start_insert_idx
-    for widx in range(start, stop, (stop-start)//n_weights):
+    stepsize = (stop-start)//n_weights
+    assert n_weights, f"n_weights={n_weights} and max_stride are not compatible, lower n_weights or increase max_stride"
+    weights_inserted = 0
+    for widx in range(stop-1, start-1, -stepsize):
+        if weights_inserted == n_weights:
+            break
         retv = np.insert(retv, insert_idx, [X[widx], Y[widx]])
-        insert_idx += 2
+        weights_inserted += 1
     return retv 
 
 def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, max_stride: int, n_weights: int):
@@ -721,33 +725,42 @@ def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, 
     y_new_labels = np.array([])
     metadata = []
     for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
-        stride = 3
+        stride = max_stride
         if stride > t.history_X.shape[0]:
             continue
-        for j in range(t.history_X.shape[0]-max_stride):
+        for j in range(0, t.history_X.shape[0]-max_stride):
+            """
             if stride < max_stride:
                 midx = stride // 2
                 end_idx = stride-1
                 feature_vector = np.array([t.history_X[0], t.history_Y[0],
+                                        t.history_X[midx], t.history_Y[midx],
                                         t.history_X[end_idx], t.history_Y[end_idx]])
-                feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
+                #feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
                 metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
                                             t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
-                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]))
+                if X_feature_vectors.shape == (0,):
+                    X_feature_vectors = np.array([np.array([feature_vector])])
+                else:
+                    X_feature_vectors = np.append(X_feature_vectors, np.array([[feature_vector]]), axis=0)
                 stride += 1
             else:
-                midx = j + (stride // 2)
-                end_idx = j + stride-1
-                feature_vector = np.array([t.history_X[j], t.history_Y[j],
-                                        t.history_X[end_idx], t.history_Y[end_idx]])
-                feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
-                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
-                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
-                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]))
-                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
-                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            """
+            midx = j + (stride // 2) - 1
+            end_idx = j + stride - 1
+            feature_vector = np.array([t.history_X[j], t.history_Y[j],
+                                    t.history_X[end_idx], t.history_Y[end_idx]])
+            feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
+            metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape((-1,4+n_weights*2))
+            else:
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+            metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
             y_new_labels = np.append(y_new_labels, labels[i])
-    return np.array(X_feature_vectors).reshape((-1, 4+n_weights*2)), np.array(y_new_labels, dtype=int), np.array(metadata)
+    return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
 
 def iter_minibatches(X: np.ndarray, y: np.ndarray, batch_size: int):
     """Generate minibatches for training.
@@ -1303,7 +1316,7 @@ def trackedObjects_old_to_new(trackedObjects: list[TrackedObject], k_velocity: i
         new_trackedObjects.append(tmp_obj)
     return new_trackedObjects
 
-def level_features(X: np.ndarray, y: np.ndarray):
+def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     """Level out the nuber of features.
 
     Args:
@@ -1323,14 +1336,20 @@ def level_features(X: np.ndarray, y: np.ndarray):
     y = y.astype(int)
     for y_ in y:
         label_counts[y_] += 1
-    min_sample_count = np.min(label_counts) # find min count
+    # find min count
+    #min_sample_count = np.min(label_counts) 
+    min_sample_label = np.argmin(label_counts)
     # init X and y vectors that will be filled and returned
     X_leveled = np.array([], dtype=float) 
     y_leveled = np.array([], dtype=int)
     for l in tqdm.tqdm(labels):
         i = 0
         j = 0
-        while i != min_sample_count:
+        if l != min_sample_label:
+            sample_limit = int(ratio_to_min * label_counts[min_sample_label])
+        else:
+            sample_limit = label_counts[min_sample_label]
+        while i < sample_limit and i < label_counts[l]:
             if y[j] == l:
                 if X_leveled.shape == (0,):
                     X_leveled = np.array([X[j]], dtype=float) 
