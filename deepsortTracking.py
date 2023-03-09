@@ -50,9 +50,9 @@ def getTracker(metricObj, max_iou_distance, historyDepth, db_connection = None):
         tracker: deep_sort Tracker object 
     """
     if db_connection is not None:
-        return Tracker(metric=metricObj, max_age=15, historyDepth=historyDepth, _next_id=databaseLoader.queryLastObjID(db_connection), max_iou_distance=max_iou_distance)
+        return Tracker(metric=metricObj, max_age=10, historyDepth=historyDepth, _next_id=databaseLoader.queryLastObjID(db_connection), max_iou_distance=max_iou_distance)
     else:
-        return Tracker(metric=metricObj, max_age=15, historyDepth=historyDepth, max_iou_distance=max_iou_distance)
+        return Tracker(metric=metricObj, max_age=10, historyDepth=historyDepth, max_iou_distance=max_iou_distance)
 
 def makeDetectionObject(darknetDetection: darknetDetection):
     """DeepSort Detection object factory
