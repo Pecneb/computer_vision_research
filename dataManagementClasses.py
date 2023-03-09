@@ -20,6 +20,7 @@
 
 from dataclasses import dataclass, field
 import numpy as np
+import processing_utils
 
 @dataclass
 class Detection:
@@ -273,6 +274,16 @@ class TrackedObject():
         return np.array([self.history[0].X, self.history[0].Y, 
                         self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y])
+    
+    def feature_v5_(self, n_weights: int):
+        n = (self.history_X.shape[0] // 2)
+        if (n // n_weights) < 1:
+            return None
+        feature = np.array([self.history_X[0], self.history_Y[0],
+                            self.history_X[-1], self.history_Y[-1]])
+        feature = processing_utils.insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
+        return feature
+
 
     def update_velocity(self, k: int = 10):
         """Calculate velocity from X,Y coordinates.
