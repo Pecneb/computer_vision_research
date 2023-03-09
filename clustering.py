@@ -129,7 +129,7 @@ def dbscan_on_featureVectors(featureVectors: np.ndarray, eps: float, min_samples
     dbscan = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs).fit(featureVectors)
     return dbscan.labels_
 
-def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: float, min_cluster_size: float, n_jobs: int, max_eps=np.inf):
+def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: float, min_cluster_size: float, n_jobs: int, max_eps: float, p: int):
     """Run optics clustering algorithm on extracted feature vectors.
 
     Args:
@@ -138,6 +138,7 @@ def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: f
         xi (float, optional): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. Defaults to 0.05.
         min_cluster_size (float, optional): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Defaults to 0.05.
         max_eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        p (int): Parameter for distance metric. Default = 2.
 
     Returns:
         labels: Cluster labels for each point in the dataset given to fit(). Noisy samples and points which are not included in a leaf cluster of cluster_hierarchy_ are labeled as -1.
@@ -1177,7 +1178,8 @@ def submodule_optics(args):
             min_samples=args.min_samples,
             max_eps=args.max_eps,
             xi=args.xi, 
-            min_cluster_size=args.min_cluster_size
+            min_cluster_size=args.min_cluster_size,
+            p=args.p_norm
         )
     if args.dimensions == "6D":
         clustering_search_on_6D_feature_vectors(
@@ -1188,7 +1190,8 @@ def submodule_optics(args):
             min_samples=args.min_samples,
             max_eps=args.max_eps,
             xi=args.xi, 
-            min_cluster_size=args.min_cluster_size
+            min_cluster_size=args.min_cluster_size,
+            p=args.p_norm
         )
 
 def submodule_birch(args):
@@ -1231,6 +1234,7 @@ def main():
     optics_parser.add_argument("--min_cluster_size", type=float, default=None, help="Minimum number of samples in an OPTICS cluster, expressed as an absolute number or" 
                                                                               "a fraction of the number of samples (rounded to be at least 2). If flag not used," 
                                                                               "then min_cluster_size = max_samples.")
+    optics_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     optics_parser.set_defaults(func=submodule_optics)
 
     birch_parser = subparser.add_parser("birch", help="Birch clustering.")
