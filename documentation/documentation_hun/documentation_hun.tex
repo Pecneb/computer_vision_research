@@ -80,12 +80,16 @@ kommunikációs technológiák, mint pélául szenzorok, kamerák, kommunikáci�
 keresztül, ezek a technológiák összeköthetők a közlekedési eszközökkel. Ehhez okos forgalomirányítási rendszerek kifejlesztésére
 van szükség, amik információval tudnak szolgáni a járművekbe szerelt informatikai rendszereknek.
 A legértékesebb információt a közlekedésben részvevő járművek jelen és jövőbeli pozíciója jelenti. Pontos és gyors trajektória 
-előrejelző rendszerek ifejlesztése egy nagy kihívás és egyre növekszik irántuk a kereslet. Ebben a kutatásban erre a problémára törekszünk
-megoldást adni, gépi látás, gépi tanulás és konvolúciós neurális háló segítségével. Objektumok detektálására a YOLOv7 \cite{wang2022yolov7}
-konvolúciós neurális hálót használtuk. Objektumok felismerése egyedülálló képkockákon manapság már nem olyan nagy fealdat, sok pontos
-objektum detektáló modellt fejlesztettek ki, de videók elemzésénél nem csak a pontosság hanem a sebesség is egy szempont. Emellett
-képkockáról képkockára követni is kell tudni a detektált objektumokat. Erre is sok megoldás található manapság, erre a feladatra
+előrejelző rendszerek kifejlesztése egy nagy kihívás és egyre növekszik irántuk a kereslet. E kutatási terület kiforratlanságából
+eredően, nem lehet csak úgy belevágni, és egyből machine learning modelleket vagy neurális hálókat tanítani. Tanító adatok gyűjtése, 
+és mérőszámok kifejlesztése (amivel a tesztelni kívánt modellek pontosságát tudjuk mérni) is a kutatáshoz tartoznak.  
+Ebben a kutatásban erre a problémára törekszünk egy módszertant és keretrendszert kifejleszteni, emellett klaszterezési és klasszifikációs
+algoritmusokat tesztelni. A tanító adatok előállításához, objektumok detektálására a YOLOv7 \cite{wang2022yolov7}
+konvolúciós neurális hálót használtuk, ez a konvolúciósl neurális háló architektúra nem csak nagy pontosságot hanem sebességet is nyújt nekünk. 
+Emellett képkockáról képkockára követni is kell tudni a detektált objektumokat. Erre is sok megoldás található manapság, erre a feladatra
 a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez kálmán filtert és konvolúciós neurális hálót használ az objektumok követésére.
+
+
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{biblio}

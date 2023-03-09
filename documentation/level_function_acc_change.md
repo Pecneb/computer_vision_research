@@ -394,9 +394,13 @@ Validation dataset size: 2838
 |  1 | Top_2 | 0.861875 | 0.960888 |                                                                                                                                                                                
 |  2 | Top_3 | 0.890416 | 0.975335 |    
 
+## updated level function with ratio param
+
+ratio=2.0
+
 ### feature v5
 
-python3 classification.py --n_jobs 12 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_features-v5_2023-03-05.xlsx --classification_features_version v5 --level
+python3 classification.py --n_jobs 12 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_features-v5_2023-03-05.xlsx --classification_features_version v5 --level --n_weights 3
 
 Training dataset size: 41685
 Validation dataset size: 9672
@@ -491,3 +495,379 @@ Validation dataset size: 9672
 |  0 | Top_1 | 0.586952 | 0.551799 |
 |  1 | Top_2 | 0.763544 | 0.754963 |
 |  2 | Top_3 | 0.833954 | 0.865902 |
+
+### feature_v5_v2 (velocity)
+
+python3 classification.py --n_jobs 12 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_features-v5_2023-03-05.xlsx --classification_features_version v5 --level --n_weights 5                                                                          
+
+*Time: 863 s*                                                                                                                                                                                                                                                                                                                                                                                                                           
+#### Classifier parameters                                                                                                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+{'KNN': {'n_neighbors': 15}, 'SVM': {'kernel': 'rbf', 'probability': True}}                                                                                                                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+#### Cross-val Basic accuracy                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+|    | Split              |       KNN |       SVM |                                                                                                                                                                                                                                                                                                                                                                                     
+|---:|:-------------------|----------:|----------:|                                                                                                                                                                                                                                                                                                                                                                                     
+|  0 | 1                  | 0.507137  | 0.578625  |                                                                                                                                                                                                                                                                                                                                                                                     
+|  1 | 2                  | 0.511935  | 0.540362  |                                                                                                                                                                                                                                                                                                                                                                                     
+|  2 | 3                  | 0.486026  | 0.524289  |                                                                                                                                                                                                                                                                                                                                                                                     
+|  3 | 4                  | 0.562433  | 0.594578  |                                                                                                                                                                                                                                                                                                                        
+|  4 | 5                  | 0.554876  | 0.587022  |                                                                                                                                                                                                                                                                                                                        
+|  5 | Max split          | 0.562433  | 0.594578  |                                                                                                                                                                                                                                                                                                                        
+|  6 | Mean               | 0.524481  | 0.564975  |                                                                                                                                                                                                                                                                                                                        
+|  7 | Standart deviation | 0.0293297 | 0.0276039 |                                                       
+                                                                                                                                                                                                                                                                                                                                                                           
+#### Cross-val Balanced accuracy                                                                                                                                                                                                                                                                                                                                           
+                                                                                          
+|    | Split              |      KNN |       SVM |                                                                                                                                                                                                                                                                                                                                                                                      
+|---:|:-------------------|---------:|----------:|                                                                                                                                                                                                                                                                                                                         
+|  0 | 1                  | 0.524457 | 0.596285  |                                                                                                                                                                  
+|  1 | 2                  | 0.525124 | 0.546938  |                                                        
+|  2 | 3                  | 0.495341 | 0.538816  |                                                                                                                                                                                                                                                                                                                         
+|  3 | 4                  | 0.568182 | 0.600746  |                                        
+|  4 | 5                  | 0.566067 | 0.602876  |                                                                                                                                   
+|  5 | Max split          | 0.568182 | 0.602876  |                                        
+|  6 | Mean               | 0.535834 | 0.577132  |                                                                                                                                   
+|  7 | Standart deviation | 0.027728 | 0.0281673 |                                        
+                                                                                                                                                                                     
+#### Cross-val Top 1 accuracy                                                             
+                                                                                                                                                                                                                    
+|    | Split              |       KNN |       SVM |                                                       
+|---:|:-------------------|----------:|----------:|                                                                                                                                                                 
+|  0 | 1                  | 0.507137  | 0.579225  |                                                       
+|  1 | 2                  | 0.511935  | 0.540482  |                                                                                                                                                                 
+|  2 | 3                  | 0.486026  | 0.524049  |                                                       
+|  3 | 4                  | 0.562433  | 0.594458  |                                                                                                                                                                 
+|  4 | 5                  | 0.554876  | 0.588821  |                                                       
+|  5 | Max split          | 0.562433  | 0.594458  |                                                                                                                                                                 
+|  6 | Mean               | 0.524481  | 0.565407  |                                                       
+|  7 | Standart deviation | 0.0293297 | 0.0279815 |                                                       
+                                                                                                          
+#### Cross-val Top 2 accuracy                                                                             
+                                                                                                          
+|    | Split              |       KNN |      SVM |                                                                                                                                                                                                                                                                                                                                                                                      
+|---:|:-------------------|----------:|---------:|                                                        
+|  0 | 1                  | 0.701931  | 0.738155 |                                                        
+|  1 | 2                  | 0.693055  | 0.756747 |                                                        
+|  2 | 3                  | 0.703371  | 0.710088 |                                                        
+|  3 | 4                  | 0.721123  | 0.786014 |                                                        
+|  4 | 5                  | 0.736476  | 0.814682 |                                                        
+|  5 | Max split          | 0.736476  | 0.814682 |                                                        
+|  6 | Mean               | 0.711191  | 0.761137 |                                                        
+|  7 | Standart deviation | 0.0155807 | 0.03644  |                                                        
+
+#### Cross-val Top 3 accuracy                                                                             
+
+|    | Split              |       KNN |      SVM |                                                        
+|---:|:-------------------|----------:|---------:|                                                        
+|  0 | 1                  | 0.755428  | 0.848267 |                                                        
+|  1 | 2                  | 0.754948  | 0.865419 |                                                        
+|  2 | 3                  | 0.752069  | 0.833993 |                                                        
+|  3 | 4                  | 0.762504  | 0.885091 |                                                        
+|  4 | 5                  | 0.815641  | 0.890368 |                                                        
+|  5 | Max split          | 0.815641  | 0.890368 |                                                        
+|  6 | Mean               | 0.768118  | 0.864628 |                                                        
+|  7 | Standart deviation | 0.0240084 | 0.021392 |                                                        
+
+#### Test set basic                                                                                       
+
+|    |      KNN |     SVM |                                                                               
+|---:|---------:|--------:|                                                                               
+|  0 | 0.586332 | 0.55273 |                                                                               
+
+#### Test set balanced                                                                                    
+
+|    |      KNN |      SVM |                                                                              
+|---:|---------:|---------:|                                                                              
+|  0 | 0.600293 | 0.565572 |                                                                              
+
+#### Test set top k                                                                                       
+
+|    | Top   |      KNN |      SVM |                                                                      
+|---:|:------|---------:|---------:|                                                                      
+|  0 | Top_1 | 0.586332 | 0.55273  |                                                                      
+|  1 | Top_2 | 0.762097 | 0.759305 |                                                                      
+|  2 | Top_3 | 0.83261  | 0.86859  |                                      
+
+python3 -m sklearnex classification.py --n_jobs 10 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_v3_vel10_acc2_v5_cross_val_2023-03-08.xlsx --param_set 1 --classification_features_version v5 --stride 15 --level --n_weights 5                                                                                              [119/1776]
+
+Training dataset size: 41685                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+Validation dataset size: 9672                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+*Time: 708 s*                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+#### Classifier parameters                                                                                                     
+                                                                                                          
+{'KNN': {'n_neighbors': 15}, 'SVM': {'kernel': 'rbf', 'probability': True, 'max_iter': 16000}}                                 
+                                                                                                          
+#### Cross-val Basic accuracy                                                                                                  
+                                                                                                                                                                                                                    
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                       
+|  0 | 1                  | 0.519971  | 0.559554  |                                                                            
+|  1 | 2                  | 0.563392  | 0.579225  |                                                       
+|  2 | 3                  | 0.5009    | 0.54588   |                                                       
+|  3 | 4                  | 0.575267  | 0.597457  |                                                       
+|  4 | 5                  | 0.571549  | 0.583303  |                                                       
+|  5 | Max split          | 0.575267  | 0.597457  |                                                       
+|  6 | Mean               | 0.546216  | 0.573084  |                                                                            
+|  7 | Standart deviation | 0.0300768 | 0.0182172 |                                                                            
+                                                                                                                               
+#### Cross-val Balanced accuracy                                                                                               
+
+|    | Split              |       KNN |      SVM |                                                                             
+|---:|:-------------------|----------:|---------:|                                                                             
+|  0 | 1                  | 0.537554  | 0.581071 |                                                                             
+|  1 | 2                  | 0.573321  | 0.587647 |                                                                             
+|  2 | 3                  | 0.504686  | 0.55     |                                                                             
+|  3 | 4                  | 0.578086  | 0.60136  |                                                                             
+|  4 | 5                  | 0.582177  | 0.606828 |                                                                             
+|  5 | Max split          | 0.582177  | 0.606828 |                                                                             
+|  6 | Mean               | 0.555165  | 0.585381 |                                                                             
+|  7 | Standart deviation | 0.0298093 | 0.019954 |                                                                             
+
+#### Cross-val Top 1 accuracy                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.519971  | 0.559674  |                                                                            
+|  1 | 2                  | 0.563392  | 0.578386  |                                                                            
+|  2 | 3                  | 0.5009    | 0.54516   |                                                                            
+|  3 | 4                  | 0.575267  | 0.597577  |                                                                            
+|  4 | 5                  | 0.571549  | 0.584623  |                                                                            
+|  5 | Max split          | 0.575267  | 0.597577  |                                                                            
+|  6 | Mean               | 0.546216  | 0.573084  |                                                                            
+|  7 | Standart deviation | 0.0300768 | 0.0185512 |                                                                            
+
+#### Cross-val Top 2 accuracy                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.737316  | 0.730239  |                                                                            
+|  1 | 2                  | 0.748711  | 0.774259  |                                                                            
+|  2 | 3                  | 0.68238   | 0.753748  |                                                                            
+|  3 | 4                  | 0.755787  | 0.758066  |                                                                            
+|  4 | 5                  | 0.781096  | 0.793811  |                                                                            
+|  5 | Max split          | 0.781096  | 0.793811  |                                                                            
+|  6 | Mean               | 0.741058  | 0.762025  |                                                                            
+|  7 | Standart deviation | 0.0326672 | 0.0212347 |                                                                            
+
+#### Cross-val Top 3 accuracy                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.821279  | 0.828116  |                                                                            
+|  1 | 2                  | 0.820439  | 0.875135  |                                                                            
+|  2 | 3                  | 0.756507  | 0.845628  |                                                                            
+|  3 | 4                  | 0.827516  | 0.922634  |                                                                            
+|  4 | 5                  | 0.848507  | 0.902483  |                                                                            
+|  5 | Max split          | 0.848507  | 0.922634  |                                                                            
+|  6 | Mean               | 0.814849  | 0.874799  |                                                                            
+|  7 | Standart deviation | 0.0308858 | 0.0348855 |                                                                            
+
+#### Test set basic                                                                                                            
+
+|    |      KNN |      SVM |                                                                                                   
+|---:|---------:|---------:|                                                                                                   
+|  0 | 0.594086 | 0.576199 |                                                                                                   
+
+#### Test set balanced                                                                                                         
+
+|    |      KNN |     SVM |                                                                                                    
+|---:|---------:|--------:|                                                                                                    
+|  0 | 0.597957 | 0.59059 |                                                                                                    
+
+#### Test set top k                                                                                                            
+
+|    | Top   |      KNN |      SVM |                                                                                           
+|---:|:------|---------:|---------:|                                                                                           
+|  0 | Top_1 | 0.594086 | 0.576199 |                                                                                           
+|  1 | Top_2 | 0.785463 | 0.783189 |                                                                                           
+|  2 | Top_3 | 0.865902 | 0.893817 |                                                                                           
+
+python3 -m sklearnex classification.py --n_jobs 10 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_v3_vel10_acc2_v5_cross_val_2023-03-08_level-2.xlsx --param_set 1 --classification_features_version v5 --stride 30 --level 2.0 --n_weights 10                                                                                   
+
+*Time: 663 s*                                                                                                                  
+
+#### Classifier parameters                                                                                                     
+
+{'KNN': {'n_neighbors': 15}, 'SVM': {'kernel': 'rbf', 'probability': True, 'max_iter': 16000}}
+
+#### Cross-val Basic accuracy                                                                                                  
+
+|    | Split              |      KNN |       SVM |                                                                             
+|---:|:-------------------|---------:|----------:|                                                                             
+|  0 | 1                  | 0.525748 | 0.570741  |                                                                             
+|  1 | 2                  | 0.571782 | 0.581795  |                                                                             
+|  2 | 3                  | 0.504421 | 0.527438  |                                                                             
+|  3 | 4                  | 0.571521 | 0.604941  |                                                                             
+|  4 | 5                  | 0.60463  | 0.618156  |                                                                             
+|  5 | Max split          | 0.60463  | 0.618156  |                                                                             
+|  6 | Mean               | 0.55562  | 0.580614  |                                                                             
+|  7 | Standart deviation | 0.03586  | 0.0313934 |                                                                             
+
+#### Cross-val Balanced accuracy                                                                                               
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.543066  | 0.592948  |                                                                            
+|  1 | 2                  | 0.572657  | 0.594658  |                                                                            
+|  2 | 3                  | 0.512023  | 0.540555  |                                                                            
+|  3 | 4                  | 0.573903  | 0.605339  |                                                                            
+|  4 | 5                  | 0.613059  | 0.638334  |                                                                            
+|  5 | Max split          | 0.613059  | 0.638334  |                                                                            
+|  6 | Mean               | 0.562942  | 0.594367  |                                                                            
+|  7 | Standart deviation | 0.0338055 | 0.0314685 |                                                                            
+
+#### Cross-val Top 1 accuracy                                                                                                  
+
+|    | Split              |      KNN |       SVM |                                                                             
+|---:|:-------------------|---------:|----------:|                                                                             
+|  0 | 1                  | 0.525748 | 0.569051  |                                                                             
+|  1 | 2                  | 0.571782 | 0.581664  |                                                                             
+|  2 | 3                  | 0.504421 | 0.527568  |                                                                             
+|  3 | 4                  | 0.571521 | 0.602731  |                                                                             
+|  4 | 5                  | 0.60463  | 0.618936  |                                                                             
+|  5 | Max split          | 0.60463  | 0.618936  |                                                                             
+|  6 | Mean               | 0.55562  | 0.57999   |                                                                             
+|  7 | Standart deviation | 0.03586  | 0.0313192 |                                                                             
+
+#### Cross-val Top 2 accuracy                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.730689  | 0.729779  |                                                                            
+|  1 | 2                  | 0.744863  | 0.777763  |                                                                            
+|  2 | 3                  | 0.677633  | 0.742263  |                                                                            
+|  3 | 4                  | 0.741092  | 0.762159  |                                                                            
+|  4 | 5                  | 0.782416  | 0.805827  |                                                                            
+|  5 | Max split          | 0.782416  | 0.805827  |                                                                            
+|  6 | Mean               | 0.735339  | 0.763558  |                                                                            
+|  7 | Standart deviation | 0.0337392 | 0.0267765 |                                                                            
+
+#### Cross-val Top 3 accuracy                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                            
+|---:|:-------------------|----------:|----------:|                                                                            
+|  0 | 1                  | 0.808583  | 0.839012  |                                                                            
+|  1 | 2                  | 0.821977  | 0.868401  |                                                                            
+|  2 | 3                  | 0.753316  | 0.842263  |                                                                            
+|  3 | 4                  | 0.80117   | 0.891157  |                                                                            
+|  4 | 5                  | 0.844583  | 0.900247  |                                                                            
+|  5 | Max split          | 0.844583  | 0.900247  |                                                                            
+|  6 | Mean               | 0.805926  | 0.868216  |                                                                            
+|  7 | Standart deviation | 0.0301645 | 0.0248145 |                                                                            
+
+#### Test set basic                                                                                                            
+
+|    |      KNN |      SVM |                                                                                                   
+|---:|---------:|---------:|                                                                                                   
+|  0 | 0.588005 | 0.552087 |                                                                                                   
+
+#### Test set balanced                                                                                                         
+
+|    |      KNN |      SVM |                                                                                                   
+|---:|---------:|---------:|                                                                                                   
+|  0 | 0.589719 | 0.564521 |                                                                                                   
+
+#### Test set top k                                                                                                            
+
+|    | Top   |      KNN |      SVM |                                                                                           
+|---:|:------|---------:|---------:|                                                                                           
+|  0 | Top_1 | 0.588005 | 0.552087 |                                                                                           
+|  1 | Top_2 | 0.786729 | 0.766141 |                                                                                           
+|  2 | Top_3 | 0.866734 | 0.880385 |                                                           
+
+### feature v4
+
+python3 classification.py --n_jobs 12 cross-validation -db research_data/0001_2_308min/0001_2_308min_v3_vel10_acc2_clustered.joblib --output research_data/0001_2_308min/tables/0001_2_308min_features-v5_2023-03-05_features_v1.xlsx --classification_features_version v4 --level                                                                                                                                                                                                                                                                                                
+*Time: 780 s*                                                                                                                                                  
+                                                                                                                                                               
+#### Classifier parameters                                                                                                                                     
+                                                                                                                                                               
+{'KNN': {'n_neighbors': 15}, 'SVM': {'kernel': 'rbf', 'probability': True}}                                                                                    
+                                                                                                                                                               
+#### Cross-val Basic accuracy                                                                                                                                  
+                                                                                                                                                               
+|    | Split              |       KNN |       SVM |                                                                                                                                                                 
+|---:|:-------------------|----------:|----------:|                                                                                                            
+|  0 | 1                  | 0.513254  | 0.577306  |                                                                                                                                                                 
+|  1 | 2                  | 0.52345   | 0.543241  |                                                                                                            
+|  2 | 3                  | 0.491664  | 0.528248  |                                                                                                            
+|  3 | 4                  | 0.56807   | 0.59074   |                                                                                                            
+|  4 | 5                  | 0.562672  | 0.575147  |                                                                                                            
+|  5 | Max split          | 0.56807   | 0.59074   |                                                                                                            
+|  6 | Mean               | 0.531822  | 0.562936  |                                                                                                            
+|  7 | Standart deviation | 0.0293026 | 0.0233232 |                                                                                                            
+                                                                                                                                                               
+#### Cross-val Balanced accuracy                                                                                                                               
+                                                                                                                                                               
+|    | Split              |       KNN |       SVM |                                                                                                                                                                 
+|---:|:-------------------|----------:|----------:|                                                                                                            
+|  0 | 1                  | 0.529335  | 0.598031  |                                                                                                                                                                 
+|  1 | 2                  | 0.536301  | 0.550471  |                                                                                                            
+|  2 | 3                  | 0.504025  | 0.539899  |                                                                                                            
+|  3 | 4                  | 0.574589  | 0.59842   |                                                                                                            
+|  4 | 5                  | 0.574531  | 0.604237  |                                                                                                            
+|  5 | Max split          | 0.574589  | 0.604237  |                                                                                                            
+|  6 | Mean               | 0.543756  | 0.578211  |                                                                                                            
+|  7 | Standart deviation | 0.0273491 | 0.0272613 |                                                                                                            
+                                                                                                                                                               
+#### Cross-val Top 1 accuracy                                                                                                                                  
+                                                                                                                                                               
+|    | Split              |       KNN |       SVM |                                                                                                                                                                 
+|---:|:-------------------|----------:|----------:|                                                                                                            
+|  0 | 1                  | 0.513254  | 0.580305  |                                                                                                                                                                 
+|  1 | 2                  | 0.52345   | 0.542881  |                                                                                                            
+|  2 | 3                  | 0.491664  | 0.527168  |                                                                                                            
+|  3 | 4                  | 0.56807   | 0.5911    |                                                                                                            
+|  4 | 5                  | 0.562672  | 0.59014   |                                                                                                            
+|  5 | Max split          | 0.56807   | 0.5911    |                                                                                                            
+|  6 | Mean               | 0.531822  | 0.566319  |                                                                                                            
+|  7 | Standart deviation | 0.0293026 | 0.0263032 |                                                                                                            
+                                                                                                                                                               
+#### Cross-val Top 2 accuracy                                                                                                                                  
+                                                                                                                                                               
+|    | Split              |       KNN |       SVM |                                                                                                                                                                 
+|---:|:-------------------|----------:|----------:|                                                                                                            
+|  0 | 1                  | 0.709248  | 0.748231  |                                                                                                                                                                 
+|  1 | 2                  | 0.707449  | 0.75063   |                                                                                                            
+|  2 | 3                  | 0.686938  | 0.7282    |                                                                                                            
+|  3 | 4                  | 0.724361  | 0.784935  |                                                                                                            
+|  4 | 5                  | 0.741034  | 0.805086  |                                                                                                                                                                 
+|  5 | Max split          | 0.741034  | 0.805086  |                                                                                                            
+|  6 | Mean               | 0.713806  | 0.763416  |                                                                                                                                                                 
+|  7 | Standart deviation | 0.0180879 | 0.0276901 |                                                                                                            
+                                                                                                                                                               
+#### Cross-val Top 3 accuracy                                                                                                                                  
+
+|    | Split              |       KNN |       SVM |                                                                                                            
+|---:|:-------------------|----------:|----------:|                                                                                                                                                                 
+|  0 | 1                  | 0.760226  | 0.86254   |                                                                                                            
+|  1 | 2                  | 0.773899  | 0.881252  |                                                                                                                                                                 
+|  2 | 3                  | 0.745352  | 0.847067  |                                                                                                                                                                 
+|  3 | 4                  | 0.774619  | 0.878733  |                                                                                                                                                                 
+|  4 | 5                  | 0.829675  | 0.894926  |                                                                                                                                                                 
+|  5 | Max split          | 0.829675  | 0.894926  |                                                                                                                                                                 
+|  6 | Mean               | 0.776754  | 0.872904  |                                                                                                                                                                 
+|  7 | Standart deviation | 0.0285398 | 0.0165142 |                                                                                                                                                                 
+                                                                                                                                                                                                                    
+#### Test set basic                                                                                                                                                                                                 
+                                                                                                                                                                                                                    
+|    |      KNN |      SVM |                                                                                                                                                                                        
+|---:|---------:|---------:|                                                                                                                                                                                        
+|  0 | 0.580232 | 0.543218 |                                                                                                                                                                                        
+                                                                                                                                                                                                                    
+#### Test set balanced                                                                                                                                                                                              
+                                                                                                                                                                                                                    
+|    |     KNN |      SVM |                                                                                                                                                                                         
+|---:|--------:|---------:|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+|  0 | 0.59474 | 0.555658 |                                                                                                                                                                                         
+
+#### Test set top k                                                                                                                                                                                                 
+
+|    | Top   |      KNN |      SVM |                                                                                                                                                                                
+|---:|:------|---------:|---------:|                                                                                                                                                                                
+|  0 | Top_1 | 0.580232 | 0.543218 |                                                                                                                                                                                
+|  1 | Top_2 | 0.763027 | 0.756203 |                                                                                                                                                                                
+|  2 | Top_3 | 0.832093 | 0.866315 |                                                                                                                                                                                
