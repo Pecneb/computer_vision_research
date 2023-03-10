@@ -1,9 +1,9 @@
-PWD /media/pecneb/DataStorage/computer_vision_research/documentation/documentation_hun
+PWD /media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun
 INPUT /etc/texmf/web2c/texmf.cnf
 INPUT /usr/share/texmf/web2c/texmf.cnf
 INPUT /usr/share/texlive/texmf-dist/web2c/texmf.cnf
 INPUT /var/lib/texmf/web2c/pdftex/pdflatex.fmt
-INPUT /media/pecneb/DataStorage/computer_vision_research/documentation/documentation_hun/documentation_hun.tex
+INPUT /media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex
 OUTPUT documentation_hun.log
 INPUT ./acmart.cls
 INPUT ./acmart.cls
@@ -958,6 +958,7 @@ INPUT documentation_hun.toc
 INPUT /var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
 OUTPUT documentation_hun.toc
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss9.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti9.tfm
 INPUT ./documentation_hun.bbl
 INPUT documentation_hun.bbl
 INPUT ./documentation_hun.bbl
@@ -991,3 +992,4 @@ INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss17.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti7.pfb
+INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb
