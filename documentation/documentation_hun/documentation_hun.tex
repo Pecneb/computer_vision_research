@@ -46,14 +46,14 @@
     csomópontok elemzésének automatizálása és felgyorsítása. A kutatásban
     lefektetett alapgondolatokat, kifejlesztett keretrendszert és 
     a felmerülő probélmák megoldásait, a gyakorlatban balesetek megelőzésére,
-    renitens viselkedések kiszűrésére és forgalomirányító renszerek támogatásá-ra
+    renitens viselke-dések kiszűrésére és forgalomirányító renszerek támogatásá-ra
     lehet használni.  
     A kutatásban egy trajektória osztályozó módszert ismertetünk, amely objektumdetektálás 
-    és objektumkövetés segítségével elemezi a közlekedési 
-    csomópontokban elhaladó járművek mozgását. A mozgásuk alapján 
+    és objektumkövetés segítségé-vel elemezi a közlekedési 
+    csomópontokban elhaladó járművek mozgá-sát. A mozgásuk alapján 
     klaszterezi a trajektóriákat, majd gépi tanulás 
     segítségével predikciót ad az újonnan belépő járművek kilépési 
-    pontjára. A módszerhez 6 különböző közlekedési csomópontban 
+    pontjára. A módszerhez 6 különböző közlekedési csomópont-ban 
     készített saját videó adatbázisunkat használtuk fel.
     A tesztelt klaszterezési mód-szerek közül (OPTICS, BIRCH, KMeans, DBSCAN)
     az OPTICS algoritmus bizonyult legjobbnak trajektórák klaszterezésére.
@@ -91,9 +91,18 @@ a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez kálmán f
 A tanító adatok 6 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
 a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt. A klaszterezés
 során megpróbáljuk minél pontosabban meghatározni a be és kimeneti pontok által leírt klasztereket, amelyek majd alapul szolgálnak a
-klasszifikáció tanítása során. A klasszifikációhoz bináris klasszifikációs modelleket kombinálunk, így több klasszos klasszifikációs modelt
+klasszifikáció tanítása során. Több fajta klaszterezési algoritmust megvizsgáltunk a kutatás során, KMeans, OPTICS \cite{10.1145/304181.304187}, BIRCH \cite{10.1145/233269.233324} és DBSCAN \cite{10.5555/3001460.3001507}\cite{10.1145/3068335}. 
+A klasszifikációhoz bináris klasszifikációs modelleket kombinálunk, így több klasszos klasszifikációs modelt
 kapunk. Minden bináris modelnél, egy klassz az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot
 alkalmaztunk, amik az \emph{Accuracy Score}, \emph{Balanced Accuracy Score} \cite{10.1109/ICPR.2010.764} és \emph{Top-k Accuracy Score}.
+Mindegyik mérőszám kiszámolásához \emph{K-Fold Cross-Validation} \cite{Anguita2012TheI} metódust alkalmaztunk, ahol \begin{math}K=5\end{math}.
+
+\section{Kapcsolódó kutatások}
+Sok ITS-el kapcsolatos kutatásban tárgyalják a forgalom folyás (traffic flow) előrejelzését. \cite{PAUL2017177} össze-hasonlítja az eddig
+kutatott és használt modellek, mint például Kalman Filtering, k-nearest neighbor (k-NN), mesterséges neurális hálók, stb., pontosságát és
+sebességét, ezen modellek tovább-kutatását, mivel egyre növekednek a különböző szenzorok által  begyűjtött traffic flow adatok, így ez a terület belépett
+a \emph{Big Data} korszakába. \cite{10.1371/journal.pone.0253868} is a traffic flow előrejelzését és generálását tárgyalja, Floating Car Data (FCD) 
+adathalmazokon betanított, Hosszú-Rövid-Távú memóriájú és Generatív versengő hálókkal.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{biblio}

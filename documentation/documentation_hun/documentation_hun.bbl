@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{3}
+\begin{thebibliography}{10}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -37,6 +37,34 @@
 \providecommand\natexlab[1]{#1}
 \providecommand\showeprint[2][]{arXiv:#2}
 
+\bibitem[Anguita et~al\mbox{.}(2012)]%
+        {Anguita2012TheI}
+\bibfield{author}{\bibinfo{person}{D. Anguita}, \bibinfo{person}{Luca
+  Ghelardoni}, \bibinfo{person}{Alessandro Ghio}, \bibinfo{person}{L. Oneto},
+  {and} \bibinfo{person}{Sandro Ridella}.} \bibinfo{year}{2012}\natexlab{}.
+\newblock \showarticletitle{The 'K' in K-fold Cross Validation}. In
+  \bibinfo{booktitle}{\emph{The European Symposium on Artificial Neural
+  Networks}}.
+\newblock
+
+
+\bibitem[Ankerst et~al\mbox{.}(1999)]%
+        {10.1145/304181.304187}
+\bibfield{author}{\bibinfo{person}{Mihael Ankerst}, \bibinfo{person}{Markus~M.
+  Breunig}, \bibinfo{person}{Hans-Peter Kriegel}, {and}
+  \bibinfo{person}{J\"{o}rg Sander}.} \bibinfo{year}{1999}\natexlab{}.
+\newblock \showarticletitle{OPTICS: Ordering Points to Identify the Clustering
+  Structure}.
+\newblock \bibinfo{journal}{\emph{SIGMOD Rec.}} \bibinfo{volume}{28},
+  \bibinfo{number}{2} (\bibinfo{date}{jun} \bibinfo{year}{1999}),
+  \bibinfo{pages}{49–60}.
+\newblock
+\showISSN{0163-5808}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/304181.304187}
+\showDOI{\tempurl}
+
+
 \bibitem[Brodersen et~al\mbox{.}(2010)]%
         {10.1109/ICPR.2010.764}
 \bibfield{author}{\bibinfo{person}{Kay~Henning Brodersen},
@@ -51,6 +79,72 @@
 \showISBNx{9780769541099}
 \urldef\tempurl%
 \url{https://doi.org/10.1109/ICPR.2010.764}
+\showDOI{\tempurl}
+
+
+\bibitem[Ester et~al\mbox{.}(1996)]%
+        {10.5555/3001460.3001507}
+\bibfield{author}{\bibinfo{person}{Martin Ester}, \bibinfo{person}{Hans-Peter
+  Kriegel}, \bibinfo{person}{J\"{o}rg Sander}, {and} \bibinfo{person}{Xiaowei
+  Xu}.} \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{A Density-Based Algorithm for Discovering Clusters
+  in Large Spatial Databases with Noise}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the Second International Conference
+  on Knowledge Discovery and Data Mining}} (Portland, Oregon)
+  \emph{(\bibinfo{series}{KDD'96})}. \bibinfo{publisher}{AAAI Press},
+  \bibinfo{pages}{226–231}.
+\newblock
+
+
+\bibitem[Paul et~al\mbox{.}(2017)]%
+        {PAUL2017177}
+\bibfield{author}{\bibinfo{person}{Anand Paul}, \bibinfo{person}{Naveen
+  Chilamkurti}, \bibinfo{person}{Alfred Daniel}, {and}
+  \bibinfo{person}{Seungmin Rho}.} \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Chapter 8 - Big Data collision analysis framework}.
+\newblock In \bibinfo{booktitle}{\emph{Intelligent Vehicular Networks and
+  Communications}}, \bibfield{editor}{\bibinfo{person}{Anand Paul},
+  \bibinfo{person}{Naveen Chilamkurti}, \bibinfo{person}{Alfred Daniel}, {and}
+  \bibinfo{person}{Seungmin Rho}} (Eds.). \bibinfo{publisher}{Elsevier},
+  \bibinfo{pages}{177--184}.
+\newblock
+\showISBNx{978-0-12-809266-8}
+\urldef\tempurl%
+\url{https://doi.org/10.1016/B978-0-12-809266-8.00008-9}
+\showDOI{\tempurl}
+
+
+\bibitem[Rossi et~al\mbox{.}(2021)]%
+        {10.1371/journal.pone.0253868}
+\bibfield{author}{\bibinfo{person}{Luca Rossi}, \bibinfo{person}{Andrea Ajmar},
+  \bibinfo{person}{Marina Paolanti}, {and} \bibinfo{person}{Roberto
+  Pierdicca}.} \bibinfo{year}{2021}\natexlab{}.
+\newblock \showarticletitle{Vehicle trajectory prediction and generation using
+  LSTM models and GANs}.
+\newblock \bibinfo{journal}{\emph{PLOS ONE}} \bibinfo{volume}{16},
+  \bibinfo{number}{7} (\bibinfo{date}{07} \bibinfo{year}{2021}),
+  \bibinfo{pages}{1--28}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1371/journal.pone.0253868}
+\showDOI{\tempurl}
+
+
+\bibitem[Schubert et~al\mbox{.}(2017)]%
+        {10.1145/3068335}
+\bibfield{author}{\bibinfo{person}{Erich Schubert}, \bibinfo{person}{J\"{o}rg
+  Sander}, \bibinfo{person}{Martin Ester}, \bibinfo{person}{Hans~Peter
+  Kriegel}, {and} \bibinfo{person}{Xiaowei Xu}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{DBSCAN Revisited, Revisited: Why and How You Should
+  (Still) Use DBSCAN}.
+\newblock \bibinfo{journal}{\emph{ACM Trans. Database Syst.}}
+  \bibinfo{volume}{42}, \bibinfo{number}{3}, Article \bibinfo{articleno}{19}
+  (\bibinfo{date}{jul} \bibinfo{year}{2017}), \bibinfo{numpages}{21}~pages.
+\newblock
+\showISSN{0362-5915}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/3068335}
 \showDOI{\tempurl}
 
 
@@ -76,6 +170,24 @@
 \newblock
 \urldef\tempurl%
 \url{https://doi.org/10.1109/WACV.2018.00087}
+\showDOI{\tempurl}
+
+
+\bibitem[Zhang et~al\mbox{.}(1996)]%
+        {10.1145/233269.233324}
+\bibfield{author}{\bibinfo{person}{Tian Zhang}, \bibinfo{person}{Raghu
+  Ramakrishnan}, {and} \bibinfo{person}{Miron Livny}.}
+  \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{BIRCH: An Efficient Data Clustering Method for Very
+  Large Databases}. In \bibinfo{booktitle}{\emph{Proceedings of the 1996 ACM
+  SIGMOD International Conference on Management of Data}} (Montreal, Quebec,
+  Canada) \emph{(\bibinfo{series}{SIGMOD '96})}.
+  \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}, \bibinfo{pages}{103–114}.
+\newblock
+\showISBNx{0897917944}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/233269.233324}
 \showDOI{\tempurl}
 
 

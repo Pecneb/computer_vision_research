@@ -959,6 +959,11 @@ INPUT /var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
 OUTPUT documentation_hun.toc
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmss9.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti9.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmmi9.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex9.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT ./documentation_hun.bbl
 INPUT documentation_hun.bbl
 INPUT ./documentation_hun.bbl
@@ -984,6 +989,7 @@ INPUT /home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0700.6
 INPUT /home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0800.600pk
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb
+INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb
