@@ -858,15 +858,6 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks, 
-                                    make_feature_vectors_version_two, 
-                                    make_feature_vectors_version_two_half, 
-                                    make_feature_vectors_version_one, 
-                                    make_feature_vectors_version_one_half,
-                                    make_feature_vectors_version_three, 
-                                    make_feature_vectors_version_three_half,
-                                    make_feature_vectors_version_four,
-                                    make_feature_vectors_version_five,
-                                    make_feature_vectors_version_six
                                 )
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.svm import SVC
@@ -899,18 +890,23 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     fit_params = None
 
     if classification_features_version == "v1":
+        from processing_utils import make_feature_vectors_version_one
         X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v1_half":
+        from processing_utils import make_feature_vectors_version_one_half
         X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2":
+        from processing_utils import make_feature_vectors_version_two
         X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2_half":
+        from processing_utils import make_feature_vectors_version_two_half
         X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v3":
+        from processing_utils import make_feature_vectors_version_three
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -918,6 +914,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
+        from processing_utils import make_feature_vectors_version_three_half
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -925,12 +922,15 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v4":
+        from processing_utils import make_feature_vectors_version_four
         X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
     elif classification_features_version == "v5":
+        from processing_utils import make_feature_vectors_version_five
         X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
         X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
     elif classification_features_version == "v6":
+        from processing_utils import make_feature_vectors_version_six
         weights_presets = {
             1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
             2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
@@ -940,6 +940,10 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     if level is not None:
         X_train, y_train = level_features(X_train, y_train, level)
         X_test, y_test = level_features(X_test, y_test, level)
+    elif classification_features_version == "v7":
+        from processing_utils import make_feature_vectors_version_seven
+        X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
+        X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -1158,7 +1162,7 @@ def main():
     train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
         help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     train_binary_classifiers_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
-    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6"], help="Choose which version of features to use for classification.", default="v1")
+    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
     train_binary_classifiers_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
     train_binary_classifiers_parser.add_argument("--batchsize", type=int, default=None, help="Set training batch size.")
     train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
@@ -1176,7 +1180,7 @@ def main():
     cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
     cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
-    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6"], help="Choose which version of features to use for classification.", default="v1")
+    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
     cross_validation_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
     #cross_validation_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
     cross_validation_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")

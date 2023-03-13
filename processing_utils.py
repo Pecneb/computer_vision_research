@@ -344,7 +344,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))): 
             filteredTracks.append(obj)
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
-    return filter_out_false_positive_detections(filteredTracks, 0.4)
+    return filter_out_false_positive_detections_by_enter_exit_distance(filteredTracks, 0.4)
 
 def filter_tracks(trackedObjects: list, label="car"):
     """Only return objects with given label.
@@ -772,7 +772,7 @@ def make_feature_vectors_version_six(trackedObjects: list, labels: np.ndarray, m
         if stride > t.history_X.shape[0]:
             continue
         for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
-            midx = j + (stride // 2) - 1
+            midx = j + (3*stride // 4) - 1
             end_idx = j + stride - 1
             feature_vector = np.array([t.history_X[j], t.history_Y[j], t.history_VX_calculated[j], t.history_VY_calculated[j],
                                     t.history_X[midx], t.history_Y[midx], t.history_VX_calculated[midx], t.history_VY_calculated[midx],
@@ -782,6 +782,29 @@ def make_feature_vectors_version_six(trackedObjects: list, labels: np.ndarray, m
             else:
                 X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
             metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
+
+def make_feature_vectors_version_seven(trackedObjects: list, labels: np.ndarray, max_stride: int):
+    weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = max_stride
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
+            #midx = j + (3*stride // 4) - 1
+            end_idx = j + stride - 1
+            feature_vector = np.array([t.history_X[j], t.history_Y[j], t.history_VX_calculated[j], t.history_VY_calculated[j],
+                                    t.history_X[end_idx], t.history_Y[end_idx], t.history_VX_calculated[end_idx], t.history_VY_calculated[end_idx]]) * weights
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))
+            else:
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+            metadata.append(np.array([t.history[j].frameID,
                                         t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)

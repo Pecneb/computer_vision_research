@@ -20,7 +20,7 @@
 from processing_utils import (
     detectionParser, 
     trackedObjectFactory, 
-    filter_out_false_positive_detections, 
+    filter_out_false_positive_detections_by_enter_exit_distance, 
     filter_out_edge_detections, 
     filter_tracks, 
     make_4D_feature_vectors, 
@@ -32,7 +32,9 @@ from processing_utils import (
 )
 from dataManagementClasses import Detection, TrackedObject
 import databaseLoader
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 import numpy as np
 import os 
 
@@ -67,7 +69,7 @@ def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float)
         for det in rawDets:
             tmpDets.append(detectionParser(det))
         trackedObjects.append(trackedObjectFactory(tmpDets))
-    filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
+    filteredTrackedObjects = filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects, threshold)
     featureVectors = make_4D_feature_vectors(filteredTrackedObjects)
     labels, cluster_center_indices_= affinityPropagation_on_featureVector(featureVectors)
     n_clusters_= len(cluster_center_indices_)
@@ -155,7 +157,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
         n_clusters (int): number of initial clusters for kmeans 
         threshold (float): the threshold for the filtering algorithm 
     """
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections_by_enter_exit_distance(path2db, threshold)
     filteredEnterFeatures  = makeFeatureVectors_Nx2(filteredEnterDets)
     filteredExitFeatures = makeFeatureVectors_Nx2(filteredExitDets)
     colors = "bgrcmyk"
@@ -1128,7 +1130,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 os.mkdir(dirpath)
             dirpaths[model][metric] = dirpath
     while thres < threshold[1]:
-        filteredTracks = filter_out_false_positive_detections(tracks, thres) 
+        filteredTracks = filter_out_false_positive_detections_by_enter_exit_distance(tracks, thres) 
         X = make_4D_feature_vectors(filteredTracks)
         for model in models:
             for metric in metrics:
