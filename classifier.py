@@ -301,7 +301,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         self.tracks = tracks
         super().__init__(estimator, n_jobs=n_jobs)
     
-    def fit(self, X, y, centroids: dict = None):
+    def fit(self, X, y, centroids: dict = None, scale: bool = False):
         """Fit underlying estimators.
         If centroids dictionary are given,
         then version three feature vectors
@@ -333,8 +333,12 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         # In cases where individual estimators are very fast to train setting
         # n_jobs > 1 in can results in slower performance due to the overhead
         # of spawning threads.  See joblib issue #112.
-        self.scaler_ = StandardScaler().fit(X)
-        X_scaled = self.scaler_.transform(X)
+        if scale:
+            self.scaler_ = StandardScaler().fit(X)
+            X_ = self.scaler_.transform(X)
+        else:
+            self.scaler_ = None
+            X_ = X.copy()
         if centroids is not None:
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
@@ -344,7 +348,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                                             centroids[i][0] - x[2], 
                                             centroids[i][1] - x[3], 
                                             centroids[i][0] - x[4], 
-                                            centroids[i][1] - x[5]]) for x in X_scaled]),
+                                            centroids[i][1] - x[5]]) for x in X_]),
                     column,
                     classes=[
                         "not %s" % self.label_binarizer_.classes_[i],
@@ -357,7 +361,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
                     self.estimator,
-                    X_scaled,
+                    X_,
                     column,
                     classes=[
                         "not %s" % self.label_binarizer_.classes_[i],
@@ -438,7 +442,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         return self      
 
-    def predict_proba(self, X: np.ndarray, centroids: dict = None):
+    def predict_proba(self, X: np.ndarray, centroids: dict = None, scale: bool = False):
         """Return predicted probabilities of dataset X.
         If cluster centroids dictionary is given, then 
         version three feature vectors are used, that are
@@ -454,8 +458,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         """
         check_is_fitted(self)
         X = validation.check_array(X, ensure_2d=True)
-        X_scaled = self.scaler_.transform(X)
-
+        if self.scaler_ is not None:
+            X_ = self.scaler_.transform(X)
+        else:
+            X_ = X.copy()
         Y = np.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
             if centroids is not None:
@@ -466,9 +472,9 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     centroids[clr][1] - x[3], 
                     centroids[clr][0] - x[4], 
                     centroids[clr][1] - x[5]
-                ]) for x in X_scaled]))[:, 1]
+                ]) for x in X_]))[:, 1]
             else:
-                Y[:, clr] = mdl.predict_proba(X_scaled)[:, 1]
+                Y[:, clr] = mdl.predict_proba(X_)[:, 1]
         return Y 
 
     def predict(self, X: np.ndarray, top:int=1, centroids: dict = None):
