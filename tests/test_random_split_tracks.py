@@ -1,19 +1,20 @@
-from processing_utils import random_split_tracks, load_joblib_tracks
-import argparse
+from processing_utils import random_split_tracks
+import numpy as np
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-db", help="Dataset")
-    parser.add_argument("--seed", help="Integer as seed, to be able to regenerate the dataset.", type=int)
-    args = parser.parse_args()
+class TestRandomSplitFunc:
+    example_dataset = np.linspace(0, 100, 1000)
 
-    tracks = load_joblib_tracks(args.db) 
+    def test_train_not_equals_test(self):
+        train, test = random_split_tracks(self.example_dataset, 0.75, 1)
+        for e in train:
+            for t in test:
+                assert e != t
 
-    print("\nFiltered tracks")
-    train, test = random_split_tracks(tracks, 0.7, args.seed)
-    print(train)
-    print(test)
-    print("\n")
-
-if __name__ == "__main__":
-    main()
+    def test_change_percentage(self):
+        train, test = random_split_tracks(self.example_dataset, 0.75, 1)
+        train_test_a = np.append(train, [test])
+        changed = 0
+        for i in range(len(train_test_a)):
+            if train_test_a[i] != self.example_dataset[i]:
+                changed += 1
+        assert changed/len(train_test_a) > 0.75 
