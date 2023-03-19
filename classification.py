@@ -534,7 +534,9 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         classification_features_version=argv['classification_features_version'],
         stride=argv['stride'],
         level=argv['level'],
-
+        threshold=argv['threshold'],
+        n_weights=argv['n_weights'],
+        weights_preset=argv['weights_preset']
     )
     tracks_filtered = [t for i, t in enumerate(tracks) if labels[i] > -1] 
     labels_filtered = [l for l in labels if l > -1]  
@@ -604,6 +606,8 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v5"), binaryModel)
         elif argv['classification_features_version'] == 'v6':
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v6"), binaryModel)
+        elif argv['classification_features_version'] == 'v7':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_stride-{argv['stride']}_v7"), binaryModel)
     
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     """Deprecated, dont use.
@@ -1027,6 +1031,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     print(f"\nTraining dataset size: {X_train.shape[0]}")
     print(f"Validation dataset size: {X_test.shape[0]}\n")
 
+    print(f"Number of clusters: {len(set(labels_train))}")
+
     t1 = time.time()
     for m in tqdm(models, desc="Cross validate models"):
         clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
@@ -1120,7 +1126,9 @@ def train_binary_classifiers_submodule(args):
                             classification_features_version=args.classification_features_version,
                             stride=args.stride,
                             batch_size=args.batchsize,
-                            level=args.level, n_weights=args.n_weights)
+                            level=args.level, n_weights=args.n_weights,
+                            weights_preset=args.weights_preset,
+                            threshold=args.threshold)
 
 def cross_validation_submodule(args):
     cross_validate(args.database, args.output, 
@@ -1168,6 +1176,7 @@ def main():
     train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
     train_binary_classifiers_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
     train_binary_classifiers_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.4, help="Threshold value for clustering.")
     train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
 
     # add subcommands for cross validating classifiers 

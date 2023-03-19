@@ -306,7 +306,30 @@ def filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects: 
             filteredTracks.append(obj)
     return filteredTracks
 
+def is_noise(trackedObject, threshold: float = 0.1):
+    for i in range(len(trackedObject.history_X)-1):
+        d = np.linalg.norm(np.array([trackedObject.history_X[i], trackedObject.history_Y[i]])-np.array([trackedObject.history_X[i+1], trackedObject.history_Y[i+1]]))
+        if d > threshold:
+            return True
+    return False
+    
+def filter_out_noise_trajectories(trackedObjects: list):
+    filtered = []
+    for i in range(len(trackedObjects)):
+        if not is_noise(trackedObjects[i], 0.05):
+            filtered.append(trackedObjects[i])
+    return np.array(filtered)
+
 def search_min_max_coordinates(trackedObjects: list):
+    """Search for minimum and maximum of x,y coordinates,
+    to find the edges of the range of interest.
+
+    Args:
+        trackedObjects (list): list of trajectory objects 
+
+    Returns:
+        tuple: tuple consisting of min x,y and max x,y coordinates 
+    """
     max_y = 0 
     min_y = 9999 
     max_x = 0
@@ -344,7 +367,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))): 
             filteredTracks.append(obj)
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
-    return filter_out_false_positive_detections_by_enter_exit_distance(filteredTracks, 0.4)
+    return filter_out_noise_trajectories(filter_out_false_positive_detections_by_enter_exit_distance(filteredTracks, 0.4))
 
 def filter_tracks(trackedObjects: list, label="car"):
     """Only return objects with given label.
@@ -1100,7 +1123,7 @@ def load_joblib_tracks(path2tracks: str) -> list:
         exit(1)
     return joblib.load(path2tracks)
 
-def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold = 0.5, p = 2, cluster_dimensions: str = "6D"):
+def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold = 0.5, p = 2, cluster_dimensions: str = "4D"):
     """Save training tracks with class numbers ordered to them.
 
     Args:
@@ -1179,12 +1202,15 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
 
     # fill test dataset with the rest of the tracks
     i = 0
-    while(len(test) != test_size or i > len(dataset)):
-        if dataset[i] not in train and dataset[i] not in test:
-            test.append(dataset[i])
+    while(len(test) <= test_size and i <= len(dataset)):
+        try:
+            if dataset[i]['track'] not in [t['track'] for t in train] and dataset[i]['track'] not in [t['track'] for t in test]:
+                test.append(dataset[i])
+        except:
+            print(i)
         i += 1
 
-    return train, test
+    return np.array(train), np.array(test)
 
 def load_dataset(path2dataset: str):
     """This function loads the track data from sqlite db or joblib file.
