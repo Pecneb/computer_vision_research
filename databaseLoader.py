@@ -24,7 +24,7 @@ LOAD_OBJECTS_SCRIPT = """SELECT * FROM objects"""
 
 GET_LAST_OBJ_ID = """SELECT objID FROM objects WHERE objID=(SELECT MAX(objID) FROM objects)"""
 
-LOAD_DETECTIONS_SCRIPT = """SELECT detections.objID, frameNum, label, confidence, x, y, width, height, vx, vy, ax, ay
+LOAD_DETECTIONS_SCRIPT = """SELECT detections.objID, frameNum, label, confidence, x, y, width, height, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c
                             FROM detections, objects 
                             WHERE detections.objID = objects.objID"""
 
@@ -111,7 +111,12 @@ def loadDetectionsOfObject(path2db: str, objID: int) -> list:
     conn = getConnection(path2db)
     try:
         cur = conn.cursor()
-        data = cur.execute(f"""SELECT d.objID, frameNum, o.label, confidence, x, y, width, height, vx, vy, ax, ay FROM detections d, objects o WHERE d.objID={objID} AND d.objID=o.objID  ORDER BY d.frameNum ASC""").fetchall()
+        data = cur.execute(f"""
+            SELECT d.objID, frameNum, o.label, confidence, x, y, width, height, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c 
+            FROM detections d, objects o 
+            WHERE d.objID={objID} AND d.objID=o.objID 
+            ORDER BY d.frameNum ASC
+            """).fetchall()
         return data
     except Error as e:
         print(e)

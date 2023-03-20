@@ -20,7 +20,7 @@
 from processing_utils import (
     detectionParser, 
     trackedObjectFactory, 
-    filter_out_false_positive_detections, 
+    filter_out_false_positive_detections_by_enter_exit_distance, 
     filter_out_edge_detections, 
     filter_tracks, 
     make_4D_feature_vectors, 
@@ -32,7 +32,9 @@ from processing_utils import (
 )
 from dataManagementClasses import Detection, TrackedObject
 import databaseLoader
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 import numpy as np
 import os 
 
@@ -67,7 +69,7 @@ def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float)
         for det in rawDets:
             tmpDets.append(detectionParser(det))
         trackedObjects.append(trackedObjectFactory(tmpDets))
-    filteredTrackedObjects = filter_out_false_positive_detections(trackedObjects, threshold)
+    filteredTrackedObjects = filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects, threshold)
     featureVectors = make_4D_feature_vectors(filteredTrackedObjects)
     labels, cluster_center_indices_= affinityPropagation_on_featureVector(featureVectors)
     n_clusters_= len(cluster_center_indices_)
@@ -129,7 +131,7 @@ def dbscan_on_featureVectors(featureVectors: np.ndarray, eps: float, min_samples
     dbscan = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs).fit(featureVectors)
     return dbscan.labels_
 
-def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: float, min_cluster_size: float, n_jobs: int, max_eps=np.inf):
+def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: float, min_cluster_size: float, n_jobs: int, max_eps: float, p: int):
     """Run optics clustering algorithm on extracted feature vectors.
 
     Args:
@@ -138,6 +140,7 @@ def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: f
         xi (float, optional): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. Defaults to 0.05.
         min_cluster_size (float, optional): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Defaults to 0.05.
         max_eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+        p (int): Parameter for distance metric. Default = 2.
 
     Returns:
         labels: Cluster labels for each point in the dataset given to fit(). Noisy samples and points which are not included in a leaf cluster of cluster_hierarchy_ are labeled as -1.
@@ -154,7 +157,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
         n_clusters (int): number of initial clusters for kmeans 
         threshold (float): the threshold for the filtering algorithm 
     """
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections(path2db, threshold)
+    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections_by_enter_exit_distance(path2db, threshold)
     filteredEnterFeatures  = makeFeatureVectors_Nx2(filteredEnterDets)
     filteredExitFeatures = makeFeatureVectors_Nx2(filteredExitDets)
     colors = "bgrcmyk"
@@ -1127,7 +1130,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 os.mkdir(dirpath)
             dirpaths[model][metric] = dirpath
     while thres < threshold[1]:
-        filteredTracks = filter_out_false_positive_detections(tracks, thres) 
+        filteredTracks = filter_out_false_positive_detections_by_enter_exit_distance(tracks, thres) 
         X = make_4D_feature_vectors(filteredTracks)
         for model in models:
             for metric in metrics:
@@ -1177,7 +1180,8 @@ def submodule_optics(args):
             min_samples=args.min_samples,
             max_eps=args.max_eps,
             xi=args.xi, 
-            min_cluster_size=args.min_cluster_size
+            min_cluster_size=args.min_cluster_size,
+            p=args.p_norm
         )
     if args.dimensions == "6D":
         clustering_search_on_6D_feature_vectors(
@@ -1188,7 +1192,8 @@ def submodule_optics(args):
             min_samples=args.min_samples,
             max_eps=args.max_eps,
             xi=args.xi, 
-            min_cluster_size=args.min_cluster_size
+            min_cluster_size=args.min_cluster_size,
+            p=args.p_norm
         )
 
 def submodule_birch(args):
@@ -1231,6 +1236,7 @@ def main():
     optics_parser.add_argument("--min_cluster_size", type=float, default=None, help="Minimum number of samples in an OPTICS cluster, expressed as an absolute number or" 
                                                                               "a fraction of the number of samples (rounded to be at least 2). If flag not used," 
                                                                               "then min_cluster_size = max_samples.")
+    optics_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     optics_parser.set_defaults(func=submodule_optics)
 
     birch_parser = subparser.add_parser("birch", help="Birch clustering.")

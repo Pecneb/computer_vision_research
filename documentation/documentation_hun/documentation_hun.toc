@@ -1,0 +1,5 @@
+\contentsline {section}{Abstract}{1}{section*.2}%
+\contentsline {section}{Contents}{2}{section*.3}%
+\contentsline {section}{\numberline {1}Bevezetés}{2}{section.1}%
+\contentsline {section}{\numberline {2}Kapcsolódó kutatások}{2}{section.2}%
+\contentsline {section}{References}{2}{section*.5}%

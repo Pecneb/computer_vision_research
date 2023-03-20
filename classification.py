@@ -32,7 +32,7 @@ from processing_utils import (
     data_preprocessing_for_classifier_from_joblib_model, 
     preprocess_dataset_for_training,
     load_joblib_tracks,
-    level_features
+    level_features,
     )
 from tqdm import tqdm
 np.seterr(divide='ignore', invalid='ignore')
@@ -533,7 +533,10 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         cluster_features_version=argv['cluster_features_version'],
         classification_features_version=argv['classification_features_version'],
         stride=argv['stride'],
-        level=argv['level']
+        level=argv['level'],
+        threshold=argv['threshold'],
+        n_weights=argv['n_weights'],
+        weights_preset=argv['weights_preset']
     )
     tracks_filtered = [t for i, t in enumerate(tracks) if labels[i] > -1] 
     labels_filtered = [l for l in labels if l > -1]  
@@ -551,7 +554,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     parameters = {
         'KNN' : {'n_neighbors' : 15},
         #'GP' :  {},
-        'SVM' : {'kernel' : 'rbf', 'probability' : True}
+        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 16000}
     }
 
     if not os.path.isdir(os.path.join(outdir, "tables")):
@@ -599,6 +602,12 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3_from_half"), binaryModel)
         elif argv['classification_features_version'] == 'v4':
             save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v4"), binaryModel)
+        elif argv['classification_features_version'] == 'v5':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v5"), binaryModel)
+        elif argv['classification_features_version'] == 'v6':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v6"), binaryModel)
+        elif argv['classification_features_version'] == 'v7':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_stride-{argv['stride']}_v7"), binaryModel)
     
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     """Deprecated, dont use.
@@ -831,35 +840,32 @@ def plot_decision_tree(path2model: str):
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: bool = False):
-    """Calculate classification model accuracy with cross validation method.
+def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1):
+    """Run cross validation on chosen classifiers with different feature vectors.
 
     Args:
-        path2dataset (str): Path to dataset. File with joblib extension. 
-        train_ratio (float, optional): Split ratio of the tracks. Defaults to 0.75.
-        seed (int, optional): Seed for reproducable track splitting. Defaults to 1.
-        n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
-        n_jobs (int, optional): Number of jobs to run. Defaults to 18.
+        path2dataset (str): Clustered dataset path.
+        outputPath (str, optional): The path to the output table to save the results. Defaults to None.
+        train_ratio (float, optional): The ratio of the training dataset compared to the test dataset. Defaults to 0.75.
+        seed (int, optional): Seed value to be able reproduce shuffle on dataset. Defaults to 1.
+        n_splits (int, optional): Cross validation split number. Defaults to 5.
+        n_jobs (int, optional): Number of paralell processes to run. Defaults to 18.
+        estimator_params_set (int, optional): Choose classifier parameter set. Defaults to 1.
+        classification_features_version (str, optional): Choose which feature vector to use for classification. Defaults to "v1".
+        stride (int, optional): Size of the sliding window used to generate feature vectors from detection history. Defaults to 15.
+        level (bool, optional): Choose if dataset should be balanced or stay as it is after enrichment. Defaults to False.
+        n_weights (int, optional): The number of dimensions, that is going to be added between the first and last dimension in the feature vector. Defaults to n_weights.
+
+    Returns:
+        tuple: cross validation results in pandas datastructure 
     """
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks, 
-                                    make_feature_vectors_version_two, 
-                                    make_feature_vectors_version_two_half, 
-                                    make_feature_vectors_version_one, 
-                                    make_feature_vectors_version_one_half,
-                                    make_feature_vectors_version_three, 
-                                    make_feature_vectors_version_three_half,
-                                    make_feature_vectors_version_four
                                 )
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier, SGDOneClassSVM
-    from sklearn.gaussian_process import GaussianProcessClassifier
-    from sklearn.naive_bayes import GaussianNB
-    from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
-    from sklearn.tree import DecisionTreeClassifier
     from sklearn.model_selection import cross_val_score, cross_validate
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
@@ -888,18 +894,23 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     fit_params = None
 
     if classification_features_version == "v1":
+        from processing_utils import make_feature_vectors_version_one
         X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v1_half":
+        from processing_utils import make_feature_vectors_version_one_half
         X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2":
+        from processing_utils import make_feature_vectors_version_two
         X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2_half":
+        from processing_utils import make_feature_vectors_version_two_half
         X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v3":
+        from processing_utils import make_feature_vectors_version_three
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -907,6 +918,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
+        from processing_utils import make_feature_vectors_version_three_half
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -914,11 +926,28 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v4":
+        from processing_utils import make_feature_vectors_version_four
         X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
-        if level:
-            X_train, y_train = level_features(X_train, y_train)
-            X_test, y_test = level_features(X_test, y_test)
+    elif classification_features_version == "v5":
+        from processing_utils import make_feature_vectors_version_five
+        X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
+        X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
+    elif classification_features_version == "v6":
+        from processing_utils import make_feature_vectors_version_six
+        weights_presets = {
+            1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
+            2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
+        }
+        X_train, y_train, metadata_train = make_feature_vectors_version_six(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, weights=weights_presets[weights_preset])
+        X_test, y_test, metadata_test = make_feature_vectors_version_six(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, weights=weights_presets[weights_preset])
+    if level is not None:
+        X_train, y_train = level_features(X_train, y_train, level)
+        X_test, y_test = level_features(X_test, y_test, level)
+    elif classification_features_version == "v7":
+        from processing_utils import make_feature_vectors_version_seven
+        X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
+        X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -938,7 +967,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
                     #'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
                     #'SGD_modified_huber' : {'loss' : 'modified_huber'},
                     #'SGD_log_loss' : {'loss' : 'log_loss'},
-                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 16000},
                     #'DT' : {} 
                 }, {
                     'KNN' : {'n_neighbors' : 3},
@@ -1001,6 +1030,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
 
     print(f"\nTraining dataset size: {X_train.shape[0]}")
     print(f"Validation dataset size: {X_test.shape[0]}\n")
+
+    print(f"Number of clusters: {len(set(labels_train))}")
 
     t1 = time.time()
     for m in tqdm(models, desc="Cross validate models"):
@@ -1095,7 +1126,9 @@ def train_binary_classifiers_submodule(args):
                             classification_features_version=args.classification_features_version,
                             stride=args.stride,
                             batch_size=args.batchsize,
-                            level=args.level)
+                            level=args.level, n_weights=args.n_weights,
+                            weights_preset=args.weights_preset,
+                            threshold=args.threshold)
 
 def cross_validation_submodule(args):
     cross_validate(args.database, args.output, 
@@ -1104,7 +1137,7 @@ def cross_validation_submodule(args):
                 estimator_params_set=args.param_set, 
                 #cluster_features_version=args.cluster_features_version,
                 classification_features_version=args.classification_features_version,
-                stride=args.stride, level=args.level)
+                stride=args.stride, level=args.level, n_weights=args.n_weights, weights_preset=args.weights_preset)
 
 def investigate_renitent_features(args):
     investigateRenitent(args.model, args.threshold, 
@@ -1137,10 +1170,13 @@ def main():
     train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
         help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
     train_binary_classifiers_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
-    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4"], help="Choose which version of features to use for classification.", default="v1")
+    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
     train_binary_classifiers_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
     train_binary_classifiers_parser.add_argument("--batchsize", type=int, default=None, help="Set training batch size.")
-    train_binary_classifiers_parser.add_argument("--level", default=False, action="store_true", help="Use this flag to level out class numbers.")
+    train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    train_binary_classifiers_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    train_binary_classifiers_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.4, help="Threshold value for clustering.")
     train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
 
     # add subcommands for cross validating classifiers 
@@ -1153,10 +1189,12 @@ def main():
     cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
     cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
     cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
-    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4"], help="Choose which version of features to use for classification.", default="v1")
+    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
     cross_validation_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
     #cross_validation_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
-    cross_validation_parser.add_argument("--level", default=False, action="store_true", help="Use this flag to level out class numbers.")
+    cross_validation_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    cross_validation_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    cross_validation_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
     cross_validation_parser.set_defaults(func=cross_validation_submodule)
 
     # add subcommands for renitent investigation module
