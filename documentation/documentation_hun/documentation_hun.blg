@@ -14,51 +14,55 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--empty publisher in Anguita2012TheI
 Warning--empty address in Anguita2012TheI
 Warning--page numbers missing in both pages and numpages fields in Anguita2012TheI
+Warning--no number and no volume in opencv_library
+Warning--page numbers missing in both pages and numpages fields in opencv_library
 Warning--empty address in 10.5555/3001460.3001507
+Warning--empty organization in joblib_library
+Warning--empty organization in reback2020pandas
 Warning--empty address in PAUL2017177
 Warning--no number and no volume in wang2022yolov7
 Warning--page numbers missing in both pages and numpages fields in wang2022yolov7
 Warning--empty publisher in Wojke2018deep
 Warning--empty address in Wojke2018deep
-You've used 10 entries,
+You've used 17 entries,
             5981 wiz_defined-function locations,
-            1564 strings with 20642 characters,
-and the built_in function-call counts, 12346 in all, are:
-= -- 1579
-> -- 396
+            1609 strings with 22290 characters,
+and the built_in function-call counts, 20716 in all, are:
+= -- 2677
+> -- 831
 < -- 0
-+ -- 138
-- -- 136
-* -- 890
-:= -- 1137
-add.period$ -- 50
-call.type$ -- 10
-change.case$ -- 78
-chr.to.int$ -- 10
-cite$ -- 19
-duplicate$ -- 1105
-empty$ -- 747
-format.name$ -- 166
-if$ -- 3035
++ -- 286
+- -- 297
+* -- 1578
+:= -- 2073
+add.period$ -- 83
+call.type$ -- 17
+change.case$ -- 153
+chr.to.int$ -- 17
+cite$ -- 30
+duplicate$ -- 1688
+empty$ -- 1161
+format.name$ -- 335
+if$ -- 5000
 int.to.chr$ -- 2
 int.to.str$ -- 1
-missing$ -- 41
-newline$ -- 141
-num.names$ -- 72
-pop$ -- 413
+missing$ -- 57
+newline$ -- 212
+num.names$ -- 121
+pop$ -- 642
 preamble$ -- 1
-purify$ -- 158
+purify$ -- 289
 quote$ -- 0
-skip$ -- 440
+skip$ -- 661
 stack$ -- 0
-substring$ -- 860
-swap$ -- 144
+substring$ -- 1377
+swap$ -- 200
 text.length$ -- 19
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 244
-warning$ -- 9
-while$ -- 47
+type$ -- 398
+warning$ -- 13
+while$ -- 97
 width$ -- 0
-write$ -- 258
-(There were 9 warnings)
+write$ -- 400
+(There were 13 warnings)

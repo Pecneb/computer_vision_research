@@ -1,7 +1,8 @@
 \documentclass[acmtog, authorversion]{acmart}
 \usepackage{graphicx}
+\usepackage{minted}
 %\usepackage[numbers]{natbib}
-%\usepackage{float}
+\usepackage{float}
 %\usepackage{hyperref}
 %\usepackage{comment}
 %\usepackage{ragged2e}
@@ -10,7 +11,6 @@
 
 
 \begin{document}
-
 \title{Járművek trajektóriájinak előrejelzése machine learning modellekkel}
 
 \author{Péter Bence Mérnökinformatika BSc 6. félév}%\\Mérnökinformatika BSc 6. félév\\Konzulensek:\\Dr. Horváth András egyetemi docens\\Agg Áron PhD hallgató}
@@ -103,6 +103,111 @@ kutatott és használt modellek, mint például Kalman Filtering, k-nearest neig
 sebességét, ezen modellek tovább-kutatását, mivel egyre növekednek a különböző szenzorok által  begyűjtött traffic flow adatok, így ez a terület belépett
 a \emph{Big Data} korszakába. \cite{10.1371/journal.pone.0253868} is a traffic flow előrejelzését és generálását tárgyalja, Floating Car Data (FCD) 
 adathalmazokon betanított, Hosszú-Rövid-Távú memóriájú és Generatív versengő hálókkal.
+\subsection{YOLO}
+"You look only once" (YOLO) egy state-of-the-art, valós idejű objektum detektáló rendszer. Legfrissebb változata a Yolov7 felülmúlja sebességben
+és pontosságban a modern konvolúciós hálókat. Beágyazott rendszerekben és videókártyá-kon is egyaránt jó a teljesítménye, ezért az ITS területén
+alkalmazható. 
+\begin{figure}[H]
+ \Description{YOLOv3 perfomance over other CNN models.}
+ \includegraphics[width=1\columnwidth]{yolov3_perf.png}
+ \caption[YOLOv3]{YOLOv3 Performance}
+ \label{fig: Yolov3chart}
+\end{figure}
+\begin{figure}[H]
+ \Description{YOLOv4 perfomance over other CNN models.}
+ \includegraphics[width=1\columnwidth]{yolov4_perf.png}
+ \caption[YOLOv4]{YOLOv4 Performance}
+ \label{fig: Yolov4chart}
+\end{figure}
+\begin{figure}[H]
+ \Description{YOLOv7 perfomance over other yolo models.}
+ \includegraphics[width=1\columnwidth]{performance.png}
+ \caption[YOLOv7]{YOLOv7 Performance}
+ \label{fig: Yolov7chart}
+\end{figure}
+\subsection{DeepSORT}
+Simple Online and Realtime Tracking with a Deep Association Metric (DeepSORT) a SORT algoritmus egy továbbfejlesztett változata. Az eredeti
+algoritmus sebességét törekednek növelni egy offline tanítási lépéssel. A betanított mély asszociációs metrika segítségével nagyban lecsökkentették
+az identitás vál-tásokat, és hosszabb elfedés után is követni tudja az objektumokat.
+
+\section{Adathalmazok kialakítása}
+A kutatás során saját adathalmazok kialakítására volt szükség. Az adatok begyűjtésére és eltárolására saját alkalmazást és keretrendszert
+fejlesztettünk ki. A szoftver keretrendszert python nyelven írtuk meg, a forráskód ezen a linken megtatlálható \url{http://github.com/Pecneb/computer_vision_research}.
+A fejlesztés során a következő programkönyvtárakat használtuk OpenCV \cite{opencv_library}, Numpy \cite{harris2020array}, Pandas \cite{reback2020pandas}, 
+Scikit-Learn \cite{scikit-learn}, Matplotlib \cite{Hunter:2007}, SQLite \cite{sqlite2020hipp}, Joblib \cite{joblib_library}. Az adat-halmazokat SQLite adatbázisban és
+joblib fájlokban tároltuk el. Azért döntöttünk így, hogy két féle módon is eltároljuk az adathalmazokat, mert az SQL adatbázist univerzálisan
+bármilyen adatbáziskezelővel, vagy más programnyelvvel be lehet olvasni, viszont a joblib fájlokat sokkal gyorsabban be lehet töletni pythonnal.
+\subsection{Adatstruktúra}
+Az adatstruktúrát SQL schema-ként, és python class-ként is definiáltuk.
+\begin{minted}{sql}
+CREATE TABLE IF NOT EXISTS objects (
+    objID INTEGER PRIMARY KEY NOT NULL,
+    label TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS detections (
+    objID INTEGER NOT NULL,
+    frameNum INTEGER NOT NULL,
+    confidence REAL NOT NULL,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    width REAL NOT NULL,
+    height REAL NOT NULL,
+    vx REAL NOT NULL,
+    vy REAL NOT NULL,
+    ax REAL NOT NULL,
+    ay REAL NOT NULL,
+    FOREIGN KEY(objID) REFERENCES objects(objID)
+);
+CREATE TABLE IF NOT EXISTS metadata (
+    historyDepth INTEGER NOT NULL,
+    futureDepth INTEGER NOT NULL,
+    yoloVersion TEXT NOT NULL,   
+    device TEXT NOT NULL,
+    imgsize INTEGER NOT NULL,
+    stride INTEGER NOT NULL,
+    confidence_threshold REAL NOT NULL,
+    iou_threshold REAL NOT NULL
+);
+\end{minted}
+Minden követett objektum egyedi azonosítóval lett ellátva. Az objektumhoz tartozó detektálások külön táblába lett kiszervezve,
+ahol az \textit{objID} idegen kulcsal kapcsoljuk az \textit{objektumok} táblához. Egy objektumhoz az egyedi azonosítón kívül
+tartozik egy \textit{label} amit a YOLO objektum detektálótól kap, ez lehet pl. autó, személy, teherautó, stb. Az objektumokhoz
+tartózó detektálások tartalmazzák a képkocka számát, amikor a detektálás történt, a konfidenciát, hogy mennyire biztos az
+objektumfelismerő a hozzárendelt \textit{label}-ben, az objektum \begin{math}X,Y\end{math} kordinátáját, az objektum szélességét
+és magasságát, sebességét és gyorsulását. Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg
+lehessen ismételni a detektálást.
+\subsection{Objektumdetektálás}
+\subsubsection{YOLOv4}
+\subsubsection{YOLOv7}
+\subsection{Objektumkövetés}
+\subsubsection{Távolság alapú}
+\subsubsection{DeepSORT}
+\subsection{Eltárolás}
+
+\section{Klaszterezés}
+\subsection{Adattisztítás}
+\subsection{Feature vektorok}
+\subsection{Klaszterezési algoritmusok}
+\subsection{Megfelelő paraméterek}
+
+\section{Klasszifikáció}
+\subsection{Multiclass}
+\subsection{Binary}
+\subsection{OneVsRest}
+\subsection{Machine Learning modellek}
+\subsection{Feature vektorok}
+\subsubsection{Adatdúsítás}
+\subsubsection{Klassz kiegyenlítés}
+\subsection{Pontosság mérése}
+\subsubsection{Adathalmaz szétválasztás}
+\subsubsection{Cross Validation}
+\subsubsection{Teszthalmazos validáció}
+\subsection{Tanítás}
+\subsubsection{Modellek tárolása}
+
+\section{Valós idejű alkalmazás}
+
+\section{Alkalmazási területek}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{biblio}
