@@ -105,7 +105,7 @@ a \emph{Big Data} korszakába. \cite{10.1371/journal.pone.0253868} is a traffic 
 adathalmazokon betanított, Hosszú-Rövid-Távú memóriájú és Generatív versengő hálókkal.
 \subsection{YOLO}
 "You look only once" (YOLO) egy state-of-the-art, valós idejű objektum detektáló rendszer. Legfrissebb változata a Yolov7 felülmúlja sebességben
-és pontosságban a modern konvolúciós hálókat. Beágyazott rendszerekben és videókártyá-kon is egyaránt jó a teljesítménye, ezért az ITS területén
+és pontosságban a modern konvolúciós hálókat (lásd \ref{fig: Yolov3chart} \ref{fig: Yolov4chart} \ref{fig: Yolov7chart}). Beágyazott rendszerekben és videókártyá-kon is egyaránt jó a teljesítménye, ezért az ITS területén
 alkalmazható. 
 \begin{figure}[H]
  \Description{YOLOv3 perfomance over other CNN models.}
@@ -177,37 +177,106 @@ objektumfelismerő a hozzárendelt \textit{label}-ben, az objektum \begin{math}X
 és magasságát, sebességét és gyorsulását. Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg
 lehessen ismételni a detektálást.
 \subsection{Objektumdetektálás}
+Az objektumdetektáláshoz a fennt említett YOLO modellt haszáltuk. Kutatásunk kezdetekor, a YOLO 4-es verziójával kezdtünk dolgozni,
+de később átváltottunk a jobb pontosságot és sebességet ígérő 7-es verzióra.
 \subsubsection{YOLOv4}
+YOLO 4-es verzióját, C-ben implementálták. Hogy fel tudjuk használni, írnunk kellett egy python API-t, ami meg tudtunk hívni a
+deketáló programunkban.
 \subsubsection{YOLOv7}
+A YOLOv7 viszont már python-ban implementálták amihez már sokkal könnyebb volt API-t progra-mozni és használni. Emellett, gyorsaságban
+és pontosságban is felülmúlta a 4-es verziót (lásd \ref{fig: Yolov7chart}).
 \subsection{Objektumkövetés}
-\subsubsection{Távolság alapú}
 \subsubsection{DeepSORT}
-\subsection{Eltárolás}
 
 \section{Klaszterezés}
+A klaszterezés segítségével lehet az adathalmazból alőállítani a klasszifikáció alapjául szolgáló klasszokat. Ahhoz, hogy az
+a rengeteg trajektóriából és detektálásból számunkra felhasználható információ keletkezzen, meg kell határoznunk feature
+vectorokat, amik a trajektóriákra jellemző értékeket tartalmaznak. Ebben a feature térben fogja a klaszterező algoritmus
+megtalálni az egymáshoz közeli, hasonló trajektóriákat.
 \subsection{Adattisztítás}
+A klaszterezés előtt a nyers adatokat fel kell dolgoznunk, hogy az esetleges hibás, zajos detektálások, trajektóriák miatt
+kapjunk fals klasztereket.
+\subsubsection{Trajektóriák kiválasztása}
+Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakará-sok miatt a trajektóriák megszakadhatnak
+ezért ki kell válasz-tani az egyben maradt trajektóriákat. Első soron kiválasztjuk azokat, amelyek belépési és kilépési pontjai
+a kép relatív széleitől egy meghatározott határértékre vannak. 
+\subsubsection{DeepSORT pontatlanság}
+Kutatásunk során azt tapasztaltuk, hogy a DeepSORT és a YOLO pontatlanságai felerősí-tik egymást. A YOLO hajlamos néha táblákat
+vagy rendőr-lámpákat autóknak nézni, és ekkor a DeepSORT is elkezdi követni. Egy olyan hibáját is felfedeztük a DeepSORT-nak, hogy
+egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni A
+paramétereit, ami nem bizonyult akkora javulásnak, ezért útólagos szűréssel kellett korrigálnunk ezt a hibát. ...
 \subsection{Feature vektorok}
+Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk
+létre, de a kifejlesztett szűrő hatékonyab-bnak bizonyult, ezért maradtunk a 4 dimenziós feature vektorok mellett. (lásd ...)
 \subsection{Klaszterezési algoritmusok}
-\subsection{Megfelelő paraméterek}
+A legjobb eredményeket az OPTICS \cite{10.1145/304181.304187} algoritmus adta. ...
+\subsection{Paraméterek kiválasztása}
+A megfelelő paraméterek kiválasztása a klaszterezéshez igen fonzosnak bizonyult. Ezt a gyűjtött adathalmazokon kézzel kellett finomhangolnunk. ...
 
 \section{Klasszifikáció}
 \subsection{Multiclass}
+A több klasszos klasszifikálás egy olyan feladat, amikor több mint 2 klassz van, és minden feature vektor csa egy klasszba tartozhat.
 \subsection{Binary}
+A bináris klasszifikáció a többklasszossal szemben, csak 2 klassz között dönt. 2 klassz között sokkal pontosabban el lehet dönteni,
+hogy a feature vektor melyikbe tartozik. 
 \subsection{OneVsRest}
+Binráris klasszifikációs modellek kombinációjából, egy több klasszos modellt állítottunk össze, ami ... \%-al pontosabb eredményt adott.
 \subsection{Machine Learning modellek}
+Kutatásunk során több klasszifikációs modellt is teszteltünk, ezek közül a két legjobban teljesítő algoritmust tárgyaljuk, KNN és SVM modellt.
+...
 \subsection{Feature vektorok}
+Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. 7 fajta
+feature vektorral teszteltük a kiválasztott klasszifikációs modelleket, a legjobban az 1. és 7. verzió teljesített. ...
 \subsubsection{Adatdúsítás}
-\subsubsection{Klassz kiegyenlítés}
+Hogy minél pontosabban reprezentáljuk a valód idejű futást, a gyűjtött trajektóriákból nem trajektóriánként egy feture vektort
+generáltunk. Ezeknek a szá-mosságát a feature vektort felépítő algoritmusban szabtuk meg.
+%\subsubsection{Klassz kiegyenlítés}
 \subsection{Pontosság mérése}
+A pontosság mérésére háromféle metrikát használtunk.
+\paragraph{Accuracy Score}
+Ha \begin{math}\hat{y_i}\end{math} az \begin{math}i\end{math}. minta predikciója és \begin{math}y_i\end{math} a hozzá-tartozó valódi érték,
+akkor az eltalált predikciók és összes predikció hányadosa, amit így lehet leírni:\break
+\begin{equation}
+\texttt{accuracy}(y, \hat{y}) = \frac{1}{n_\text{samples}} \sum_{i=0}^{n_\text{samples}-1} 1(\hat{y}_i = y_i)
+\end{equation}
+\paragraph{Balanced Accuracy}
+amit ezért használtunk, hogy az adathalmaz kiegyensúlyozatlansága miatt ne kapjunk fals pontosságot. Ha minden klasszra egyenlően jól teljesít a klasszifikációs modellünk, akkor a sima \emph{Accuracy}-t kapjuk vissza.
+Ha a teszt adathalmaz kiegyensúlyozatlansága miatt az egyik klassznak jobb a pontossága mint egy másiknak, akkor ezt az értéket
+elosztja a klasszok számával. Ha az \begin{math}y_i\end{math} a valódi értéke az \begin{math}i\end{math}. mintának, és
+\begin{math}w_i\end{math} a hozzátartozó súly, akkor ezt a súlyt a következőképpen korrigáljuk:
+\begin{equation}
+    \hat{w}_i = \frac{w_i}{\sum_j{1(y_j = y_i) w_j}}
+\end{equation}
+ahol \begin{math}1(x)\end{math} a karakterisztikus függvény. Adott a \begin{math}\hat{y_i}\end{math} perdikció az \begin{math}i\end{math}.
+mintának, így a balanced accuracy-t így definiálhatjuk:
+\begin{equation}
+    \texttt{balanced-accuracy}(y, \hat{y}, w) = \frac{1}{\sum{\hat{w}_i}} \sum_i 1(\hat{y}_i = y_i) \hat{w}_i
+\end{equation}
+\paragraph{Top-K Accuracy}
+az \emph{Accuracy Score} egy generalizált változa-ta. A különbség az, hogy a predikció akkor számít igaznak, ha beletartozik a \begin{math}k\end{math}
+legmagasabb valószínűségű prediciók közé. Ha \begin{math}\hat{f}_{i,j}\end{math} a \begin{math}i\end{math}. mintának a \begin{math}j\end{math}. legmagasabb 
+predikciója, és \begin{math}y_i\end{math} a hozzátartozó valódi predikció, akkor az eltalált predikciók és az összes minta hányadosát így
+lehet definiálni:
+\begin{equation}
+    \texttt{top-k accuracy}(y, \hat{f}) = \frac{1}{n_\text{samples}} \sum_{i=0}^{n_\text{samples}-1} \sum_{j=1}^{k} 1(\hat{f}_{i,j} = y_i)
+\end{equation}
+ahol \begin{math}k\end{math} a megengedett találgatások száma, és \begin{math}1(x)\end{math} a karakte-risztikus függvény.
 \subsubsection{Adathalmaz szétválasztás}
+A pontosság méréséhez el kell választanunk egy teszt adatahalmazt a tanító adathalmaztól, mivel ha azon az adathalmazon tesztelünk, amin tanítottunk
+akkor tökéletes pontosságot kapnánk eredményül. Ezt \emph{Overfitting}-nek hívják. A szétválasztást egy általunk implementált algoritmus végzi, ami véletlen szám generátort használ a
+minták kiválasztásához. Az algoritmusnak meg lehet adni paraméterként a tanító adathalmaz méretét, és egy \emph{seed} értéket, ami azért fontos, hogy meg
+lehessen ismételni a szétválasztást.
 \subsubsection{Cross Validation}
+A túltanítás elkerülése érdekében, alkalmaztunk egy elterjedt metódust a cross-validációt. ...
 \subsubsection{Teszthalmazos validáció}
-\subsection{Tanítás}
+Hogy meggyőződjünk arról, hogy biztosan nem tanítottuk túl a modellünket, egy olyan teszt adathalmazon is le kell tesztelnünk, amit nem használ-tunk fel
+cross-validáció alatt.
 \subsubsection{Modellek tárolása}
+A betanított modelleket joblib file-ként tároltuk el, amit később python-nal tudunk betölteni.
 
-\section{Valós idejű alkalmazás}
+%\section{Valós idejű alkalmazás}
 
-\section{Alkalmazási területek}
+%\section{Alkalmazási területek}
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{biblio}
