@@ -110,19 +110,19 @@ alkalmazható.
 \begin{figure}[H]
  \Description{YOLOv3 perfomance over other CNN models.}
  \includegraphics[width=1\columnwidth]{yolov3_perf.png}
- \caption[YOLOv3]{YOLOv3 Performance}
+ \caption{YOLOv3 Performance}
  \label{fig: Yolov3chart}
 \end{figure}
 \begin{figure}[H]
  \Description{YOLOv4 perfomance over other CNN models.}
  \includegraphics[width=1\columnwidth]{yolov4_perf.png}
- \caption[YOLOv4]{YOLOv4 Performance}
+ \caption{YOLOv4 Performance}
  \label{fig: Yolov4chart}
 \end{figure}
 \begin{figure}[H]
  \Description{YOLOv7 perfomance over other yolo models.}
  \includegraphics[width=1\columnwidth]{performance.png}
- \caption[YOLOv7]{YOLOv7 Performance}
+ \caption{YOLOv7 Performance}
  \label{fig: Yolov7chart}
 \end{figure}
 \subsection{DeepSORT}
@@ -186,7 +186,12 @@ deketáló programunkban.
 A YOLOv7 viszont már python-ban implementálták amihez már sokkal könnyebb volt API-t progra-mozni és használni. Emellett, gyorsaságban
 és pontosságban is felülmúlta a 4-es verziót (lásd \ref{fig: Yolov7chart}).
 \subsection{Objektumkövetés}
+Ahhoz, hogy trajektóriák alapján tudjunk szabájosságokat felismerni a forgalomban, pontos objektumkövetésre volt szükségünk. Eleinte
+saját objektumkövető algoritmust használ-tunk, ami deketálások euklideszi távolsága alapján próbálta meg követni az objektumokat.
+Ezzel az volt a gond, hogy hosszabb kitakarás után nem találta meg az objektumot, így egy új objektumnak számított, ami a kép
+közepéből bukkant fel. Ennek a problémának a kiküszöbölésére próbáltuk ki a DeepSORT algoritmust.
 \subsubsection{DeepSORT}
+A DeepSORT algoritmus pythonban implementált változatát integráltuk a mi programunkba.
 
 \section{Klaszterezés}
 A klaszterezés segítségével lehet az adathalmazból alőállítani a klasszifikáció alapjául szolgáló klasszokat. Ahhoz, hogy az
@@ -195,24 +200,59 @@ vectorokat, amik a trajektóriákra jellemző értékeket tartalmaznak. Ebben a 
 megtalálni az egymáshoz közeli, hasonló trajektóriákat.
 \subsection{Adattisztítás}
 A klaszterezés előtt a nyers adatokat fel kell dolgoznunk, hogy az esetleges hibás, zajos detektálások, trajektóriák miatt
-kapjunk fals klasztereket.
-\subsubsection{Trajektóriák kiválasztása}
-Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakará-sok miatt a trajektóriák megszakadhatnak
-ezért ki kell válasz-tani az egyben maradt trajektóriákat. Első soron kiválasztjuk azokat, amelyek belépési és kilépési pontjai
-a kép relatív széleitől egy meghatározott határértékre vannak. 
+kapjunk fals klasztereket. Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakarások miatt 
+a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három szűrő algoritmust futtattunk 
+az adathalmazon. Elsőnek a trajektóriák belépő és kilépő pontjainak az euklideszi távolsága alapján szűrtünk.
+Majd a kép széleit meghatározzuk min max kiválasztással, és azokat a trajektórákat választjuk ki amiknek a szélektől meghatározott
+távolságra vannak a belépő és kilépő pontjaik.
 \subsubsection{DeepSORT pontatlanság}
-Kutatásunk során azt tapasztaltuk, hogy a DeepSORT és a YOLO pontatlanságai felerősí-tik egymást. A YOLO hajlamos néha táblákat
-vagy rendőr-lámpákat autóknak nézni, és ekkor a DeepSORT is elkezdi követni. Egy olyan hibáját is felfedeztük a DeepSORT-nak, hogy
+Kutatásunk során azt tapasztaltuk, hogy a DeepSORT és a YOLO pontatlanságai felerősítik egymást. A YOLO hajlamos néha táblákat
+vagy rendőr lám-pákat autóknak nézni, és ekkor a DeepSORT is elkezdi követni. Egy olyan hibáját is felfedeztük a DeepSORT-nak, hogy
 egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni A
-paramétereit, ami nem bizonyult akkora javulásnak, ezért útólagos szűréssel kellett korrigálnunk ezt a hibát. ...
+paramétereit, ami nem bizonyult akkora javulásnak, ezért útólagos szűréssel kellett korrigálnunk ezt a hibát. Az algoritmus végig 
+iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak akkor eldobjuk a trajektóriát.
+A következő képeken láthatók a klaszterek szűrés előtt és után. A koordinátákl plottolása mellett, hisztogramot is készítettünk,
+hogy lássuk a trajektóriák hosszának változását.
+\begin{figure}[H]
+ \Description{Klaszterezés szűrés előtt}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_0_n_tracks_1280.png}
+ \caption{KlaszterV1 1}
+ \label{fig: KlaszterV1_0}   
+\end{figure}
+\begin{figure}[H]
+ \Description{Klaszterezés szűrés után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_0_n_tracks_933.png}
+ \caption{KlaszterV2 1}
+ \label{fig: KlaszterV2_0}   
+\end{figure}
+\begin{figure}[H]
+ \Description{Klaszterezés szűrés előtt}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_4_n_tracks_235.png}
+ \caption{KlaszterV1 2}
+ \label{fig: KlaszterV1_4}   
+\end{figure}
+\begin{figure}[H]
+ \Description{Klaszterezés szűrés előtt}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_5_n_tracks_130.png}
+ \caption{KlaszterV2 2}
+ \label{fig: KlaszterV2_4}   
+\end{figure}
 \subsection{Feature vektorok}
 Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk
-létre, de a kifejlesztett szűrő hatékonyab-bnak bizonyult, ezért maradtunk a 4 dimenziós feature vektorok mellett. (lásd ...)
+létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y], de a kifejlesztett szűrő hatékonyab-bnak bizonyult, és a kevesebb dimenzió is előnyt jelent,
+ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
 \subsection{Klaszterezési algoritmusok}
-A legjobb eredményeket az OPTICS \cite{10.1145/304181.304187} algoritmus adta. ...
+A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta. 
+Aminek az eredményei fenti képeken látható (lásd. \ref{fig: KlaszterV1_0} \ref{fig: KlaszterV2_0} \ref{fig: KlaszterV1_4} \ref{fig: KlaszterV2_4}).
+Ez az algoritmus megkeresi a nagy sűrűségű halmazokat az adathalmazban, majd fokozatossan bővíti őket.
 \subsection{Paraméterek kiválasztása}
-A megfelelő paraméterek kiválasztása a klaszterezéshez igen fonzosnak bizonyult. Ezt a gyűjtött adathalmazokon kézzel kellett finomhangolnunk. ...
-
+A megfelelő paraméterek kiválasztása a klaszterezéshez igen fonzosnak bizonyult. Ezt a gyűjtött adathalmazokon kézzel kellett finomhangolnunk.
+A halmazok minimum számosságát a \begin{math}min\_samples\end{math} paraméterrel lehet szabályozni, a pontok egymástól való távolságának
+felső határát \begin{math}max\_eps\end{math}-el lehet megadni. Az távolság kiszámítására használt methódust \begin{math}metric\end{math}-el
+lehet megadni. A \begin{math}xi\end{math} paraméterrel az elérési plot minimum meredekségét lehet megadni. ami a klaszterek határát szabja meg.
+Az adathalmazra alkalmazható megfelelő paramétereket nem tudtuk generalizálni, kézzel kellett finomhangolnunk. A plotokon látható klaszterek
+megtalálásához \begin{math}min\_samples=50\end{math}, \begin{math}max\_eps=0.1\end{math}, \begin{math}metric='minkowski'\end{math} és \begin{math}xi=0.15\end{math}
+paramétereket használtunk.
 \section{Klasszifikáció}
 \subsection{Multiclass}
 A több klasszos klasszifikálás egy olyan feladat, amikor több mint 2 klassz van, és minden feature vektor csa egy klasszba tartozhat.
