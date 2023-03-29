@@ -38,8 +38,8 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True, help="Path to video.", type=str)
     parser.add_argument("--model", required=True, help="Path to trained model.", type=str)
-    parser.add_argument("--train_tracks", required=True, help="Path to the tracks joblib file.", type=str)
-    parser.add_argument("--all_tracks", help="Not only the tracks used for model training, rather all detections.", type=str)
+    #parser.add_argument("--train_tracks", required=True, help="Path to the tracks joblib file.", type=str)
+    #parser.add_argument("--all_tracks", help="Not only the tracks used for model training, rather all detections.", type=str)
     parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
     parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
     parser.add_argument("--max_iou_distance", type=float, default=0.7)
@@ -151,12 +151,17 @@ def draw_prediction(trackedObject, centroid: list[np.ndarray], image: np.ndarray
         bbox = (X, Y, W, H)
         left, top, right, bottom = bbox2points(bbox)
         cv.rectangle(image, (left, top), (right, bottom), (0,255,0), 1)
-        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[0]]}", (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[0]]:3.2f}", (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
         for i in range(centroid.shape[0]):
             if i == len(predictions)-1:
                 cv.line(image, (X, Y), (int(centroid[i, 0]), int(centroid[i, 1])), (0,255,0), 3)
+                cv.circle(image, (int(centroid[i, 0]), int(centroid[i, 1])), 10, (0,255,0), 3)
+                cv.putText(image, f"Cluster: {predictions[-1]}", 
+                            (int(centroid[i, 0]), int(centroid[i, 1])),
+                            cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
             else:
                 cv.line(image, (X, Y), (int(centroid[i, 0]), int(centroid[i, 1])), (0,0,255), 3)
+        
 
 def upscale_coordinates(p1, p2, image: np.ndarray):
     ratio = image.shape[1]/image.shape[0]
@@ -226,6 +231,8 @@ def main():
 
     model = load_model(args.model)
     model.n_jobs = 18
+    dataset = model.tracks
+    """
     dataset = load_joblib_tracks(args.train_tracks) 
     if type(dataset[0]) != dict:
         raise TypeError("Bad type of dataset file. The train_tracks dataset should contain clustered data. List containing dicts with keys: track, class.")
@@ -233,8 +240,9 @@ def main():
         all_tracks = load_joblib_tracks(args.all_tracks)
 
     dataset_filtered = [d for d in dataset if d["class"] != -1]
-    tracks = [d["track"] for d in dataset_filtered]
-    classes = [d["class"] for d in dataset_filtered]
+    """
+    tracks = [d["track"] for d in dataset]
+    classes = [d["class"] for d in dataset]
 
     # extract cluster centroids from dataset of classes and tracks
     cluster_centroids = aoiextraction(tracks, classes)

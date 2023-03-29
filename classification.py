@@ -542,6 +542,13 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     tracks_filtered = [t for i, t in enumerate(tracks) if labels[i] > -1] 
     labels_filtered = [l for l in labels if l > -1]  
 
+    tracks_labels = []
+    for i in range(len(tracks_filtered)):
+        tracks_labels.append({
+            "track" : tracks_filtered[i],
+            "class" : labels_filtered[i]
+        })
+
     cluster_centroids = None
     if argv['classification_features_version'] == 'v3' or argv['classification_features_version'] == 'v3_half':
         cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
@@ -555,7 +562,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     parameters = {
         'KNN' : {'n_neighbors' : 15},
         #'GP' :  {},
-        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 20000}
+        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000}
     }
 
     if not os.path.isdir(os.path.join(outdir, "tables")):
@@ -569,7 +576,7 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     all_classes = np.array(list(set(y)))
 
     for clr in tqdm(models, desc="Classifier trained."):
-        binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
+        binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks_labels, n_jobs=argv['n_jobs'])
 
         # if batch size is given, use partial_fit() method and train with minibatches
         if argv['batch_size'] is not None:
@@ -845,7 +852,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     """Run cross validation on chosen classifiers with different feature vectors.
 
     Args:
-        path2dataset (str): Clustered dataset path.
+        path2dataset (str): dataset path.
         outputPath (str, optional): The path to the output table to save the results. Defaults to None.
         train_ratio (float, optional): The ratio of the training dataset compared to the test dataset. Defaults to 0.75.
         seed (int, optional): Seed value to be able reproduce shuffle on dataset. Defaults to 1.
@@ -1125,11 +1132,11 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1):
+def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, threshold: float = 0.7, **estkwargs):
     """Run cross validation on chosen classifiers with different feature vectors.
 
     Args:
-        path2dataset (str): Clustered dataset path.
+        path2dataset (str): dataset path.
         outputPath (str, optional): The path to the output table to save the results. Defaults to None.
         train_ratio (float, optional): The ratio of the training dataset compared to the test dataset. Defaults to 0.75.
         seed (int, optional): Seed value to be able reproduce shuffle on dataset. Defaults to 1.
@@ -1146,8 +1153,12 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     """
     from processing_utils import (
                                     load_joblib_tracks, 
-                                    random_split_tracks, 
+                                    random_split_tracks,
+                                    filter_out_edge_detections,
+                                    make_4D_feature_vectors
                                 )
+    from clustering import clustering_on_feature_vectors
+    from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
@@ -1155,20 +1166,24 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
-    # load tracks from joblib file
-    # tracks stored as list[dict]
-    # {
-    #   "track": t,
-    #   "class": c
-    # }
     tracks = load_joblib_tracks(path2dataset)
-    tracks_filteted = []
-    for t in tracks:
-        if t["class"] != -1:
-            tracks_filteted.append(t)
+
+    # cluster tracks
+    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    train_dict = []
+    for i in range(len(tracks_labeled)):
+        train_dict.append({
+            "track" : tracks_labeled[i],
+            "class" : cluster_labels[i]
+        })
 
     # shuffle tracks, and separate into a train and test dataset
-    train, test = random_split_tracks(tracks_filteted, train_ratio, seed)
+    train, test = random_split_tracks(train_dict, train_ratio, seed)
 
     tracks_train = [t["track"] for t in train]
     labels_train = np.array([t["class"] for t in train])
@@ -1437,13 +1452,23 @@ def cross_validation_submodule(args):
                 p=args.p_norm) # clustering param
 
 def cross_validation_multiclass_submodule(args):
-    cross_validate_multiclass(args.database, args.output, 
+    cross_validate_multiclass(args.database, 
+                args.output, 
                 args.train_ratio, 
-                args.seed, n_jobs=args.n_jobs, 
+                args.seed, 
+                n_jobs=args.n_jobs, 
                 estimator_params_set=args.param_set, 
                 #cluster_features_version=args.cluster_features_version,
                 classification_features_version=args.classification_features_version,
-                stride=args.stride, level=args.level, n_weights=args.n_weights, weights_preset=args.weights_preset)
+                stride=args.stride, 
+                level=args.level, 
+                n_weights=args.n_weights, 
+                weights_preset=args.weights_preset,
+                threshold=args.threshold,
+                min_samples=args.min_samples, # clustering param
+                max_eps=args.max_eps, # clustering param
+                xi=args.xi, # clustering param
+                p=args.p_norm) # clustering param
 
 def investigate_renitent_features(args):
     investigateRenitent(args.model, args.threshold, 
@@ -1541,6 +1566,11 @@ def main():
     cross_validation_multiclass_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
     cross_validation_multiclass_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
     cross_validation_multiclass_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    cross_validation_multiclass_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
+    cross_validation_multiclass_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
     cross_validation_multiclass_parser.set_defaults(func=cross_validation_multiclass_submodule)
 
 
