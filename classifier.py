@@ -478,7 +478,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return Y 
 
     def predict(self, X: np.ndarray, top:int=1, centroids: dict = None):
-        """Return predicted top labels of dataset X
+        """Return predicted top labels of dataset X in ascending order.
 
         Parameters
         ----------
@@ -511,7 +511,6 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         prediction_result = np.argsort(class_proba)
         
         #top_pred_res = np.zeros(prediction_result.shape)
-        #print(prediction_result[:,-top:])
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 
