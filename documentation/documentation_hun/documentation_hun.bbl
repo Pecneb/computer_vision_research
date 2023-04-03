@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{17}
+\begin{thebibliography}{20}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -89,6 +89,35 @@
 \showISBNx{9780769541099}
 \urldef\tempurl%
 \url{https://doi.org/10.1109/ICPR.2010.764}
+\showDOI{\tempurl}
+
+
+\bibitem[Caliński and JA(1974)]%
+        {article}
+\bibfield{author}{\bibinfo{person}{Tadeusz Caliński} {and}
+  \bibinfo{person}{Harabasz JA}.} \bibinfo{year}{1974}\natexlab{}.
+\newblock \showarticletitle{A Dendrite Method for Cluster Analysis}.
+\newblock \bibinfo{journal}{\emph{Communications in Statistics - Theory and
+  Methods}}  \bibinfo{volume}{3} (\bibinfo{date}{01} \bibinfo{year}{1974}),
+  \bibinfo{pages}{1--27}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1080/03610927408827101}
+\showDOI{\tempurl}
+
+
+\bibitem[Davies and Bouldin(1979)]%
+        {4766909}
+\bibfield{author}{\bibinfo{person}{David~L. Davies} {and}
+  \bibinfo{person}{Donald~W. Bouldin}.} \bibinfo{year}{1979}\natexlab{}.
+\newblock \showarticletitle{A Cluster Separation Measure}.
+\newblock \bibinfo{journal}{\emph{IEEE Transactions on Pattern Analysis and
+  Machine Intelligence}} \bibinfo{volume}{PAMI-1}, \bibinfo{number}{2}
+  (\bibinfo{date}{April} \bibinfo{year}{1979}), \bibinfo{pages}{224--227}.
+\newblock
+\showISSN{1939-3539}
+\urldef\tempurl%
+\url{https://doi.org/10.1109/TPAMI.1979.4766909}
 \showDOI{\tempurl}
 
 
@@ -230,6 +259,21 @@
 \newblock
 \urldef\tempurl%
 \url{https://doi.org/10.1371/journal.pone.0253868}
+\showDOI{\tempurl}
+
+
+\bibitem[Rousseeuw(1987)]%
+        {ROUSSEEUW198753}
+\bibfield{author}{\bibinfo{person}{Peter~J. Rousseeuw}.}
+  \bibinfo{year}{1987}\natexlab{}.
+\newblock \showarticletitle{Silhouettes: A graphical aid to the interpretation
+  and validation of cluster analysis}.
+\newblock \bibinfo{journal}{\emph{J. Comput. Appl. Math.}}
+  \bibinfo{volume}{20} (\bibinfo{year}{1987}), \bibinfo{pages}{53--65}.
+\newblock
+\showISSN{0377-0427}
+\urldef\tempurl%
+\url{https://doi.org/10.1016/0377-0427(87)90125-7}
 \showDOI{\tempurl}
 
 

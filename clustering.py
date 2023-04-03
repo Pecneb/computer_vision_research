@@ -1219,6 +1219,48 @@ def submodule_birch(args):
             n_clusters=args.n_clusters
         )
 
+def submodule_kmeans(args):
+    from sklearn.cluster import KMeans 
+    if args.dimensions == "4D":
+        clustering_search_on_4D_feature_vectors(
+            estimator=KMeans, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            n_clusters=args.n_clusters
+        )
+    if args.dimensions == "6D":
+        clustering_search_on_6D_feature_vectors(
+            estimator=KMeans, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            n_clusters=args.n_clusters
+        )
+
+def submodule_dbscan(args):
+    from sklearn.cluster import DBSCAN 
+    if args.dimensions == "4D":
+        clustering_search_on_4D_feature_vectors(
+            estimator=DBSCAN, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            eps=args.eps,
+            min_samples=args.min_samples,
+            p=args.p_norm
+        )
+    if args.dimensions == "6D":
+        clustering_search_on_6D_feature_vectors(
+            estimator=DBSCAN, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            eps=args.eps,
+            min_samples=args.min_samples,
+            p=args.p_norm
+        )
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1250,6 +1292,16 @@ def main():
         help="Number of clusters after the final clustering step, which treats the subclusters from the leaves as new samples."
     )
     birch_parser.set_defaults(func=submodule_birch)
+
+    kmeans_parser = subparser.add_parser("kmeans", help="KMeans clustering.")
+    kmeans_parser.add_argument("--n_clusters", type=int, default=10, help="Number of clusters.")
+    kmeans_parser.set_defaults(func=submodule_kmeans)
+
+    dbscan_parser = subparser.add_parser("dbscan", help="DBSCAN clustering.")
+    dbscan_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    dbscan_parser.add_argument("--eps", type=float, default=np.inf, help="Set epsilon distance that can be between samples of a cluster.")
+    dbscan_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    dbscan_parser.set_defaults(func=submodule_dbscan)
 
     args = argparser.parse_args() 
     args.func(args)

@@ -24,45 +24,45 @@ Warning--no number and no volume in wang2022yolov7
 Warning--page numbers missing in both pages and numpages fields in wang2022yolov7
 Warning--empty publisher in Wojke2018deep
 Warning--empty address in Wojke2018deep
-You've used 17 entries,
+You've used 20 entries,
             5981 wiz_defined-function locations,
-            1609 strings with 22290 characters,
-and the built_in function-call counts, 20716 in all, are:
-= -- 2677
-> -- 831
+            1635 strings with 22898 characters,
+and the built_in function-call counts, 24238 in all, are:
+= -- 3226
+> -- 910
 < -- 0
-+ -- 286
-- -- 297
-* -- 1578
-:= -- 2073
-add.period$ -- 83
-call.type$ -- 17
-change.case$ -- 153
-chr.to.int$ -- 17
-cite$ -- 30
-duplicate$ -- 1688
-empty$ -- 1161
-format.name$ -- 335
-if$ -- 5000
++ -- 316
+- -- 342
+* -- 1798
+:= -- 2394
+add.period$ -- 98
+call.type$ -- 20
+change.case$ -- 170
+chr.to.int$ -- 20
+cite$ -- 33
+duplicate$ -- 1980
+empty$ -- 1369
+format.name$ -- 378
+if$ -- 5901
 int.to.chr$ -- 2
 int.to.str$ -- 1
-missing$ -- 57
-newline$ -- 212
-num.names$ -- 121
-pop$ -- 642
+missing$ -- 69
+newline$ -- 247
+num.names$ -- 142
+pop$ -- 732
 preamble$ -- 1
-purify$ -- 289
+purify$ -- 330
 quote$ -- 0
-skip$ -- 661
+skip$ -- 761
 stack$ -- 0
-substring$ -- 1377
-swap$ -- 200
-text.length$ -- 19
+substring$ -- 1678
+swap$ -- 230
+text.length$ -- 38
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 398
+type$ -- 446
 warning$ -- 13
-while$ -- 97
+while$ -- 125
 width$ -- 0
-write$ -- 400
+write$ -- 468
 (There were 13 warnings)

@@ -211,40 +211,89 @@ vagy rendőr lám-pákat autóknak nézni, és ekkor a DeepSORT is elkezdi köve
 egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni A
 paramétereit, ami nem bizonyult akkora javulásnak, ezért útólagos szűréssel kellett korrigálnunk ezt a hibát. Az algoritmus végig 
 iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak akkor eldobjuk a trajektóriát.
-A következő képeken láthatók a klaszterek szűrés előtt és után. A koordinátákl plottolása mellett, hisztogramot is készítettünk,
-hogy lássuk a trajektóriák hosszának változását.
-\begin{figure}[H]
- \Description{Klaszterezés szűrés előtt}
- \includegraphics[width=1\columnwidth]{clustering/n_cluster_0_n_tracks_1280.png}
- \caption{KlaszterV1 1}
- \label{fig: KlaszterV1_0}   
+A következő képeken láthatók a klaszterek szűrés előtt és után (lásd \ref{fig: Klaszterezés szűrő} \ref{fig: Klaszterezés szűrő 2}).
+
+\begin{figure}
+ \Description{Klaszter 0 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_0_before_after.png}
+
+ \Description{Klaszter 2 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_2_before_after.png}
+
+ \Description{Klaszter 3 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_3_before_after.png}
+
+ \Description{Klaszter 4 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_4_before_after.png}
+
+ \Description{Klaszter 5 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_5_before_after.png}
+
+ \caption{Klaszterezés szűrő}
+
+ \label{fig: Klaszterezés szűrő}   
 \end{figure}
-\begin{figure}[H]
- \Description{Klaszterezés szűrés után}
- \includegraphics[width=1\columnwidth]{clustering/n_cluster_0_n_tracks_933.png}
- \caption{KlaszterV2 1}
- \label{fig: KlaszterV2_0}   
-\end{figure}
-\begin{figure}[H]
- \Description{Klaszterezés szűrés előtt}
- \includegraphics[width=1\columnwidth]{clustering/n_cluster_4_n_tracks_235.png}
- \caption{KlaszterV1 2}
- \label{fig: KlaszterV1_4}   
-\end{figure}
-\begin{figure}[H]
- \Description{Klaszterezés szűrés előtt}
- \includegraphics[width=1\columnwidth]{clustering/n_cluster_5_n_tracks_130.png}
- \caption{KlaszterV2 2}
- \label{fig: KlaszterV2_4}   
+
+\begin{figure}
+ \Description{Klaszter 7 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_7_before_after.png}
+
+ \Description{Klaszter 8 szűrés előtt és után}
+ \includegraphics[width=1\columnwidth]{clustering/n_cluster_8_before_after.png}
+
+ \caption{Klaszterezés szűrő }
+
+ \label{fig: Klaszterezés szűrő 2}   
 \end{figure}
 \subsection{Feature vektorok}
 Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk
 létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y], de a kifejlesztett szűrő hatékonyab-bnak bizonyult, és a kevesebb dimenzió is előnyt jelent,
 ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
 \subsection{Klaszterezési algoritmusok}
-A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta. 
-Aminek az eredményei fenti képeken látható (lásd. \ref{fig: KlaszterV1_0} \ref{fig: KlaszterV2_0} \ref{fig: KlaszterV1_4} \ref{fig: KlaszterV2_4}).
-Ez az algoritmus megkeresi a nagy sűrűségű halmazokat az adathalmazban, majd fokozatossan bővíti őket.
+Klaszterezéshez több fajta algoritmust teszteltünk. A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta. 
+Aminek az eredményei fenti képeken látható (lásd. \ref{fig: Klaszterezés szűrő}).
+OPTICS-on kívül leteszteltük a KMeans, DBSCAN és BIRCH algoritmusokat. KMeans algoritmus egyenlő varianciájú csoportokba osztja a mintákat úgy,
+hogy az \begin{math}inercia\end{math} kritériumot csökkentse. A KMeans egy fontos paramétere a \begin{math}n_clusters\end{math}, amivel a várható
+klaszterek számát kell megadni. Ennek a paraméternek a meghatározására próbálkoztunk különböző metrikákat felhasználni, hogy automatizálható legyen
+a klaszterezési lépés. Ezek a metrikák a Silhouette Coefficient \cite{ROUSSEEUW198753}, Calinski-Harabasz Index \cite{article} és Davies-Bouldin Index \cite{4766909}.
+Elbow diagramok segítségével próbáltuk eldönteni, hogy milyen értéket érdemes adni az \begin{math}n_clusters\end{math} paraméternek lásd \ref{fig: Elbow diagramok}.
+A mérőszámok konzisztensen alacsony értéket adtak, egy négy ágú kereszteződésnél, ahol jóval több klaszterbe sorolhatók a trajektóriák. A KMeans használatát
+ezért elvetettük.
+
+\begin{figure}
+    \Description{Elbow Calinski}
+    \includegraphics[width=1\columnwidth]{elbow/elbow_on_kmeans_2-16_metric_calinski-harabasz_thresh_0.5.png}
+
+    \Description{Silhouette}
+    \includegraphics[width=1\columnwidth]{elbow/elbow_on_kmeans_2-16_metric_silhouette_thresh_0.5.png}
+
+    \Description{Davies Bouldin Index}
+    \includegraphics[width=1\columnwidth]{elbow/elbow_on_kmeans_2-16_metric_davies-bouldin_thresh_0.5.png}
+    
+    \caption{Elbow diagramok}
+    \label{fig: Elbow diagramok}
+\end{figure}
+
+\begin{figure}
+    \Description{KMEans}
+    \includegraphics[width=1\columnwidth]{bad_clustering/example_kmeans_vs_optics.png}
+
+    \Description{BIRCH}
+    \includegraphics[width=1\columnwidth]{bad_clustering/example_birch_vs_optics.png}
+
+    \Description{DBSCAN vs OPTICS merged cluster}
+    \includegraphics[width=1\columnwidth]{bad_clustering/example_dbscan_vs_optics_merged_cluster.png}
+
+    \caption{KMeans, BIRCH, DBSCAN vs OPTICS}
+    \label{fig: Bad clusters}
+\end{figure}
+
+A BIRCH algoritmus sokszor egybevon klaszter bemeneteket vagy kimeneteket, ami miatt több más irányból jövő, vagy több más irányba kilépő objektumokat sorol azonos klaszterekbe.
+\begin{math}threshold\end{math} paraméterrel lehet a klaszterek méretét szabályozni, amivel javítható az egybevont klaszterek száma, a kutatás során futtatott tesztek alapján, még
+így is az OPTICS adta a legtisztább klasztereket. 
+DBSCAN algoritmus sokban hasonlít az OPTICS-hoz. A \begin{math}max\_eps\end{math} paraméter helyett, ami egy távolság tartományt ad meg, az \begin{math}eps\end{math} paraméter  
+pontos távolságot adja meg, hogy két minta egymás szomszédságában van-e vagy sem, ez egy éles határ, ezért az OPTICS könnyebben finomhangolható.
+
 \subsection{Paraméterek kiválasztása}
 A megfelelő paraméterek kiválasztása a klaszterezéshez igen fonzosnak bizonyult. Ezt a gyűjtött adathalmazokon kézzel kellett finomhangolnunk.
 A halmazok minimum számosságát a \begin{math}min\_samples\end{math} paraméterrel lehet szabályozni, a pontok egymástól való távolságának
@@ -255,18 +304,68 @@ megtalálásához \begin{math}min\_samples=50\end{math}, \begin{math}max\_eps=0.
 paramétereket használtunk.
 \section{Klasszifikáció}
 \subsection{Multiclass}
-A több klasszos klasszifikálás egy olyan feladat, amikor több mint 2 klassz van, és minden feature vektor csa egy klasszba tartozhat.
+A több klasszos klasszifikálás egy olyan feladat, amikor több mint 2 klassz van, és minden feature vektor csak egy klasszba tartozhat.
+Ez kevesebb klassz számnál jó eredeményt adhat, de a mi esetünkben ahol 10-15 klassz is lehet, ami azt jelenti, hogy nem lehet elérni nagy
+pontosságot. Ennyi klassz közül nehéz pontosan eltatlálni melyik klasszba tartozik egy trajektória.
 \subsection{Binary}
 A bináris klasszifikáció a többklasszossal szemben, csak 2 klassz között dönt. 2 klassz között sokkal pontosabban el lehet dönteni,
-hogy a feature vektor melyikbe tartozik. 
+hogy a feature vektor melyikbe tartozik.
 \subsection{OneVsRest}
-Binráris klasszifikációs modellek kombinációjából, egy több klasszos modellt állítottunk össze, ami ... \%-al pontosabb eredményt adott.
+Binráris klasszifikációs modellek kombinációjából, egy több klasszos modellt állítottunk össze, ami átlagban 90\%-os feletti pontossággal tudta előre
+jelezni, hogy mely klaszterbe tartozik a jármű.
 \subsection{Machine Learning modellek}
 Kutatásunk során több klasszifikációs modellt is teszteltünk, ezek közül a két legjobban teljesítő algoritmust tárgyaljuk, KNN és SVM modellt.
-...
+A KNN átlagban 5\% al adott jobb eredményt mint az SVM
+
+\begin{table}
+\begin{center}
+\begin{tabular}{ | c | c | c | }
+   \hline 
+   \multicolumn{3}{|c|}{Binary Model Accuracy Features v1} \\
+   \hline
+   \hline
+   Metrics              & KNN               & SVM       \\
+   \hline
+   Base Accuracy        & 96.75\%           & 90.86\%   \\
+   \hline
+   Balanced Accuracy    & 95.75\%           & 84.52\%   \\
+   \hline
+   Top 1 Accuracy       & 96.75\%           & 90.82\%   \\
+   \hline
+   Top 2 Accuracy       & 99.30\%           & 98.03\%   \\
+   \hline
+\end{tabular}
+\caption[Binary version 1 feature vectors]{Binary modell verzió 1-es feature vektorokkal mért pontossága}
+\label{table:1}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\begin{tabular}{ | c | c | c | }
+   \hline 
+   \multicolumn{3}{|c|}{Binary Model Accuracy Features v7} \\
+   \hline
+   \hline
+   Metrics              & KNN               & SVM       \\
+   \hline
+   Base Accuracy        & 96.66\%           & 96.16\%   \\
+   \hline
+   Balanced Accuracy    & 93.61\%           & 92.18\%   \\
+   \hline
+   Top 1 Accuracy       & 96.64\%           & 92.16\%   \\
+   \hline
+   Top 2 Accuracy       & 99.39\%           & 98.90\%   \\
+   \hline
+\end{tabular}
+\end{center}
+\caption[Binary version 7 feature vectors]{Binary modell verzió 7-es feature vektorokkal mért pontossága}
+\label{table:2}
+\end{table}
+
 \subsection{Feature vektorok}
 Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. 7 fajta
-feature vektorral teszteltük a kiválasztott klasszifikációs modelleket, a legjobban az 1. és 7. verzió teljesített. ...
+feature vektorral teszteltük a kiválasztott klasszifikációs modelleket, a legjobban az 1. és 7. verzió teljesített. (lásd \ref{table:1} \ref{table:2})
 \subsubsection{Adatdúsítás}
 Hogy minél pontosabban reprezentáljuk a valód idejű futást, a gyűjtött trajektóriákból nem trajektóriánként egy feture vektort
 generáltunk. Ezeknek a szá-mosságát a feature vektort felépítő algoritmusban szabtuk meg.
