@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{20}
+\begin{thebibliography}{22}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -75,6 +75,15 @@
 \newblock
 
 
+\bibitem[Breiman et~al\mbox{.}(1984)]%
+        {Breiman1984ClassificationAR}
+\bibfield{author}{\bibinfo{person}{L. Breiman}, \bibinfo{person}{Jerome~H.
+  Friedman}, \bibinfo{person}{Richard~A. Olshen}, {and} \bibinfo{person}{C.~J.
+  Stone}.} \bibinfo{year}{1984}\natexlab{}.
+\newblock \showarticletitle{Classification and Regression Trees}.
+\newblock
+
+
 \bibitem[Brodersen et~al\mbox{.}(2010)]%
         {10.1109/ICPR.2010.764}
 \bibfield{author}{\bibinfo{person}{Kay~Henning Brodersen},
@@ -104,6 +113,21 @@
 \urldef\tempurl%
 \url{https://doi.org/10.1080/03610927408827101}
 \showDOI{\tempurl}
+
+
+\bibitem[Chang and Lin(2011)]%
+        {CC01a}
+\bibfield{author}{\bibinfo{person}{Chih-Chung Chang} {and}
+  \bibinfo{person}{Chih-Jen Lin}.} \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{{LIBSVM}: A library for support vector machines}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Intelligent Systems and
+  Technology}}  \bibinfo{volume}{2} (\bibinfo{year}{2011}),
+  \bibinfo{pages}{27:1--27:27}.
+\newblock
+Issue 3.
+\newblock
+\shownote{Software available at
+  \url{http://www.csie.ntu.edu.tw/~cjlin/libsvm}}.
 
 
 \bibitem[Davies and Bouldin(1979)]%

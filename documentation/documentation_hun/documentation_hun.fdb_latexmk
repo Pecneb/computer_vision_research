@@ -1,17 +1,17 @@
 # Fdb version 3
-["bibtex documentation_hun"] 1680688518 "documentation_hun.aux" "documentation_hun.bbl" "documentation_hun" 1680689924
+["bibtex documentation_hun"] 1680706614 "documentation_hun.aux" "documentation_hun.bbl" "documentation_hun" 1680706616
   "./ACM-Reference-Format.bst" 1678483833 90333 ccee583820c555b8fd3c6d1b9f362b14 ""
-  "biblio.bib" 1680542118 24505 5fb0ca9a589a1a00597d2993282d5713 ""
-  "documentation_hun.aux" 1680689924 9814 d60d51b609423704063d766fbb591f82 "pdflatex"
+  "biblio.bib" 1680700128 25043 eb0f857ab4e2d5a4564de4bfed38368c ""
+  "documentation_hun.aux" 1680706616 9976 0f3dd1eb3518bad6e7f1fd9b108ce10e "pdflatex"
   (generated)
   "documentation_hun.bbl"
   "documentation_hun.blg"
-["pdflatex"] 1680689921 "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" "documentation_hun.pdf" "documentation_hun" 1680689924
+["pdflatex"] 1680706614 "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" "documentation_hun.pdf" "documentation_hun" 1680706616
   "/dev/null" 0 -1 0 ""
   "/etc/texmf/web2c/texmf.cnf" 1677618109 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0700.600pk" 1678143638 7604 c056a5a8aa013ec4d6d9bc76ed603931 ""
   "/home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0800.600pk" 1678144149 8588 32086d0fb34ca2173985e2c5ea2b2a8f ""
-  "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" 1680689921 30763 8729dd8d1dae29c9ec908cfea9595313 ""
+  "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" 1680706611 32118 ca023a5149e3fafd5976bac63ca5cac9 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/tcss0700.tfm" 1136768653 1536 e5428b375c095aa4874fb47053e1d4fc ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/tcss0800.tfm" 1136768653 1536 16418351df4369b7cef8f784ccb87a85 ""
@@ -68,6 +68,7 @@
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss17.pfb" 1248133631 24416 36515493f76659302880e2604105b074 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb" 1248133631 24420 52dbb8e8aa0069a1b987309557f8d303 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi9.pfb" 1248133631 25029 6f2cec9646ca278302ed7d604e506e3e ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb" 1248133631 32915 7bf7720c61a5b3a7ff25b0964421c9b6 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb" 1248133631 32587 1788b0c1c5b39540c96f5e42ccd6dae8 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb" 1248133631 32442 c975af247b6702f7ca0c299af3616b80 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti7.pfb" 1248133631 36607 d654cb3f2bc54f57509240071db3bffa ""
@@ -199,11 +200,11 @@
   "clustering/n_cluster_5_before_after.png" 1680537327 133256 74880441f57f0fe556bf286a5a7c377b ""
   "clustering/n_cluster_7_before_after.png" 1680537394 125238 28ae7d23cfa83600064863f1fefc4d16 ""
   "clustering/n_cluster_8_before_after.png" 1680537462 127454 f6c39cca6949cc4e4de27828fa58ae75 ""
-  "documentation_hun.aux" 1680689924 9814 d60d51b609423704063d766fbb591f82 "pdflatex"
-  "documentation_hun.bbl" 1680688518 13729 8f4d24f0292d44ef5883b808974cb9f9 "bibtex documentation_hun"
-  "documentation_hun.out" 1680689924 3343 3d6c6c4c1d1bd813217742c64c51b41d "pdflatex"
-  "documentation_hun.tex" 1680689921 30763 8729dd8d1dae29c9ec908cfea9595313 ""
-  "documentation_hun.toc" 1680689924 2935 de7be7f7a12b4715bd465e68de203d1c "pdflatex"
+  "documentation_hun.aux" 1680706616 9976 0f3dd1eb3518bad6e7f1fd9b108ce10e "pdflatex"
+  "documentation_hun.bbl" 1680706614 14618 e639666bb918e542f5e0362d503e2886 "bibtex documentation_hun"
+  "documentation_hun.out" 1680706616 3343 3d6c6c4c1d1bd813217742c64c51b41d "pdflatex"
+  "documentation_hun.tex" 1680706611 32118 ca023a5149e3fafd5976bac63ca5cac9 ""
+  "documentation_hun.toc" 1680706616 2935 30e90b596266d8f939ad20cbabea7431 "pdflatex"
   "elbow/elbow_on_kmeans_2-16_metric_calinski-harabasz_thresh_0.5.png" 1680542840 63819 d515835b6301f6c6c0816177ffc30fb9 ""
   "elbow/elbow_on_kmeans_2-16_metric_davies-bouldin_thresh_0.5.png" 1680542849 64024 e4288a80088214c0ce3fe5e6baba2386 ""
   "elbow/elbow_on_kmeans_2-16_metric_silhouette_thresh_0.5.png" 1680542854 59478 f4509232b28c32c2f44c14a258e2bc07 ""

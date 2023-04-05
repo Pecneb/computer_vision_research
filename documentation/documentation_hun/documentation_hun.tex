@@ -92,8 +92,8 @@ A tanító adatok 6 különböző helyszín forgalmát tartalmazzák. Minden hel
 a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt. A klaszterezés
 során megpróbáljuk minél pontosabban meghatározni a be és kimeneti pontok által leírt klasztereket, amelyek majd alapul szolgálnak a
 klasszifikáció tanítása során. Több fajta klaszterezési algoritmust megvizsgáltunk a kutatás során, KMeans, OPTICS \cite{10.1145/304181.304187}, BIRCH \cite{10.1145/233269.233324} és DBSCAN \cite{10.5555/3001460.3001507}\cite{10.1145/3068335}. 
-A klasszifikációhoz bináris klasszifikációs modelleket kombinálunk, így több klasszos klasszifikációs modelt
-kapunk. Minden bináris modelnél, egy klassz az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot
+A klasszifikációhoz bináris klasszifikációs modelleket kombinálunk, így több osztályos klasszifikációs modelt
+kapunk. Minden bináris modelnél, egy osztály az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot
 alkalmaztunk, amik az \emph{Accuracy Score}, \emph{Balanced Accuracy Score} \cite{10.1109/ICPR.2010.764} és \emph{Top-k Accuracy Score}.
 Mindegyik mérőszám kiszámolásához \emph{K-Fold Cross-Validation} \cite{Anguita2012TheI} metódust alkalmaztunk, ahol \begin{math}K=5\end{math}.
 
@@ -315,58 +315,49 @@ megtalálásához \begin{math}min\_samples=50\end{math}, \begin{math}max\_eps=0.
 paramétereket használtunk.
 \section{Klasszifikáció}
 \subsection{Multiclass}
-A több klasszos klasszifikálás egy olyan feladat, amikor több mint 2 klassz van, és minden feature vektor csak egy klasszba tartozhat.
-Ez kevesebb klassz számnál jó eredeményt adhat, de a mi esetünkben ahol 10-15 klassz is lehet, ami azt jelenti, hogy nem lehet elérni nagy
-pontosságot. Ennyi klassz közül nehéz pontosan eltatlálni melyik klasszba tartozik egy trajektória.
+A több osztályos klasszifikálás egy olyan feladat, amikor több mint 2 osztály van, és minden feature vektor csak egy osztályba tartozhat.
+Ez kevesebb osztály számnál jó eredeményt adhat, de a mi esetünkben ahol 10-15 osztály is lehet, ami azt jelenti, hogy nem lehet elérni nagy
+pontosságot. Ennyi osztály közül nehéz pontosan eltatlálni melyik osztályba tartozik egy trajektória.
 \subsection{Binary}
-A bináris klasszifikáció a többklasszossal szemben, csak 2 klassz között dönt. 2 klassz között sokkal pontosabban el lehet dönteni,
+A bináris klasszifikáció a többklasszossal szemben, csak 2 osztály között dönt. 2 osztály között sokkal pontosabban el lehet dönteni,
 hogy a feature vektor melyikbe tartozik.
 \subsection{OneVsRest}
-Binráris klasszifikációs modellek kombinációjából, egy több klasszos modellt állítottunk össze, ami átlagban 90\%-os feletti pontossággal tudta előre
+Binráris klasszifikációs modellek kombinációjából, egy több osztályos modellt állítottunk össze, ami átlagban 90\%-os feletti pontossággal tudta előre
 jelezni, hogy mely klaszterbe tartozik a jármű.
 \subsection{Machine Learning modellek}
-Kutatatásunk során 
+Kutatatásunk során több féle machine learning modellt teszteltünk: KNN (KNearesNeighbors), GNB (GaussianNaiveBayes), MLP (MultiLayerPerceptron), 
+SGD (StochasticGradientDescent), SVM/SVC (SupportVectorMachine/SupportVectorClassifier) \cite{CC01a}, DT (DecisionTree) \cite{Breiman1984ClassificationAR}.
+Ezekből a GNB, MLP és SGD nem adott jó eredményeket ami látható az alábbi táblázatban \ref{table:1}, az eredmények megismétlődtek későbbi tesztekben, ezért
+ezeket a modelleket nem tárgyaljuk. A legjobb eredményeket a KNN adta
 
-\begin{table}
-\begin{center}
-\begin{tabular}{ | c | c | c | }
-   \hline 
-   \multicolumn{3}{|c|}{OneVsRest verzió 1} \\
-   \hline
-   \hline
-   Metrics              & KNN               & SVM       \\
-   \hline
-   Base Accuracy        & 96.75\%           & 90.86\%   \\
-   \hline
-   Balanced Accuracy    & 95.75\%           & 84.52\%   \\
-   \hline
-   Top 1 Accuracy       & 96.75\%           & 90.82\%   \\
-   \hline
-   Top 2 Accuracy       & 99.30\%           & 98.03\%   \\
-   \hline
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{Feature vektor verzió 1}                                                                     \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics}            & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+\multicolumn{1}{|l|}{KNN}                & \multicolumn{1}{c|}{90.57\%}  & \multicolumn{1}{c|}{95.50\%} & 99.12\% \\ \hline
+\multicolumn{1}{|l|}{GNB}                & \multicolumn{1}{c|}{63.92\%}  & \multicolumn{1}{c|}{73.25\%} & 90.10\% \\ \hline
+\multicolumn{1}{|l|}{MLP}                & \multicolumn{1}{c|}{58.49\%}  & \multicolumn{1}{c|}{81.93\%} & 89.43\% \\ \hline
+\multicolumn{1}{|l|}{SGD Modified Huber} & \multicolumn{1}{c|}{45.43\%}  & \multicolumn{1}{c|}{66.39\%} & 83.54\% \\ \hline
+\multicolumn{1}{|l|}{SGD Log Loss}       & \multicolumn{1}{c|}{40.41\%}  & \multicolumn{1}{c|}{60.70\%} & 79.69\% \\ \hline
+\multicolumn{1}{|l|}{SVM}                & \multicolumn{1}{c|}{77.87\%}  & \multicolumn{1}{c|}{89.29\%} & 96.61\% \\ \hline
+\multicolumn{1}{|l|}{DT}                 & \multicolumn{1}{c|}{90.95\%}  & \multicolumn{1}{c|}{93.64\%} & 95.06\% \\ \hline
 \end{tabular}
-\caption{OneVsRest verzió 1 feature vektorok}
+\caption{Feature vektor verzió 1}
 \label{table:1}
-\end{center}
 \end{table}
 
-\begin{table}
+\begin{table}[]
 \begin{center}
-\begin{tabular}{ | c | c | c | }
-   \hline 
-   \multicolumn{3}{|c|}{OneVsRest verzió 2} \\
-   \hline
-   \hline
-   Metrics              & KNN               & SVM       \\
-   \hline
-   Base Accuracy        & 96.66\%           & 96.16\%   \\
-   \hline
-   Balanced Accuracy    & 93.61\%           & 92.18\%   \\
-   \hline
-   Top 1 Accuracy       & 96.64\%           & 92.16\%   \\
-   \hline
-   Top 2 Accuracy       & 99.39\%           & 98.90\%   \\
-   \hline
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy \\ Feature Vector v1\end{tabular}}    \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+\multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.22\%}  & \multicolumn{1}{c|}{96.82\%} & 99.51\% \\ \hline
+\multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.05\%}  & \multicolumn{1}{c|}{90.69\%} & 98.16\% \\ \hline
+\multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.83\%}  & \multicolumn{1}{c|}{95.56\%} & 96.65\% \\ \hline
 \end{tabular}
 \end{center}
 \caption{OneVsRest verzió 2 feature vektorok}
@@ -403,9 +394,9 @@ akkor az eltalált predikciók és összes predikció hányadosa, amit így lehe
 \texttt{accuracy}(y, \hat{y}) = \frac{1}{n_\text{samples}} \sum_{i=0}^{n_\text{samples}-1} 1(\hat{y}_i = y_i)
 \end{equation}
 \paragraph{Balanced Accuracy}
-amit ezért használtunk, hogy az adathalmaz kiegyensúlyozatlansága miatt ne kapjunk fals pontosságot. Ha minden klasszra egyenlően jól teljesít a klasszifikációs modellünk, akkor a sima \emph{Accuracy}-t kapjuk vissza.
-Ha a teszt adathalmaz kiegyensúlyozatlansága miatt az egyik klassznak jobb a pontossága mint egy másiknak, akkor ezt az értéket
-elosztja a klasszok számával. Ha az \begin{math}y_i\end{math} a valódi értéke az \begin{math}i\end{math}. mintának, és
+amit ezért használtunk, hogy az adathalmaz kiegyensúlyozatlansága miatt ne kapjunk fals pontosságot. Ha minden osztályra egyenlően jól teljesít a klasszifikációs modellünk, akkor a sima \emph{Accuracy}-t kapjuk vissza.
+Ha a teszt adathalmaz kiegyensúlyozatlansága miatt az egyik osztálynak jobb a pontossága mint egy másiknak, akkor ezt az értéket
+elosztja a számával. Ha az \begin{math}y_i\end{math} a valódi értéke az \begin{math}i\end{math}. mintának, és
 \begin{math}w_i\end{math} a hozzátartozó súly, akkor ezt a súlyt a következőképpen korrigáljuk:
 \begin{equation}
     \hat{w}_i = \frac{w_i}{\sum_j{1(y_j = y_i) w_j}}
