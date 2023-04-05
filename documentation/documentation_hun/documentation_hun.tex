@@ -60,7 +60,7 @@
     Összehasonlí-tottunk több különböző klasszifikációs módszert 
     a legpontosabb predikció eléréséhez, amelyek: KNN, SVM, GP, DT, 
     GNB, MLP, SGD. A tanul-mányban bemutatott eljárások közül az 
-    SVM adta a legpontosabb 90\%-os eredményt.
+    KNN adta atlagban a legpontosabb 90\%-os eredményt.
     %Ezt a pontosságot valós idejű futás közben 5 fps mellett érte el.
     %Ebből azt a következtetést lehet levonni, hogy jobb sebesség elérése
     %érdekében, vagy a feature vectorok dimenzióját kell csökkenteni, vagy
@@ -141,41 +141,52 @@ bármilyen adatbáziskezelővel, vagy más programnyelvvel be lehet olvasni, vis
 Az adatstruktúrát SQL schema-ként, és python class-ként is definiáltuk.
 \begin{minted}{sql}
 CREATE TABLE IF NOT EXISTS objects (
-    objID INTEGER PRIMARY KEY NOT NULL,
-    label TEXT NOT NULL
-);
+            objID INTEGER PRIMARY KEY NOT NULL,
+            label TEXT NOT NULL
+        );
 CREATE TABLE IF NOT EXISTS detections (
-    objID INTEGER NOT NULL,
-    frameNum INTEGER NOT NULL,
-    confidence REAL NOT NULL,
-    x REAL NOT NULL,
-    y REAL NOT NULL,
-    width REAL NOT NULL,
-    height REAL NOT NULL,
-    vx REAL NOT NULL,
-    vy REAL NOT NULL,
-    ax REAL NOT NULL,
-    ay REAL NOT NULL,
-    FOREIGN KEY(objID) REFERENCES objects(objID)
-);
+            objID INTEGER NOT NULL,
+            frameNum INTEGER NOT NULL,
+            confidence REAL NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            width REAL NOT NULL,
+            height REAL NOT NULL,
+            vx REAL NOT NULL,
+            vy REAL NOT NULL,
+            ax REAL NOT NULL,
+            ay REAL NOT NULL,
+            vx_c REAL NOT NULL,
+            vy_c REAL NOT NULL,
+            ax_c REAL NOT NULL,
+            ay_c REAL NOT NULL,
+            FOREIGN KEY(objID) REFERENCES objects(objID)
+        );
 CREATE TABLE IF NOT EXISTS metadata (
-    historyDepth INTEGER NOT NULL,
-    futureDepth INTEGER NOT NULL,
-    yoloVersion TEXT NOT NULL,   
-    device TEXT NOT NULL,
-    imgsize INTEGER NOT NULL,
-    stride INTEGER NOT NULL,
-    confidence_threshold REAL NOT NULL,
-    iou_threshold REAL NOT NULL
-);
+            historyDepth INTEGER NOT NULL,
+            yoloVersion TEXT NOT NULL,   
+            device TEXT NOT NULL,
+            imgsize INTEGER NOT NULL,
+            stride INTEGER NOT NULL,
+            confidence_threshold REAL NOT NULL,
+            iou_threshold REAL NOT NULL,
+            k_velocity REAL NOT NULL,
+            k_acceleration REAL NOT NULL
+        );
 \end{minted}
 Minden követett objektum egyedi azonosítóval lett ellátva. Az objektumhoz tartozó detektálások külön táblába lett kiszervezve,
 ahol az \textit{objID} idegen kulcsal kapcsoljuk az \textit{objektumok} táblához. Egy objektumhoz az egyedi azonosítón kívül
 tartozik egy \textit{label} amit a YOLO objektum detektálótól kap, ez lehet pl. autó, személy, teherautó, stb. Az objektumokhoz
 tartózó detektálások tartalmazzák a képkocka számát, amikor a detektálás történt, a konfidenciát, hogy mennyire biztos az
 objektumfelismerő a hozzárendelt \textit{label}-ben, az objektum \begin{math}X,Y\end{math} kordinátáját, az objektum szélességét
-és magasságát, sebességét és gyorsulását. Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg
-lehessen ismételni a detektálást.
+\begin{math}width\end{math} és magasságát \begin{math}width\end{math}, sebességét \begin{math}v_x,v_y\end{math} és gyorsulását \begin{math}a_x,a_y\end{math}, 
+amik a deepSORT által kalkulált értékek, így még külön a koordinátákból kiszámolt \begin{math}v_{x_c},v_{y_c}\end{math} sebességet és
+\begin{math}a_{x_c},a_{y_c}\end{math} gyorsulást is eltároltuk.
+Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg lehessen ismételni a detektálást. 
+A koordinátákat a videó méretének megfelelően leskálázzuk 0 - 1 értékek köré. Ha a videó kép szélesség \begin{math}w\end{math}, magasság \begin{math}h\end{math}, 
+akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koordináták \begin{math}X = \frac{X_0}{w} * r\end{math}, \begin{math}Y = \frac{Y_0}{w} * r\end{math},
+\begin{math}v_x = \frac{v_{x_0}}{w} * r\end{math}, \begin{math}v_y = \frac{v_{y_0}}{w} * r\end{math}, \begin{math}a_x = \frac{a_{x_0}}{w} * r\end{math}, \begin{math}a_y = \frac{a_{y_0}}{w} * r\end{math}
+\begin{math}v_{x_c} = \frac{v_{xc0}}{w} * r\end{math}, \begin{math}v_{y_c} = \frac{v_{yc0}}{w} * r\end{math}, \begin{math}a_{x_c} = \frac{a_{xc0}}{w} * r\end{math}, \begin{math}a_{y_c} = \frac{a_{yc0}}{w} * r\end{math}.
 \subsection{Objektumdetektálás}
 Az objektumdetektáláshoz a fennt említett YOLO modellt haszáltuk. Kutatásunk kezdetekor, a YOLO 4-es verziójával kezdtünk dolgozni,
 de később átváltottunk a jobb pontosságot és sebességet ígérő 7-es verzióra.
@@ -314,8 +325,7 @@ hogy a feature vektor melyikbe tartozik.
 Binráris klasszifikációs modellek kombinációjából, egy több klasszos modellt állítottunk össze, ami átlagban 90\%-os feletti pontossággal tudta előre
 jelezni, hogy mely klaszterbe tartozik a jármű.
 \subsection{Machine Learning modellek}
-Kutatásunk során több klasszifikációs modellt is teszteltünk, ezek közül a két legjobban teljesítő algoritmust tárgyaljuk, KNN és SVM modellt.
-A KNN átlagban 5\% al adott jobb eredményt mint az SVM
+Kutatatásunk során 
 
 \begin{table}
 \begin{center}
@@ -364,8 +374,17 @@ A KNN átlagban 5\% al adott jobb eredményt mint az SVM
 \end{table}
 
 \subsection{Feature vektorok}
-Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. 7 fajta
-feature vektorral teszteltük a kiválasztott klasszifikációs modelleket, a legjobban az 1. és 7. verzió teljesített. (lásd \ref{table:1} \ref{table:2})
+Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. Ebben a papírban
+két fajta vektor verziót fogunk tárgyalni, amik a tesztek során a legjobban teljesítettek. 
+\paragraph{Az első verzió} Felépítése a következő \begin{math}[x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m\\, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}, ahol \begin{math}m\end{math}
+index jelöli az időben középen elhelyezkedő detektálást, az \begin{math}l\end{math} index pedig az utolsó, legfrissebb detektálást jelőli.
+Ez a vektor jól reprezentálja a valós idejű futás közben keletkező trajektóriákat, mert egyszerre több száz detektálást objektumonként
+nem lehet eltárolni a memórában, hanem egy meghatározott méretű buffert kell alkalmazni, aminek mi 15 vagy 30 detektálást adtunk.
+Az adathalmazban eltárolt trajektóriák ennél a buffernél több detektálást tartalmaznak, ezért az első verziónál a trajektóriát \begin{math}k\end{math} 
+részre osztottuk, így egy trajektória szelet mérete \begin{math}s_n = n_d/k\end{math}, ahol \begin{math}n_d\end{math} a detektálások számossága
+a trajektóriában. Ezekből a szeletekből képeztük az egyes feature vektorokat.
+\paragraph{A másik verzió} Felépítése \begin{math}x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m\\, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}
+
 \subsubsection{Adatdúsítás}
 Hogy minél pontosabban reprezentáljuk a valód idejű futást, a gyűjtött trajektóriákból nem trajektóriánként egy feture vektort
 generáltunk. Ezeknek a szá-mosságát a feature vektort felépítő algoritmusban szabtuk meg.

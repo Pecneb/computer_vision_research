@@ -877,6 +877,11 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.svm import SVC
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.tree import DecisionTreeClassifier
     from classifier import OneVSRestClassifierExtended
     from sklearn.model_selection import cross_val_score, cross_validate
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
@@ -968,23 +973,23 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     models = {
         'KNN' : KNeighborsClassifier,
         #'GP' : GaussianProcessClassifier,
-        #'GNB' : GaussianNB,
-        #'MLP' : MLPClassifier,
-        #'SGD_modified_huber' : SGDClassifier,
-        #'SGD_log_loss' : SGDClassifier,
+        'GNB' : GaussianNB,
+        'MLP' : MLPClassifier,
+        'SGD_modified_huber' : SGDClassifier,
+        'SGD_log_loss' : SGDClassifier,
         'SVM' : SVC,
-        #'DT' : DecisionTreeClassifier
+        'DT' : DecisionTreeClassifier
     }
     
     parameters = [{
                     'KNN' : {'n_neighbors' : 15},
-                    #'GP' :  {},
-                    #'GNB' : {},
-                    #'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    #'SGD_modified_huber' : {'loss' : 'modified_huber'},
-                    #'SGD_log_loss' : {'loss' : 'log_loss'},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 5000, 'solver' : 'sgd'},
+                    'SGD_modified_huber' : {'loss' : 'modified_huber'},
+                    'SGD_log_loss' : {'loss' : 'log_loss'},
                     'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
-                    #'DT' : {} 
+                    'DT' : {} 
                 }, {
                     'KNN' : {'n_neighbors' : 3},
                     #'GP' :  {},
@@ -1161,6 +1166,11 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.svm import SVC
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.tree import DecisionTreeClassifier
     from classifier import OneVSRestClassifierExtended
     from sklearn.model_selection import cross_val_score, cross_validate
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
@@ -1252,26 +1262,26 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     models = {
         'KNN' : KNeighborsClassifier,
         #'GP' : GaussianProcessClassifier,
-        #'GNB' : GaussianNB,
-        #'MLP' : MLPClassifier,
-        #'SGD_modified_huber' : SGDClassifier,
-        #'SGD_log_loss' : SGDClassifier,
+        'GNB' : GaussianNB,
+        'MLP' : MLPClassifier,
+        'SGD_modified_huber' : SGDClassifier,
+        'SGD_log_loss' : SGDClassifier,
         'SVM' : SVC,
-        #'DT' : DecisionTreeClassifier
+        'DT' : DecisionTreeClassifier
     }
     
     parameters = [{
                     'KNN' : {'n_neighbors' : 15},
-                    #'GP' :  {},
-                    #'GNB' : {},
-                    #'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    #'SGD_modified_huber' : {'loss' : 'modified_huber'},
-                    #'SGD_log_loss' : {'loss' : 'log_loss'},
-                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 16000},
-                    #'DT' : {} 
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 26000, 'solver' : 'sgd'},
+                    'SGD_modified_huber' : {'loss' : 'modified_huber'},
+                    'SGD_log_loss' : {'loss' : 'log_loss'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
+                    'DT' : {} 
                 }, {
                     'KNN' : {'n_neighbors' : 3},
-                    #'GP' :  {},
+                    'GP' :  {},
                     #'GNB' : {},
                     #'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
                     #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 2000},
