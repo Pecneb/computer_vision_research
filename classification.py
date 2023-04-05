@@ -1413,6 +1413,30 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print("\n#### Test set top k\n")
     print(final_test_top_k.to_markdown())
 
+    print("\n#### Cross-val Basic accuracy\n")
+    print(basic_table.to_markdown())
+    
+    print("\n#### Cross-val Balanced accuracy\n")
+    print(balanced_table.to_latex())
+
+    print("\n#### Cross-val Top 1 accuracy\n")
+    print(top_1_table.to_latex())
+
+    print("\n#### Cross-val Top 2 accuracy\n")
+    print(top_2_table.to_latex())
+
+    print("\n#### Cross-val Top 3 accuracy\n")
+    print(top_3_table.to_latex())
+
+    print("\n#### Test set basic\n")
+    print(final_test_basic.to_latex())
+
+    print("\n#### Test set balanced\n")
+    print(final_test_balanced.to_latex())
+
+    print("\n#### Test set top k\n")
+    print(final_test_top_k.to_latex())
+
     if outputPath is not None:
         with pd.ExcelWriter(outputPath) as writer:
             parameters_table.to_excel(writer, sheet_name="Classifier parameters")
