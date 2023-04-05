@@ -299,6 +299,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Default n_jobs value is 16.
         """
         self.tracks = tracks
+        self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
     
     def fit(self, X, y, centroids: dict = None, scale: bool = False):

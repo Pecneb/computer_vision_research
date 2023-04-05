@@ -557,12 +557,14 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
         'KNN' : KNeighborsClassifier,
         #'GP' : GaussianProcessClassifier,
         'SVM' : SVC,
+        'DT' : DecisionTreeClassifier
     }
     
     parameters = {
         'KNN' : {'n_neighbors' : 15},
         #'GP' :  {},
-        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000}
+        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
+        'DT': {}
     }
 
     if not os.path.isdir(os.path.join(outdir, "tables")):
@@ -1262,10 +1264,10 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     models = {
         'KNN' : KNeighborsClassifier,
         #'GP' : GaussianProcessClassifier,
-        'GNB' : GaussianNB,
-        'MLP' : MLPClassifier,
-        'SGD_modified_huber' : SGDClassifier,
-        'SGD_log_loss' : SGDClassifier,
+        #'GNB' : GaussianNB,
+        #'MLP' : MLPClassifier,
+        #'SGD_modified_huber' : SGDClassifier,
+        #'SGD_log_loss' : SGDClassifier,
         'SVM' : SVC,
         'DT' : DecisionTreeClassifier
     }

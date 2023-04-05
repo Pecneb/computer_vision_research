@@ -1212,6 +1212,7 @@ INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx9.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt8.tfm
 INPUT /usr/share/texlive/texmf-dist/tex/latex/cmap/ot1tt.cmap
 INPUT /usr/share/texlive/texmf-dist/tex/latex/cmap/ot1tt.cmap
@@ -1242,6 +1243,7 @@ INPUT documentation_hun.pyg
 INPUT /home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0700.600pk
 INPUT /home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0800.600pk
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb
+INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb
 INPUT /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb

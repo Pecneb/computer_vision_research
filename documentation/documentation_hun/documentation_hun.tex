@@ -9,7 +9,7 @@
 \setcopyright{none}
 \citestyle{acmauthoryear}
 
-
+\sloppy
 \begin{document}
 \title{Járművek trajektóriájinak előrejelzése machine learning modellekkel}
 
@@ -185,7 +185,7 @@ amik a deepSORT által kalkulált értékek, így még külön a koordinátákb�
 Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg lehessen ismételni a detektálást. 
 A koordinátákat a videó méretének megfelelően leskálázzuk 0 - 1 értékek köré. Ha a videó kép szélesség \begin{math}w\end{math}, magasság \begin{math}h\end{math}, 
 akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koordináták \begin{math}X = \frac{X_0}{w} * r\end{math}, \begin{math}Y = \frac{Y_0}{w} * r\end{math},
-\begin{math}v_x = \frac{v_{x_0}}{w} * r\end{math}, \begin{math}v_y = \frac{v_{y_0}}{w} * r\end{math}, \begin{math}a_x = \frac{a_{x_0}}{w} * r\end{math}, \begin{math}a_y = \frac{a_{y_0}}{w} * r\end{math}
+\begin{math}v_x = \frac{v_{x_0}}{w} \cdot r\end{math}, \begin{math}v_y = \frac{v_{y_0}}{w} * r\end{math}, \begin{math}a_x = \frac{a_{x_0}}{w} * r\end{math}, \begin{math}a_y = \frac{a_{y_0}}{w} * r\end{math}
 \begin{math}v_{x_c} = \frac{v_{xc0}}{w} * r\end{math}, \begin{math}v_{y_c} = \frac{v_{yc0}}{w} * r\end{math}, \begin{math}a_{x_c} = \frac{a_{xc0}}{w} * r\end{math}, \begin{math}a_{y_c} = \frac{a_{yc0}}{w} * r\end{math}.
 \subsection{Objektumdetektálás}
 Az objektumdetektáláshoz a fennt említett YOLO modellt haszáltuk. Kutatásunk kezdetekor, a YOLO 4-es verziójával kezdtünk dolgozni,
@@ -331,7 +331,7 @@ Kutatatásunk során
 \begin{center}
 \begin{tabular}{ | c | c | c | }
    \hline 
-   \multicolumn{3}{|c|}{Binary Model Accuracy Features v1} \\
+   \multicolumn{3}{|c|}{OneVsRest verzió 1} \\
    \hline
    \hline
    Metrics              & KNN               & SVM       \\
@@ -345,7 +345,7 @@ Kutatatásunk során
    Top 2 Accuracy       & 99.30\%           & 98.03\%   \\
    \hline
 \end{tabular}
-\caption[Binary version 1 feature vectors]{Binary modell verzió 1-es feature vektorokkal mért pontossága}
+\caption{OneVsRest verzió 1 feature vektorok}
 \label{table:1}
 \end{center}
 \end{table}
@@ -354,7 +354,7 @@ Kutatatásunk során
 \begin{center}
 \begin{tabular}{ | c | c | c | }
    \hline 
-   \multicolumn{3}{|c|}{Binary Model Accuracy Features v7} \\
+   \multicolumn{3}{|c|}{OneVsRest verzió 2} \\
    \hline
    \hline
    Metrics              & KNN               & SVM       \\
@@ -369,21 +369,26 @@ Kutatatásunk során
    \hline
 \end{tabular}
 \end{center}
-\caption[Binary version 7 feature vectors]{Binary modell verzió 7-es feature vektorokkal mért pontossága}
+\caption{OneVsRest verzió 2 feature vektorok}
 \label{table:2}
 \end{table}
 
 \subsection{Feature vektorok}
 Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. Ebben a papírban
 két fajta vektor verziót fogunk tárgyalni, amik a tesztek során a legjobban teljesítettek. 
-\paragraph{Az első verzió} Felépítése a következő \begin{math}[x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m\\, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}, ahol \begin{math}m\end{math}
+\paragraph{Az első verzió} Felépítése a következő \begin{math}[x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}, ahol \begin{math}m\end{math}
 index jelöli az időben középen elhelyezkedő detektálást, az \begin{math}l\end{math} index pedig az utolsó, legfrissebb detektálást jelőli.
 Ez a vektor jól reprezentálja a valós idejű futás közben keletkező trajektóriákat, mert egyszerre több száz detektálást objektumonként
 nem lehet eltárolni a memórában, hanem egy meghatározott méretű buffert kell alkalmazni, aminek mi 15 vagy 30 detektálást adtunk.
 Az adathalmazban eltárolt trajektóriák ennél a buffernél több detektálást tartalmaznak, ezért az első verziónál a trajektóriát \begin{math}k\end{math} 
 részre osztottuk, így egy trajektória szelet mérete \begin{math}s_n = n_d/k\end{math}, ahol \begin{math}n_d\end{math} a detektálások számossága
 a trajektóriában. Ezekből a szeletekből képeztük az egyes feature vektorokat.
-\paragraph{A másik verzió} Felépítése \begin{math}x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m\\, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}
+\paragraph{A másik verzió} Felépítése \begin{math}[x_0 * w_1, y_0 * w_2, v_{x_0} * w_3, v_{y_0} * w_4, x_l * w_5, y_l * w_6, v_{x_l} * w_7, v_{y_l} * w_8]\end{math}.
+Ennél a verziónál használtunk súlyokat, ahol \begin{math}w_1=1\end{math}, \begin{math}w_2=1\end{math}, \begin{math}w_3=100\end{math}, \begin{math}w_4=100\end{math},
+\begin{math}w_5=2\end{math}, \begin{math}w_6=2\end{math}, \begin{math}w_7=200\end{math}, \begin{math}w_8=200\end{math}. Mivel a sebességek két 
+nagyságrenddel kisebbek mint a koordináták, ezért felszoroztuk őket 100-as súlyokkal. Hogy a 15-30 detektálás nagyságú bufferekben nagyobb hangsúlyt kapjanak a legfrissebb
+koordináták és sebességek, így azok 2-es és 200-as szorzót kaptak.
+\paragraph{Teszt eredmények} Azt mutatják, hogy az utóbbi verzió magasabb pontosságokat produkált (lásd \ref{}).
 
 \subsubsection{Adatdúsítás}
 Hogy minél pontosabban reprezentáljuk a valód idejű futást, a gyűjtött trajektóriákból nem trajektóriánként egy feture vektort
