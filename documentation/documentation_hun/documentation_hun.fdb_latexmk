@@ -1,17 +1,17 @@
 # Fdb version 3
-["bibtex documentation_hun"] 1680706614 "documentation_hun.aux" "documentation_hun.bbl" "documentation_hun" 1680706616
+["bibtex documentation_hun"] 1680723890 "documentation_hun.aux" "documentation_hun.bbl" "documentation_hun" 1680805531
   "./ACM-Reference-Format.bst" 1678483833 90333 ccee583820c555b8fd3c6d1b9f362b14 ""
   "biblio.bib" 1680700128 25043 eb0f857ab4e2d5a4564de4bfed38368c ""
-  "documentation_hun.aux" 1680706616 9976 0f3dd1eb3518bad6e7f1fd9b108ce10e "pdflatex"
+  "documentation_hun.aux" 1680805531 11227 dec8673a34e8c7e7b86e6d556df9dd96 "pdflatex"
   (generated)
   "documentation_hun.bbl"
   "documentation_hun.blg"
-["pdflatex"] 1680706614 "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" "documentation_hun.pdf" "documentation_hun" 1680706616
+["pdflatex"] 1680805528 "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" "documentation_hun.pdf" "documentation_hun" 1680805531
   "/dev/null" 0 -1 0 ""
   "/etc/texmf/web2c/texmf.cnf" 1677618109 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0700.600pk" 1678143638 7604 c056a5a8aa013ec4d6d9bc76ed603931 ""
   "/home/pecneb/.texlive2021/texmf-var/fonts/pk/ljfour/jknappen/ec/tcss0800.600pk" 1678144149 8588 32086d0fb34ca2173985e2c5ea2b2a8f ""
-  "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" 1680706611 32118 ca023a5149e3fafd5976bac63ca5cac9 ""
+  "/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/documentation/documentation_hun/documentation_hun.tex" 1680805528 34456 18979d797b892e21ec3e2071f84d9300 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/tcss0700.tfm" 1136768653 1536 e5428b375c095aa4874fb47053e1d4fc ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/tcss0800.tfm" 1136768653 1536 16418351df4369b7cef8f784ccb87a85 ""
@@ -200,11 +200,15 @@
   "clustering/n_cluster_5_before_after.png" 1680537327 133256 74880441f57f0fe556bf286a5a7c377b ""
   "clustering/n_cluster_7_before_after.png" 1680537394 125238 28ae7d23cfa83600064863f1fefc4d16 ""
   "clustering/n_cluster_8_before_after.png" 1680537462 127454 f6c39cca6949cc4e4de27828fa58ae75 ""
-  "documentation_hun.aux" 1680706616 9976 0f3dd1eb3518bad6e7f1fd9b108ce10e "pdflatex"
-  "documentation_hun.bbl" 1680706614 14618 e639666bb918e542f5e0362d503e2886 "bibtex documentation_hun"
-  "documentation_hun.out" 1680706616 3343 3d6c6c4c1d1bd813217742c64c51b41d "pdflatex"
-  "documentation_hun.tex" 1680706611 32118 ca023a5149e3fafd5976bac63ca5cac9 ""
-  "documentation_hun.toc" 1680706616 2935 30e90b596266d8f939ad20cbabea7431 "pdflatex"
+  "dataset_samples/Bellevue_116th_NE12th.JPG" 1680722369 788001 8afe6eba81b13706e8bae342a5afe258 ""
+  "dataset_samples/Bellevue_150th_Eastgate.JPG" 1680722355 699826 af3e212ae61de757c8f4549d7d38adaa ""
+  "dataset_samples/Bellevue_150th_Newport.JPG" 1680722387 824930 17cea5886981bae552c69858a7906f9e ""
+  "dataset_samples/Bellevue_150th_SE38th.JPG" 1680722401 687961 8bbeac4ca5c42bb2861b8d093e55244e ""
+  "documentation_hun.aux" 1680805531 11227 dec8673a34e8c7e7b86e6d556df9dd96 "pdflatex"
+  "documentation_hun.bbl" 1680723890 14618 e639666bb918e542f5e0362d503e2886 "bibtex documentation_hun"
+  "documentation_hun.out" 1680805531 3343 9b9a9a0916c9e6b07377b94faab44243 "pdflatex"
+  "documentation_hun.tex" 1680805528 34456 18979d797b892e21ec3e2071f84d9300 ""
+  "documentation_hun.toc" 1680805531 2936 2cc970577c2e655057b664288f2171b8 "pdflatex"
   "elbow/elbow_on_kmeans_2-16_metric_calinski-harabasz_thresh_0.5.png" 1680542840 63819 d515835b6301f6c6c0816177ffc30fb9 ""
   "elbow/elbow_on_kmeans_2-16_metric_davies-bouldin_thresh_0.5.png" 1680542849 64024 e4288a80088214c0ce3fe5e6baba2386 ""
   "elbow/elbow_on_kmeans_2-16_metric_silhouette_thresh_0.5.png" 1680542854 59478 f4509232b28c32c2f44c14a258e2bc07 ""

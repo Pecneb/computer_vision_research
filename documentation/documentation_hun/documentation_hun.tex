@@ -88,9 +88,35 @@ algoritmusokat tesztelni. A tanító adatok előállításához, objektumok dete
 konvolúciós neurális hálót használtuk, ez a konvolúciósl neurális háló architektúra nem csak nagy pontosságot hanem sebességet is nyújt nekünk. 
 Emellett képkockáról képkockára követni is kell tudni a detektált objektumokat. Erre is sok megoldás található manapság, erre a feladatra
 a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez kálmán filtert és konvolúciós neurális hálót használ az objektumok követésére.
-A tanító adatok 6 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
-a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt. A klaszterezés
-során megpróbáljuk minél pontosabban meghatározni a be és kimeneti pontok által leírt klasztereket, amelyek majd alapul szolgálnak a
+A tanító adatok 5 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
+a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt.
+5 videót Bellevue város github oldaláról gyűjtöttük, amiknek az elérhetőségét függelékként csatoljuk, a kereszteződések így néznek ki
+\ref{fig: BellevueNewport} \ref{fig: BellevueEastgate} \ref{fig: BellevueNE} \ref{fig: BellevueSE}.
+\begin{figure}
+    \Description{Bellevue Newport kereszteződés}
+    \includegraphics[width=1\columnwidth]{dataset_samples/Bellevue_150th_Newport.JPG}
+    \caption{Bellevue Newport kereszteződés}
+    \label{fig: BellevueNewport}
+\end{figure}
+\begin{figure}
+    \Description{Bellevue Eastgate kereszteződés}
+    \includegraphics[width=1\columnwidth]{dataset_samples/Bellevue_150th_Eastgate.JPG}
+    \caption{Bellevue Eastgate kereszteződés}
+    \label{fig: BellevueEastgate}
+\end{figure}
+\begin{figure}
+    \Description{Bellevue NE kereszteződés}
+    \includegraphics[width=1\columnwidth]{dataset_samples/Bellevue_116th_NE12th.JPG}
+    \caption{Bellevue NE kereszteződés}
+    \label{fig: BellevueNE}
+\end{figure}
+\begin{figure}
+    \Description{Bellevue SE kereszteződés}
+    \includegraphics[width=1\columnwidth]{dataset_samples/Bellevue_150th_SE38th.JPG}
+    \caption{Bellevue SE kereszteződés}
+    \label{fig: BellevueSE}
+\end{figure}
+A klaszterezés során megpróbáljuk minél pontosabban meghatározni a be és kimeneti pontok által leírt klasztereket, amelyek majd alapul szolgálnak a
 klasszifikáció tanítása során. Több fajta klaszterezési algoritmust megvizsgáltunk a kutatás során, KMeans, OPTICS \cite{10.1145/304181.304187}, BIRCH \cite{10.1145/233269.233324} és DBSCAN \cite{10.5555/3001460.3001507}\cite{10.1145/3068335}. 
 A klasszifikációhoz bináris klasszifikációs modelleket kombinálunk, így több osztályos klasszifikációs modelt
 kapunk. Minden bináris modelnél, egy osztály az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot
@@ -328,12 +354,14 @@ jelezni, hogy mely klaszterbe tartozik a jármű.
 Kutatatásunk során több féle machine learning modellt teszteltünk: KNN (KNearesNeighbors), GNB (GaussianNaiveBayes), MLP (MultiLayerPerceptron), 
 SGD (StochasticGradientDescent), SVM/SVC (SupportVectorMachine/SupportVectorClassifier) \cite{CC01a}, DT (DecisionTree) \cite{Breiman1984ClassificationAR}.
 Ezekből a GNB, MLP és SGD nem adott jó eredményeket ami látható az alábbi táblázatban \ref{table:1}, az eredmények megismétlődtek későbbi tesztekben, ezért
-ezeket a modelleket nem tárgyaljuk. A legjobb eredményeket a KNN adta
+ezeket a modelleket nem tárgyaljuk. A legjobb eredményeket a KNN adta minden esetben 90\% felett teljesített. A második legjobb a DecisionTree lett, ami átlagban
+balanced accuracy-ban az SVM felett teljesített, és Top 1 accuracyban is csak tizedekkel maradt le a 7. feature vektor használatakor, az 1. verzióval 4\%-al
+jobban teljesített. A mérések eredményei a \ref{table:2}. és \ref{table:3}. táblázatban láthatók. 
 
 \begin{table}[]
 \begin{tabular}{|lccc|}
 \hline
-\multicolumn{4}{|c|}{Feature vektor verzió 1}                                                                     \\ \hline
+\multicolumn{4}{|c|}{Bellevue Newport}                                                                     \\ \hline
 \hline
 \multicolumn{1}{|l|}{Metrics}            & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
 \multicolumn{1}{|l|}{KNN}                & \multicolumn{1}{c|}{90.57\%}  & \multicolumn{1}{c|}{95.50\%} & 99.12\% \\ \hline
@@ -349,24 +377,35 @@ ezeket a modelleket nem tárgyaljuk. A legjobb eredményeket a KNN adta
 \end{table}
 
 \begin{table}[]
-\begin{center}
 \begin{tabular}{|lccc|}
 \hline
 \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy \\ Feature Vector v1\end{tabular}}    \\ \hline
-\hline
 \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
-\multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.22\%}  & \multicolumn{1}{c|}{96.82\%} & 99.51\% \\ \hline
-\multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.05\%}  & \multicolumn{1}{c|}{90.69\%} & 98.16\% \\ \hline
-\multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.83\%}  & \multicolumn{1}{c|}{95.56\%} & 96.65\% \\ \hline
+\multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.16\%}  & \multicolumn{1}{c|}{96.71\%} & 99.46\% \\ \hline
+\multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.65\%}  & \multicolumn{1}{c|}{90.82\%} & 98.05\% \\ \hline
+\multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.11\%}  & \multicolumn{1}{c|}{94.88\%} & 96.03\% \\ \hline
 \end{tabular}
-\end{center}
-\caption{OneVsRest verzió 2 feature vektorok}
+\caption{Feature Vektor verzió 1}
 \label{table:2}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v7\end{tabular}}    \\ \hline
+\multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+\multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{92.08\%}  & \multicolumn{1}{c|}{95.61\%} & 98.66\% \\ \hline
+\multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & 98.92\% \\ \hline
+\multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{89.46\%}  & \multicolumn{1}{c|}{93.30\%} & 94.55\% \\ \hline
+\end{tabular}
+\caption{Feature Vektor verzió 7}
+\label{table:3}
 \end{table}
 
 \subsection{Feature vektorok}
 Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. Ebben a papírban
-két fajta vektor verziót fogunk tárgyalni, amik a tesztek során a legjobban teljesítettek. 
+két fajta vektor verziót fogunk tárgyalni, amik a tesztek során a legjobban teljesítettek. Az egyik a legelső verzió amit kipróbáltunk,
+a másik a hetedik verzió, ami jobban teljesített mint az összes többi 2-6 verzió. 
 \paragraph{Az első verzió} Felépítése a következő \begin{math}[x_0, y_0, v_{x_0}, v_{y_0}, x_m, y_m, x_l, y_l, v_{x_l}, v_{y_l}]\end{math}, ahol \begin{math}m\end{math}
 index jelöli az időben középen elhelyezkedő detektálást, az \begin{math}l\end{math} index pedig az utolsó, legfrissebb detektálást jelőli.
 Ez a vektor jól reprezentálja a valós idejű futás közben keletkező trajektóriákat, mert egyszerre több száz detektálást objektumonként
@@ -374,7 +413,7 @@ nem lehet eltárolni a memórában, hanem egy meghatározott méretű buffert ke
 Az adathalmazban eltárolt trajektóriák ennél a buffernél több detektálást tartalmaznak, ezért az első verziónál a trajektóriát \begin{math}k\end{math} 
 részre osztottuk, így egy trajektória szelet mérete \begin{math}s_n = n_d/k\end{math}, ahol \begin{math}n_d\end{math} a detektálások számossága
 a trajektóriában. Ezekből a szeletekből képeztük az egyes feature vektorokat.
-\paragraph{A másik verzió} Felépítése \begin{math}[x_0 * w_1, y_0 * w_2, v_{x_0} * w_3, v_{y_0} * w_4, x_l * w_5, y_l * w_6, v_{x_l} * w_7, v_{y_l} * w_8]\end{math}.
+\paragraph{A hetedik verzió} Felépítése \begin{math}[x_0 * w_1, y_0 * w_2, v_{x_0} * w_3, v_{y_0} * w_4, x_l * w_5, y_l * w_6, v_{x_l} * w_7, v_{y_l} * w_8]\end{math}.
 Ennél a verziónál használtunk súlyokat, ahol \begin{math}w_1=1\end{math}, \begin{math}w_2=1\end{math}, \begin{math}w_3=100\end{math}, \begin{math}w_4=100\end{math},
 \begin{math}w_5=2\end{math}, \begin{math}w_6=2\end{math}, \begin{math}w_7=200\end{math}, \begin{math}w_8=200\end{math}. Mivel a sebességek két 
 nagyságrenddel kisebbek mint a koordináták, ezért felszoroztuk őket 100-as súlyokkal. Hogy a 15-30 detektálás nagyságú bufferekben nagyobb hangsúlyt kapjanak a legfrissebb
