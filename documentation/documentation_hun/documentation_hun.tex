@@ -90,8 +90,9 @@ Emellett képkockáról képkockára követni is kell tudni a detektált objektu
 a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez kálmán filtert és konvolúciós neurális hálót használ az objektumok követésére.
 A tanító adatok 5 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
 a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt.
-5 videót Bellevue város github oldaláról gyűjtöttük, amiknek az elérhetőségét függelékként csatoljuk, a kereszteződések így néznek ki
-\ref{fig: BellevueNewport} \ref{fig: BellevueEastgate} \ref{fig: BellevueNE} \ref{fig: BellevueSE}.
+4 videót Bellevue város github oldaláról gyűjtöttük, amiknek az elérhetőségét függelékként csatoljuk, a kereszteződések így néznek ki
+\ref{fig: BellevueNewport} \ref{fig: BellevueEastgate} \ref{fig: BellevueNE} \ref{fig: BellevueSE}. A videók pontos elérhetőségét
+a mellékletben található \emph{urls.txt}-ben adtuk meg.
 \begin{figure}
     \Description{Bellevue Newport kereszteződés}
     \includegraphics[width=1\columnwidth]{dataset_samples/Bellevue_150th_Newport.JPG}
@@ -204,15 +205,18 @@ Minden követett objektum egyedi azonosítóval lett ellátva. Az objektumhoz ta
 ahol az \textit{objID} idegen kulcsal kapcsoljuk az \textit{objektumok} táblához. Egy objektumhoz az egyedi azonosítón kívül
 tartozik egy \textit{label} amit a YOLO objektum detektálótól kap, ez lehet pl. autó, személy, teherautó, stb. Az objektumokhoz
 tartózó detektálások tartalmazzák a képkocka számát, amikor a detektálás történt, a konfidenciát, hogy mennyire biztos az
-objektumfelismerő a hozzárendelt \textit{label}-ben, az objektum \begin{math}X,Y\end{math} kordinátáját, az objektum szélességét
+objektumfelismerő a hozzárendelt \textit{label}-ben, az objektum \begin{math}x,y\end{math} kordinátáját, az objektum szélességét
 \begin{math}width\end{math} és magasságát \begin{math}width\end{math}, sebességét \begin{math}v_x,v_y\end{math} és gyorsulását \begin{math}a_x,a_y\end{math}, 
 amik a deepSORT által kalkulált értékek, így még külön a koordinátákból kiszámolt \begin{math}v_{x_c},v_{y_c}\end{math} sebességet és
 \begin{math}a_{x_c},a_{y_c}\end{math} gyorsulást is eltároltuk.
 Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg lehessen ismételni a detektálást. 
 A koordinátákat a videó méretének megfelelően leskálázzuk 0 - 1 értékek köré. Ha a videó kép szélesség \begin{math}w\end{math}, magasság \begin{math}h\end{math}, 
-akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koordináták \begin{math}X = \frac{X_0}{w} * r\end{math}, \begin{math}Y = \frac{Y_0}{w} * r\end{math},
-\begin{math}v_x = \frac{v_{x_0}}{w} \cdot r\end{math}, \begin{math}v_y = \frac{v_{y_0}}{w} * r\end{math}, \begin{math}a_x = \frac{a_{x_0}}{w} * r\end{math}, \begin{math}a_y = \frac{a_{y_0}}{w} * r\end{math}
-\begin{math}v_{x_c} = \frac{v_{xc0}}{w} * r\end{math}, \begin{math}v_{y_c} = \frac{v_{yc0}}{w} * r\end{math}, \begin{math}a_{x_c} = \frac{a_{xc0}}{w} * r\end{math}, \begin{math}a_{y_c} = \frac{a_{yc0}}{w} * r\end{math}.
+akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koordináták 
+\begin{equation}x = \frac{x_0}{w} * r, y = \frac{y_0}{w} * r\end{equation}
+\begin{equation}v_x = \frac{v_{x_0}}{w} \cdot r, v_y = \frac{v_{y_0}}{w} * r\end{equation}
+\begin{equation}a_x = \frac{a_{x_0}}{w} * r, a_y = \frac{a_{y_0}}{w} * r\end{equation}
+\begin{equation}v_{x_c} = \frac{v_{xc0}}{w} * r, v_{y_c} = \frac{v_{yc0}}{w} * r\end{equation}
+\begin{equation}a_{x_c} = \frac{a_{xc0}}{w} * r, a_{y_c} = \frac{a_{yc0}}{w} * r\end{equation}.
 \subsection{Objektumdetektálás}
 Az objektumdetektáláshoz a fennt említett YOLO modellt haszáltuk. Kutatásunk kezdetekor, a YOLO 4-es verziójával kezdtünk dolgozni,
 de később átváltottunk a jobb pontosságot és sebességet ígérő 7-es verzióra.
@@ -372,20 +376,21 @@ jobban teljesített. A mérések eredményei a \ref{table:2}. és \ref{table:3}.
 \multicolumn{1}{|l|}{SVM}                & \multicolumn{1}{c|}{77.87\%}  & \multicolumn{1}{c|}{89.29\%} & 96.61\% \\ \hline
 \multicolumn{1}{|l|}{DT}                 & \multicolumn{1}{c|}{90.95\%}  & \multicolumn{1}{c|}{93.64\%} & 95.06\% \\ \hline
 \end{tabular}
-\caption{Feature vektor verzió 1}
+\caption{Bellevue Newport Feature Vektor V1}
 \label{table:1}
 \end{table}
 
 \begin{table}[]
 \begin{tabular}{|lccc|}
 \hline
-\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy \\ Feature Vector v1\end{tabular}}    \\ \hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v1\end{tabular}}    \\ \hline
+\hline
 \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
 \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.16\%}  & \multicolumn{1}{c|}{96.71\%} & 99.46\% \\ \hline
 \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.65\%}  & \multicolumn{1}{c|}{90.82\%} & 98.05\% \\ \hline
 \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.11\%}  & \multicolumn{1}{c|}{94.88\%} & 96.03\% \\ \hline
 \end{tabular}
-\caption{Feature Vektor verzió 1}
+\caption{Testset Feature Vektor V1}
 \label{table:2}
 \end{table}
 
@@ -393,13 +398,70 @@ jobban teljesített. A mérések eredményei a \ref{table:2}. és \ref{table:3}.
 \begin{tabular}{|lccc|}
 \hline
 \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v7\end{tabular}}    \\ \hline
+\hline
 \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
 \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{92.08\%}  & \multicolumn{1}{c|}{95.61\%} & 98.66\% \\ \hline
 \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & 98.92\% \\ \hline
 \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{89.46\%}  & \multicolumn{1}{c|}{93.30\%} & 94.55\% \\ \hline
 \end{tabular}
-\caption{Feature Vektor verzió 7}
+\caption{Testset Feature Vektor V7 Stride 15}
 \label{table:3}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy\\ Feature Vector v7 stride 30\end{tabular}} \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics}   & \multicolumn{1}{c|}{Balanced}   & \multicolumn{1}{c|}{Top 1}    & Top 2    \\ \hline
+\multicolumn{1}{|l|}{KNN}       & \multicolumn{1}{c|}{92.68\%}    & \multicolumn{1}{c|}{95.96\%}  & 98.79\%  \\ \hline
+\multicolumn{1}{|l|}{SVM}       & \multicolumn{1}{c|}{88.67\%}    & \multicolumn{1}{c|}{93.49\%}  & 98.91\%  \\ \hline
+\multicolumn{1}{|l|}{DT}        & \multicolumn{1}{c|}{89.87\%}    & \multicolumn{1}{c|}{93.17\%}  & 94.53\%  \\ \hline
+\end{tabular}
+\caption{Testset Feature Vektor V7 Stride 30}
+\label{table:4}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Cross-Validation Average Accuracy\\ Feature Vector v1\end{tabular}} \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics}     & \multicolumn{1}{c|}{Balanced}    & \multicolumn{1}{c|}{Top 1}      & Top 2      \\ \hline
+\multicolumn{1}{|l|}{KNN}         & \multicolumn{1}{c|}{92.60\%}     & \multicolumn{1}{c|}{96.06\%}    & 99.38\%    \\ \hline
+\multicolumn{1}{|l|}{SVM}         & \multicolumn{1}{c|}{81.21\%}     & \multicolumn{1}{c|}{89.76\%}    & 97.79\%    \\ \hline
+\multicolumn{1}{|l|}{DT}          & \multicolumn{1}{c|}{92.43\%}     & \multicolumn{1}{c|}{94.55\%}    & 95.97\%    \\ \hline
+\end{tabular}
+\caption{Cross-Validation Feature Vektor V1}
+\label{table:5}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Cross-Validation Average Accuracy\\ Feature Vector v7\end{tabular}} \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics}     & \multicolumn{1}{c|}{Balanced}    & \multicolumn{1}{c|}{Top 1}      & Top 2      \\ \hline
+\multicolumn{1}{|l|}{KNN}         & \multicolumn{1}{c|}{90.74\%}     & \multicolumn{1}{c|}{95.49\%}    & 98.39\%    \\ \hline
+\multicolumn{1}{|l|}{SVM}         & \multicolumn{1}{c|}{87.36\%}     & \multicolumn{1}{c|}{94.03\%}    & 98.85\%    \\ \hline
+\multicolumn{1}{|l|}{DT}          & \multicolumn{1}{c|}{89.12\%}     & \multicolumn{1}{c|}{93.56\%}    & 94.95\%    \\ \hline
+\end{tabular}
+\caption{Cross-Validation Feature Vektor V7 Stride 15}
+\label{table:6}
+\end{table}
+
+\begin{table}[]
+\begin{tabular}{|lccc|}
+\hline
+\multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Cross-Validation Average Accuracy\\ Feature Vector v7 stride 30\end{tabular}} \\ \hline
+\hline
+\multicolumn{1}{|l|}{Metrics}       & \multicolumn{1}{c|}{Balanced}       & \multicolumn{1}{c|}{Top 1}         & Top 2        \\ \hline
+\multicolumn{1}{|l|}{KNN}           & \multicolumn{1}{c|}{91.15\%}        & \multicolumn{1}{c|}{95.64\%}       & 98.54\%      \\ \hline
+\multicolumn{1}{|l|}{SVM}           & \multicolumn{1}{c|}{87.28\%}        & \multicolumn{1}{c|}{93.69\%}       & 98.60\%      \\ \hline
+\multicolumn{1}{|l|}{DT}            & \multicolumn{1}{c|}{89.55\%}        & \multicolumn{1}{c|}{93.73\%}       & 95.15\%      \\ \hline
+\end{tabular}
+\caption{Cross-Validation Fetature Vektro V7 Stride 30}
+\label{table:7}
 \end{table}
 
 \subsection{Feature vektorok}
@@ -418,11 +480,14 @@ Ennél a verziónál használtunk súlyokat, ahol \begin{math}w_1=1\end{math}, \
 \begin{math}w_5=2\end{math}, \begin{math}w_6=2\end{math}, \begin{math}w_7=200\end{math}, \begin{math}w_8=200\end{math}. Mivel a sebességek két 
 nagyságrenddel kisebbek mint a koordináták, ezért felszoroztuk őket 100-as súlyokkal. Hogy a 15-30 detektálás nagyságú bufferekben nagyobb hangsúlyt kapjanak a legfrissebb
 koordináták és sebességek, így azok 2-es és 200-as szorzót kaptak.
-\paragraph{Teszt eredmények} Azt mutatják, hogy az utóbbi verzió magasabb pontosságokat produkált (lásd \ref{}).
+\paragraph{Teszt eredmények} Azt mutatják, hogy az utóbbi verzió növelte az SVM pontosságát, viszont rontott a KNN és DT pontosságán (lásd \ref{table:3}).
 
 \subsubsection{Adatdúsítás}
-Hogy minél pontosabban reprezentáljuk a valód idejű futást, a gyűjtött trajektóriákból nem trajektóriánként egy feture vektort
-generáltunk. Ezeknek a szá-mosságát a feature vektort felépítő algoritmusban szabtuk meg.
+Hogy minél pontosabban reprezentáljuk a valód idejű futást és növeljük a tanító adathalmazt, egy trajektóriából több feature vektort állítunk elő.
+Ezeknek a számosságát, a feature vektorokat legeneráló algoritmusban szabtuk meg. Ezzel azt is szabályoztuk, hogy mekkora időszeletből prediktáljon
+a modellünk. Mint ahogy fennt is említettük, valós időben 15, max 30 detektálást érdemes tárolni a bufferben. A mérési eredmények azt mutatják, hogy
+15 és a 30 nagyságú buffer közt nincs nagy különbség pontosságban. Futási idő szempontjából érdemes lehet a 15 nagyságú buffert választani,
+ha van elég tanító adat, és időt akarunk spórolni tanításnál, akkor a 30 nagyságú buffert is választhatjuk, mivel így felére csökken a feature vektorok száma.
 %\subsubsection{Klassz kiegyenlítés}
 \subsection{Pontosság mérése}
 A pontosság mérésére háromféle metrikát használtunk.
@@ -460,14 +525,44 @@ akkor tökéletes pontosságot kapnánk eredményül. Ezt \emph{Overfitting}-nek
 minták kiválasztásához. Az algoritmusnak meg lehet adni paraméterként a tanító adathalmaz méretét, és egy \emph{seed} értéket, ami azért fontos, hogy meg
 lehessen ismételni a szétválasztást.
 \subsubsection{Cross Validation}
-A túltanítás elkerülése érdekében, alkalmaztunk egy elterjedt metódust a cross-validációt. ...
+A túltanítás elkerülése érdekében, alkalmaztunk egy elterjedt metódust a cross-validációt. A cross validáció egy olyan metódus, ahol a tanító adathalmazt
+$k$ részre osztják, ebből a $k$ részből egyet kiválasztanak validációra, így keletkezik egy tanító és validáló adathalmaz. A tanító adathalmazon betanítanak
+egy modellt, aminek a pontosságát megmérik a validáló adathalmazon. Ezt az algoritmust $k$-szor ismétlik meg, úgy hogy minden rész egyszer legyen validáló
+adathalmaz. Ezeknek a méréseknek az átlag pontosságát szokták kiszámolni. A cross-validation ből származó eredmények a \ref{table:4}. és \ref{table:5}. 
+táblázatban mutatjuk be.
 \subsubsection{Teszthalmazos validáció}
-Hogy meggyőződjünk arról, hogy biztosan nem tanítottuk túl a modellünket, egy olyan teszt adathalmazon is le kell tesztelnünk, amit nem használ-tunk fel
-cross-validáció alatt.
+Hogy meggyőződjünk arról, hogy biztosan nem tanítottuk túl a modellünket, egy olyan teszt adathalmazon is le kell tesztelnünk, amit nem használ-tunk fel egyszer sem
+cross-validáció alatt tanításra. Ezzel a méréssel bebizonyosodhatunk róla, hogy a modellünkben nincsen bias. A teszthalmazos mérés eredményeit a \ref{table:2}. és \ref{table:3}.
+táblázatban mutatjuk be.
 \subsubsection{Modellek tárolása}
 A betanított modelleket joblib file-ként tároltuk el, amit később python-nal tudunk betölteni.
 
-%\section{Valós idejű alkalmazás}
+\section{Valós idejű alkalmazás}
+A modellek pontosságának tesztelésére nem csak mérőszámokat alkalmaztunk, hanem egy vizualizációs alkalmazást is fejlesztettünk. Az alkalmazásnak meg kell adni
+a joblib modell fájlt és a videót amin tanítottuk. Ezeken kívül meg lehet adni mekkora detekció buffert használjon és, hogy a top mennyi predikciót rajzolja ki.
+A lejátszó kirajzolja a klaszterek kimeneti pontjait, és az autók középpontjával köti össze. A legvalószínűbb predikció zöldel a kevésbé valószínű pedig pirossal
+van kirajzolva (lásd \ref{BellevueNewportRealTimeSVM}). Az alkalmazás futását a mellékletben megadott videókon lehet megtekinteni.
+
+\begin{figure}[H]
+    \Description{Bellevue Newport}
+    \includegraphics[width=1\columnwidth]{visualization/bellevue_newport.png}
+    \caption{Bellevue Newport SVM real time application}
+    \label{BellevueNewportRealTimeSVM}
+\end{figure}
+
+\begin{figure}[H]
+    \Description{Bellevue NE kereszteződés}
+    \includegraphics[width=1\columnwidth]{visualization/bellevue_ne.png}
+    \caption{Bellevue NE SVM real time application}
+    \label{fig: BellevueNERealTimeSVM}
+\end{figure}
+
+\begin{figure}[H]
+    \Description{Bellevue Eastgate kereszteződés}
+    \includegraphics[width=1\columnwidth]{visualization/bellevue_eastgate.png}
+    \caption{Bellevue Eastgate SVM real time application}
+    \label{fig: BellevueEeatgateRealTimeSVM}
+\end{figure}
 
 %\section{Alkalmazási területek}
 
