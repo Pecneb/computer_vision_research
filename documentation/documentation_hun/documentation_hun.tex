@@ -294,10 +294,10 @@ ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: 
 Klaszterezéshez több fajta algoritmust teszteltünk. A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta. 
 Aminek az eredményei fenti képeken látható (lásd. \ref{fig: Klaszterezés szűrő}).
 OPTICS-on kívül leteszteltük a KMeans, DBSCAN és BIRCH algoritmusokat. KMeans algoritmus egyenlő varianciájú csoportokba osztja a mintákat úgy,
-hogy az \begin{math}inercia\end{math} kritériumot csökkentse. A KMeans egy fontos paramétere a \begin{math}n_clusters\end{math}, amivel a várható
+hogy az \begin{math}inercia\end{math} kritériumot csökkentse. A KMeans egy fontos paramétere a \begin{math}n\_clusters\end{math}, amivel a várható
 klaszterek számát kell megadni. Ennek a paraméternek a meghatározására próbálkoztunk különböző metrikákat felhasználni, hogy automatizálható legyen
 a klaszterezési lépés. Ezek a metrikák a Silhouette Coefficient \cite{ROUSSEEUW198753}, Calinski-Harabasz Index \cite{article} és Davies-Bouldin Index \cite{4766909}.
-Elbow diagramok segítségével próbáltuk eldönteni, hogy milyen értéket érdemes adni az \begin{math}n_clusters\end{math} paraméternek lásd \ref{fig: Elbow diagramok}.
+Elbow diagramok segítségével próbáltuk eldönteni, hogy milyen értéket érdemes adni az \begin{math}n\_clusters\end{math} paraméternek lásd \ref{fig: Elbow diagramok}.
 A mérőszámok konzisztensen alacsony értéket adtak, egy négy ágú kereszteződésnél, ahol jóval több klaszterbe sorolhatók a trajektóriák. A KMeans használatát
 ezért elvetettük.
 
@@ -329,10 +329,13 @@ ezért elvetettük.
     \label{fig: Bad clusters}
 \end{figure}
 
+BIRCH klaszterező algoritmus a pontokat euklideszi távolságuk alapján rendezi klasztereket, nagy adathalmazokra szokták használni, adatcsökkentésre és szélsőértékek eltávolítására is jól használható.
 A BIRCH algoritmus sokszor egybevon klaszter bemeneteket vagy kimeneteket, ami miatt több más irányból jövő, vagy több más irányba kilépő objektumokat sorol azonos klaszterekbe.
 \begin{math}threshold\end{math} paraméterrel lehet a klaszterek méretét szabályozni, amivel javítható az egybevont klaszterek száma, a kutatás során futtatott tesztek alapján, még
 így is az OPTICS adta a legtisztább klasztereket. 
-DBSCAN algoritmus sokban hasonlít az OPTICS-hoz. A \begin{math}max\_eps\end{math} paraméter helyett, ami egy távolság tartományt ad meg, az \begin{math}eps\end{math} paraméter  
+DBSCAN algoritmus sokban hasonlít az OPTICS-hoz. A DBSCAN algoritmust kevesebb klaszterekkel rendelkező adathalmazokra szokták használni, és szomszédsági távolság szerint alakítja ki a klasztereket. 
+Az OPTICS ezzel szemben a sok klaszterrel rendelkező adathalmazokat is tudja kezelni, és nem szomszédsági távolság hanem sima pontok közötti távolság alapján alakítja ki a klasztereket.
+A \begin{math}max\_eps\end{math} paraméter helyett, ami egy távolság tartományt ad meg, az \begin{math}eps\end{math} paraméter  
 pontos távolságot adja meg, hogy két minta egymás szomszédságában van-e vagy sem, ez egy éles határ, ezért az OPTICS könnyebben finomhangolható.
 
 \subsection{Paraméterek kiválasztása}
@@ -464,6 +467,31 @@ jobban teljesített. A mérések eredményei a \ref{table:2}. és \ref{table:3}.
 \label{table:7}
 \end{table}
 
+\paragraph{KNN (K-Nearest Neighbors)} A szomszédság alapú klasszifikáció tanulás során, nem egy általános modellt próbál létrehozni az adatahalmazra,
+hanem az adathalmaz egyes pélydányait tárolja el, és az új adatokat pedig ezekhez az eltárolt példányokhoz viszonyítja, így dönti el, hogy melyik
+kategóriába fogja sorolni. Az ilyen "instance-based" algoritmusok kissebb adathalmazokra jók, a nagy számítási igyényük miatt. A mi kutatásunk során
+nem dogloztunk túl nagy adathalmazokkal, de sokkal nagyobb adatmennyiség esetében érdemes meggondolni, hogy a magas pontosság ellenére, egy kevésbé
+pontos, de gyorsabb algoritmus használatát.
+
+\paragraph{SVM (Support Vector Machine)} Hatékony magas dimenziószám mellett, még akkor is ha a dimenziók száma magasabb mint a minták száma. A tanító adatok
+csak egy részét használja fel, így kevés a memória igénye. Több féle "kernel function" - szűrő - közül választhatunk, ami lehet lineáris, polinomiális, exponenciális stb.
+Mi az RBF (Radial Basis Function) exponenciális szűrőt használtuk, aminek két fő paramétere van: $C$ és $\gamma$. $C$ az SVM egy általános paramétere,
+ami másik szűrők használatakor is jelen van. Ez a paraméter határozza meg mennyire legyen elsimítva az osztályok közötti határ. Alacsony $C$ sima határvonalhoz vezet,
+amíg a magas $C$ az okozza, hogy minden tanító adatot pontosan osztályozni tudjon. A $\gamma$ prarméter, azt határozza meg, hogy egy tanító adatnak mekkora befolyása van.
+Magas $\gamma$ esetén az egymáshoz közelebbi adatok magas befolyással bírnak egymásra. Méréseink során azt tapasztaltuk, hogy az SVM tényleg gyors és hatékony,
+még nagy tanító halmaz mellett is.
+
+\paragraph{DT (Decision Tree)} A döntési fák, egy nem paraméterezett felügyelt tanítási metódus. A cél, hogy egy olyan döntési modellt alakítson ki a tanító adatok alapján,
+ami jól tudja kategorizálni az új bejövő adatokat. Egy döntési fát könnyű vizualizálni és megérteni, hisz egyszerű "if-else" logikai elágazásokból épül fel (lásd \ref{DTVis})
+Nagy és komplex fák alakulhatnak ki, amik túltanulást eredményezhetnek, és már kis eltérések a tanító halmazban nagy eltéréseket eredményezhetnek a fa logikájában.
+
+\begin{figure}
+    \Description{DecisionTree Visualization}
+    \includegraphics[width=1\columnwidth]{visualization/bellevue_eastgate_DT_2.png}
+    \caption{DecisionTree Visualization}
+    \label{DTVis}
+\end{figure}
+
 \subsection{Feature vektorok}
 Ahogyan klaszterezésnél is, fontos meghatározni egy olyan feature vektort, ami a legjobban jellemzi a trajektóriát. Ebben a papírban
 két fajta vektor verziót fogunk tárgyalni, amik a tesztek során a legjobban teljesítettek. Az egyik a legelső verzió amit kipróbáltunk,
@@ -541,27 +569,35 @@ A betanított modelleket joblib file-ként tároltuk el, amit később python-na
 A modellek pontosságának tesztelésére nem csak mérőszámokat alkalmaztunk, hanem egy vizualizációs alkalmazást is fejlesztettünk. Az alkalmazásnak meg kell adni
 a joblib modell fájlt és a videót amin tanítottuk. Ezeken kívül meg lehet adni mekkora detekció buffert használjon és, hogy a top mennyi predikciót rajzolja ki.
 A lejátszó kirajzolja a klaszterek kimeneti pontjait, és az autók középpontjával köti össze. A legvalószínűbb predikció zöldel a kevésbé valószínű pedig pirossal
-van kirajzolva (lásd \ref{BellevueNewportRealTimeSVM}). Az alkalmazás futását a mellékletben megadott videókon lehet megtekinteni.
+van kirajzolva (lásd \ref{BellevueNewportRealTime} \ref{fig: BellevueNERealTime} \ref{fig: BellevueSERealTime} \ref{fig: BellevueEastgateRealTime}). 
+Az alkalmazás futását a mellékletben megadott videókon lehet megtekinteni.
 
 \begin{figure}[H]
     \Description{Bellevue Newport}
     \includegraphics[width=1\columnwidth]{visualization/bellevue_newport.png}
-    \caption{Bellevue Newport SVM real time application}
-    \label{BellevueNewportRealTimeSVM}
+    \caption{Bellevue Newport real time application}
+    \label{BellevueNewportRealTime}
 \end{figure}
 
 \begin{figure}[H]
-    \Description{Bellevue NE kereszteződés}
+    \Description{Bellevue NE}
     \includegraphics[width=1\columnwidth]{visualization/bellevue_ne.png}
-    \caption{Bellevue NE SVM real time application}
-    \label{fig: BellevueNERealTimeSVM}
+    \caption{Bellevue NE real time application}
+    \label{fig: BellevueNERealTime}
 \end{figure}
 
 \begin{figure}[H]
-    \Description{Bellevue Eastgate kereszteződés}
+    \Description{Bellevue Eastgate}
     \includegraphics[width=1\columnwidth]{visualization/bellevue_eastgate.png}
-    \caption{Bellevue Eastgate SVM real time application}
-    \label{fig: BellevueEeatgateRealTimeSVM}
+    \caption{Bellevue Eastgate real time application}
+    \label{fig: BellevueEastgateRealTime}
+\end{figure}
+
+\begin{figure}[H]
+    \Description{Bellevue SE}
+    \includegraphics[width=1\columnwidth]{visualization/bellevue_se.png}
+    \caption{Bellevue SE real time application}
+    \label{fig: BellevueSERealTime}
 \end{figure}
 
 %\section{Alkalmazási területek}

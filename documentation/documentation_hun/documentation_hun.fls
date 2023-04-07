@@ -1232,6 +1232,11 @@ INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
 INPUT ./bad_clustering/example_dbscan_vs_optics_merged_cluster.png
+INPUT ./visualization/bellevue_eastgate_DT_2.png
+INPUT ./visualization/bellevue_eastgate_DT_2.png
+INPUT visualization/bellevue_eastgate_DT_2.png
+INPUT ./visualization/bellevue_eastgate_DT_2.png
+INPUT ./visualization/bellevue_eastgate_DT_2.png
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt8.tfm
 INPUT /usr/share/texlive/texmf-dist/tex/latex/cmap/ot1tt.cmap
 INPUT /usr/share/texlive/texmf-dist/tex/latex/cmap/ot1tt.cmap
@@ -1253,6 +1258,11 @@ INPUT ./visualization/bellevue_eastgate.png
 INPUT visualization/bellevue_eastgate.png
 INPUT ./visualization/bellevue_eastgate.png
 INPUT ./visualization/bellevue_eastgate.png
+INPUT ./visualization/bellevue_se.png
+INPUT ./visualization/bellevue_se.png
+INPUT visualization/bellevue_se.png
+INPUT ./visualization/bellevue_se.png
+INPUT ./visualization/bellevue_se.png
 INPUT ./documentation_hun.bbl
 INPUT documentation_hun.bbl
 INPUT ./documentation_hun.bbl

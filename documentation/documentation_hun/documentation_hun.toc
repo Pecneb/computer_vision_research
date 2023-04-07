@@ -22,18 +22,21 @@
 \contentsline {subsection}{\numberline {5.2}Binary}{7}{subsection.5.2}%
 \contentsline {subsection}{\numberline {5.3}OneVsRest}{7}{subsection.5.3}%
 \contentsline {subsection}{\numberline {5.4}Machine Learning modellek}{7}{subsection.5.4}%
-\contentsline {subsection}{\numberline {5.5}Feature vektorok}{7}{subsection.5.5}%
-\contentsline {paragraph}{Az első verzió}{8}{section*.22}%
-\contentsline {paragraph}{A hetedik verzió}{8}{section*.23}%
-\contentsline {paragraph}{Teszt eredmények}{8}{section*.24}%
-\contentsline {subsubsection}{\numberline {5.5.1}Adatdúsítás}{8}{subsubsection.5.5.1}%
-\contentsline {subsection}{\numberline {5.6}Pontosság mérése}{8}{subsection.5.6}%
-\contentsline {paragraph}{Accuracy Score}{8}{section*.25}%
-\contentsline {paragraph}{Balanced Accuracy}{9}{section*.26}%
-\contentsline {paragraph}{Top-K Accuracy}{9}{section*.27}%
+\contentsline {paragraph}{KNN (K-Nearest Neighbors)}{7}{section*.22}%
+\contentsline {paragraph}{SVM (Support Vector Machine)}{8}{section*.23}%
+\contentsline {paragraph}{DT (Decision Tree)}{8}{section*.24}%
+\contentsline {subsection}{\numberline {5.5}Feature vektorok}{8}{subsection.5.5}%
+\contentsline {paragraph}{Az első verzió}{9}{section*.26}%
+\contentsline {paragraph}{A hetedik verzió}{9}{section*.27}%
+\contentsline {paragraph}{Teszt eredmények}{9}{section*.28}%
+\contentsline {subsubsection}{\numberline {5.5.1}Adatdúsítás}{9}{subsubsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.6}Pontosság mérése}{9}{subsection.5.6}%
+\contentsline {paragraph}{Accuracy Score}{9}{section*.29}%
+\contentsline {paragraph}{Balanced Accuracy}{9}{section*.30}%
+\contentsline {paragraph}{Top-K Accuracy}{9}{section*.31}%
 \contentsline {subsubsection}{\numberline {5.6.1}Adathalmaz szétválasztás}{9}{subsubsection.5.6.1}%
-\contentsline {subsubsection}{\numberline {5.6.2}Cross Validation}{9}{subsubsection.5.6.2}%
-\contentsline {subsubsection}{\numberline {5.6.3}Teszthalmazos validáció}{9}{subsubsection.5.6.3}%
-\contentsline {subsubsection}{\numberline {5.6.4}Modellek tárolása}{9}{subsubsection.5.6.4}%
-\contentsline {section}{\numberline {6}Valós idejű alkalmazás}{9}{section.6}%
-\contentsline {section}{References}{10}{section*.32}%
+\contentsline {subsubsection}{\numberline {5.6.2}Cross Validation}{10}{subsubsection.5.6.2}%
+\contentsline {subsubsection}{\numberline {5.6.3}Teszthalmazos validáció}{10}{subsubsection.5.6.3}%
+\contentsline {subsubsection}{\numberline {5.6.4}Modellek tárolása}{10}{subsubsection.5.6.4}%
+\contentsline {section}{\numberline {6}Valós idejű alkalmazás}{10}{section.6}%
+\contentsline {section}{References}{10}{section*.37}%

@@ -845,7 +845,7 @@ def plot_decision_tree(path2model: str):
     """
     from sklearn.tree import plot_tree
     model = load_model(path2model=path2model)
-    for i, m in enumerate(model.models_):
+    for i, m in enumerate(model.estimators_):
         print(f"Class {i}")
         plot_tree(m)
         plt.show()
@@ -1537,6 +1537,9 @@ def investigate_renitent_features(args):
                         min_cluster_size=args.min_samples, 
                         n_jobs=args.n_jobs)
 
+def plot_module(args):
+    plot_decision_tree(args.decision_tree)
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Train, validate and test for renitent detection.")
@@ -1632,6 +1635,13 @@ def main():
     cross_validation_multiclass_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
     cross_validation_multiclass_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
     cross_validation_multiclass_parser.set_defaults(func=cross_validation_multiclass_submodule)
+
+    plot_parser = submodule_parser.add_parser(
+        "plot",
+        help="Run plotting functions."
+    )
+    plot_parser.add_argument("--decision_tree", help="Path to decision tree joblib modell.")
+    plot_parser.set_defaults(func=plot_module)
 
 
     args = argparser.parse_args()

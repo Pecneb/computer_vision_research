@@ -38,14 +38,21 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True, help="Path to video.", type=str)
     parser.add_argument("--model", required=True, help="Path to trained model.", type=str)
-    #parser.add_argument("--train_tracks", required=True, help="Path to the tracks joblib file.", type=str)
-    #parser.add_argument("--all_tracks", help="Not only the tracks used for model training, rather all detections.", type=str)
-    parser.add_argument("--history", help="How many detections will be saved in the track's history.", type=int, default=30)
-    parser.add_argument("--max_cosine_distance", help="Gating threshold for cosine distance metric (object apperance)", type=float, default=10.0)
+    parser.add_argument("--history", type=int, default=30, 
+                        help="How many detections will be saved in the track's history.")
+    parser.add_argument("--max_cosine_distance",  type=float, default=10.0,
+                        help="Gating threshold for cosine distance metric (object apperance)")
     parser.add_argument("--max_iou_distance", type=float, default=0.7)
-    parser.add_argument("--nn_budget", help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.", type=float, default=100)
-    parser.add_argument("--feature_version", help="What version of feature vectors to use.", choices=['1', '2','3', '4', '7'], default='2')
-    
+    parser.add_argument("--nn_budget", type=float, default=100,
+                        help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.")
+    parser.add_argument("--feature_version", choices=['1', '2','3', '4', '7'], default='2', 
+                        help="What version of feature vectors to use.")
+    parser.add_argument("--top_k", type=int, default=1,
+                        help="Number of highest confidence predictions to show.")
+    parser.add_argument("--record", action="store_true", default=False,
+                        help="Use this flag if want to record video of prediction results.")
+    parser.add_argument("--output", type=str, 
+                        help="Use this flag if want to record video of prediction results.")
     args = parser.parse_args()
     return args
 
@@ -59,7 +66,7 @@ def upscalebbox(bbox, fwidth, fheight):
     Args:
         bbox (tuple): Tuple of 4 values (X,Y,W,H) 
         fwidth (int): Frame width of the video. 
-        fheight (_type_): Frame height of the video. 
+        fheight (int): Frame height of the video. 
     """
     ratio = fwidth / fheight
     X, Y, W, H = bbox
@@ -151,7 +158,7 @@ def draw_prediction(trackedObject, centroid: list[np.ndarray], image: np.ndarray
         bbox = (X, Y, W, H)
         left, top, right, bottom = bbox2points(bbox)
         cv.rectangle(image, (left, top), (right, bottom), (0,255,0), 1)
-        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[0]]:3.2f}", (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[-1]]:3.2f}", (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
         for i in range(centroid.shape[0]):
             if i == len(predictions)-1:
                 cv.line(image, (X, Y), (int(centroid[i, 0]), int(centroid[i, 1])), (0,255,0), 3)
@@ -229,6 +236,13 @@ def main():
     framewidth = cap.get(cv.CAP_PROP_FRAME_WIDTH)
     frameheight = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 
+    if args.record:
+        if args.output is None:
+            print("No video output given exiting...")
+            exit(0)
+        fourcc = cv.VideoWriter_fourcc(*'XVID')
+        out = cv.VideoWriter(filename=args.output, fourcc=fourcc, fps=30.00, frameSize=(int(framewidth), int(frameheight)), isColor=True)
+
     model = load_model(args.model)
     model.n_jobs = 18
     dataset = model.tracks
@@ -294,15 +308,18 @@ def main():
                     if t.isMoving:
                         if feature is not None:
                             if VERSION_3:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 1, centroids=cluster_centroids).reshape((-1))
+                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), args.top_k, centroids=cluster_centroids).reshape((-1))
                             else:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 2).reshape((-1))
+                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), args.top_k).reshape((-1))
                                 predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))
                             centroids = np.array([cluster_centroids_upscaled[p] for p in predictions])
                             draw_prediction(t, centroids, frame, frameNum, predictions, predictions_proba)
             
             cv.imshow("Video", frame)
             cv.setTrackbarPos("Frame", "Video", int(frameNum))
+
+            if args.record is not None:
+                out.write(frame)
 
             # pause video
             if cv.waitKey(1) == ord('p'):
@@ -318,6 +335,7 @@ def main():
         except KeyboardInterrupt:
             break
     cap.release()
+    out.release()
     cv.destroyAllWindows()
 
 if __name__ == "__main__":
