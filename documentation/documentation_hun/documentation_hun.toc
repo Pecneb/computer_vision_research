@@ -19,7 +19,7 @@
 \contentsline {subsubsection}{\numberline {4.1.1}DeepSORT pontatlanság}{7}{subsubsection.4.1.1}%
 \contentsline {subsection}{\numberline {4.2}Feature vektorok}{7}{subsection.4.2}%
 \contentsline {subsection}{\numberline {4.3}Klaszterezési algoritmusok}{7}{subsection.4.3}%
-\contentsline {paragraph}{KMeans}{7}{section*.19}%
+\contentsline {paragraph}{KMeans}{8}{section*.19}%
 \contentsline {paragraph}{A BIRCH (Balanced Iterative Reducing and Clustering using Hierarchies)}{8}{section*.22}%
 \contentsline {paragraph}{DBSCAN (Density-Based Spatial Clustering of Applications with Noise)}{8}{section*.23}%
 \contentsline {paragraph}{Az OPTICS (Ordering Points To Identify the Clustering Structure)}{9}{section*.24}%

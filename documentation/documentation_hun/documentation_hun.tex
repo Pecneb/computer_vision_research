@@ -59,9 +59,9 @@
     A tesztelt klaszterezési módszerek közül (OPTICS, BIRCH, KMeans, DBSCAN)
     az OPTICS algoritmus bizonyult legjobbnak trajektórák klaszterezésére.
     Összehasonlítottunk több különböző klasszifikációs módszert 
-    a legpontosabb predikció eléréséhez, amelyek: KNN, SVM, GP, DT, 
-    GNB, MLP, SGD. A tanulmányban bemutatott eljárások közül az 
-    KNN adta atlagban a legpontosabb 90\%-os eredményt.
+    a legpontosabb predikció eléréséhez, amelyek: KNN (K-Nearest Neighbors), SVM (Support Vector Machine), GP (Gaussian Process), DT (Decision Tree), 
+    GNB (Gaussian Naive Bayes), MLP (Multi Layer Perceptron), SGD (Stochastic Gradient Descent). A tanulmányban bemutatott eljárások közül az 
+    KNN adta átlagban a legpontosabb 90\%-os eredményt.
     %Ezt a pontosságot valós idejű futás közben 5 fps mellett érte el.
     %Ebből azt a következtetést lehet levonni, hogy jobb sebesség elérése
     %érdekében, vagy a feature vectorok dimenzióját kell csökkenteni, vagy
@@ -289,7 +289,7 @@ vagy rendőr lám-pákat autóknak nézni, és ekkor a DeepSORT is elkezdi köve
 egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni A
 paramétereit, ami nem bizonyult akkora javulásnak, ezért útólagos szűréssel kellett korrigálnunk ezt a hibát. Az algoritmus végig 
 iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak akkor eldobjuk a trajektóriát.
-A következő képeken láthatók a klaszterek szűrés előtt és után (lásd \ref{fig: Klaszterezés szűrő} \ref{fig: Klaszterezés szűrő 2}).
+A következő képeken láthatók a klaszterek szűrés előtt és után (lásd \ref{fig: Klaszterezés szűrő} \ref{fig: Klaszterezés szűrő 2}), ahol a bal oldali oszlop reprezentálja a szűrés előtti klasztereket, a jobb oldali oszlop pedig a szűrés utáni klasztereket.
 
 \begin{figure}
  \Description{Klaszter 0 szűrés előtt és után}
@@ -319,7 +319,7 @@ A következő képeken láthatók a klaszterek szűrés előtt és után (lásd 
  \Description{Klaszter 8 szűrés előtt és után}
  \includegraphics[width=1\columnwidth]{clustering/n_cluster_8_before_after.png}
 
- \caption{Klaszterezés szűrő }
+ \caption{Klaszterezés szűrő}
 
  \label{fig: Klaszterezés szűrő 2}   
 \end{figure}
@@ -329,7 +329,7 @@ létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y]
 ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
 \subsection{Klaszterezési algoritmusok}
 Klaszterezéshez több fajta algoritmust teszteltünk. A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta. 
-Aminek az eredményei fenti képeken látható (lásd. \ref{fig: Klaszterezés szűrő}).
+Aminek az eredményei fenti képeken látható (lásd. \ref{fig: Bad clusters}). A képen bal oldalon láthatók rendre a KMeans, DBSCAN és BIRCH által rendezett klaszterek, a jobb oldalon pedig az OPTICS által rendezett klaszterek. Az utolso sorban a BIRCH eredménye látható, ahol két klasztert egybevont amit az OPTICS meg tudott különböztetni.
 OPTICS-on kívül leteszteltük a KMeans, DBSCAN és BIRCH algoritmusokat. 
 \paragraph{KMeans} A KMeans klaszterezés egy unsupervised machine learning algoritmus, amely célja az adatok csoportosítása oly módon, hogy azonos klaszterbe tartozó adatok közötti távolság minimális legyen, míg az eltérő klaszterek közötti távolság maximális.
 Az algoritmus működése a következő lépésekből áll:
@@ -687,9 +687,9 @@ Az alkalmazás futását a mellékletben megadott videókon lehet megtekinteni.
 \end{figure}
 
 \section{Konklúzió}
-A kiépített keretrendszer a klaszterezéssel és klasszifikációs modellek betanításával, egy fontos lépés e terület fejlesztésében. A mérések jó alapot szolgálnak a jövőbeli kutatásoknak, milyen algoritmusokat érdemes még mélyebben megcvizsgálni, és hogy melyekkel nem érdemes a tobábiakban foglalkozni. Más objektumdetektáló és objektumkövető algoritmusokat is érdemes lehet kipróbálni, amiviel az adatgyűjtésti fázist és az adattisztítási fázist lehet felgyorsítani és hatékonyabbá tenni.
+A kiépített keretrendszer a klaszterezéssel és klasszifikációs modellek betanításával, egy fontos lépés e terület fejlesztésében. A mérések jó alapot szolgálnak a jövőbeli kutatásoknak, milyen algoritmusokat érdemes még mélyebben megvizsgálni, és hogy melyekkel nem érdemes a továbbiakban foglalkozni. Más objektumdetektáló és objektumkövető algoritmusokat is érdemes lehet kipróbálni, amiviel az adatgyűjtési fázist és az adattisztítási fázist lehet felgyorsítani és hatékonyabbá tenni.
 Az átlagos 90\% pontosság amit elértünk a tanított modellekkel, még nem elég pontos, hogy biztonság kritikus rendszerekben alkalmazható legyen. Az adathalmaz növelésével ezt a jövőben növelni lehet. A feature vektorok dimenziószámának növelésével és másfajta súlyozással is növelhető ez a pontosság. A dimenzió növelése felveti a lehetőséget, hogy a jövőben mély neurális hálókat is teszteljünk az osztályozás feladatra.
-A megerősító tanulás bevezetése a keretrenszerünke is egy nagy előrelépés lehet, ezt úgy lehetne megvalósítani, hogy valós idejű futás közben, a bejövő adatokon nem csak osztályozást végzünk hanem ezeket az adatokat folyamatosan mentjük, majd ha elég adat összegyűlt időközönként frissítjük a modellt, így a modell adaptálódni tud a forgalom változásához. 
+A megerősító tanulás bevezetése a keretrendszerünke is egy nagy előrelépés lehet, ezt úgy lehetne megvalósítani, hogy valós idejű futás közben, a bejövő adatokon nem csak osztályozást végzünk hanem ezeket az adatokat folyamatosan mentjük, majd ha elég adat összegyűlt időközönként frissítjük a modellt, így a modell adaptálódni tud a forgalom változásához. 
 %\section{Alkalmazási területek}
 
 \bibliographystyle{ACM-Reference-Format}
