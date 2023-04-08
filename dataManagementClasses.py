@@ -247,7 +247,7 @@ class TrackedObject():
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
                         self.history[n].VY])
     
-    def feature_v3_(self):
+    def feature_v3(self):
         """Return feature vector of track.
 
         Args:
@@ -261,7 +261,7 @@ class TrackedObject():
                         self.history[n//2].X, self.history[n//2].Y,
                         self.history[n].X, self.history[n].Y])
 
-    def feature_v4_(self):
+    def feature_v4(self):
         """Return feature vector of track.
 
         Args:
@@ -275,7 +275,22 @@ class TrackedObject():
                         self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y])
     
-    def feature_v5_(self, n_weights: int):
+    def feature_v7(self, k_velocity=10):
+        """Return feature vector of track.
+
+        Args:
+            framewidth/ratio (int): Width of the video frame.
+            frameheight (int): Height of the video frame. 
+        """
+        n = len(self.history_X)-1
+        if self.history_X.shape[0] < self.max_age:
+            return None
+        return np.array([self.history_X[0], self.history_Y[0], 
+                        self.history_VX_calculated[0], self.history_VY_calculated[0], 
+                        self.history_X[n], self.history_Y[n],
+                        self.history_VX_calculated[n-1], self.history_VY_calculated[n-1]]) * np.array([1, 1, 100, 100, 2, 2, 200, 200])
+
+    def feature_v5(self, n_weights: int):
         n = (self.history_X.shape[0] // 2)
         if (n // n_weights) < 1:
             return None

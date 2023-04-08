@@ -299,6 +299,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Default n_jobs value is 16.
         """
         self.tracks = tracks
+        self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
     
     def fit(self, X, y, centroids: dict = None, scale: bool = False):
@@ -478,7 +479,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return Y 
 
     def predict(self, X: np.ndarray, top:int=1, centroids: dict = None):
-        """Return predicted top labels of dataset X
+        """Return predicted top labels of dataset X in ascending order.
 
         Parameters
         ----------
@@ -511,7 +512,6 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         prediction_result = np.argsort(class_proba)
         
         #top_pred_res = np.zeros(prediction_result.shape)
-        #print(prediction_result[:,-top:])
         return prediction_result[:,-top:]
         #return top_pred_res[:,-top:]
 

@@ -369,6 +369,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
     return filter_out_noise_trajectories(filter_out_false_positive_detections_by_enter_exit_distance(filteredTracks, 0.4))
 
+
 def filter_tracks(trackedObjects: list, label="car"):
     """Only return objects with given label.
 
@@ -1032,7 +1033,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
 
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
-def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1):
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, p_norm: int = 2):
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
@@ -1044,7 +1045,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     elif cluster_features_version == "6D":
         featureVectors = make_6D_feature_vectors(tracks)
 
-    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
+    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs, p=p_norm) 
 
     if classification_features_version == "v1":
         X, y, metadata = make_feature_vectors_version_one(tracks, 6, labels)
@@ -1068,6 +1069,8 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
             2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
         }
         X, y, metadata = make_feature_vectors_version_five(tracks, labels, stride, weights_presets[weights_preset])
+    elif classification_features_version == "v7":
+        X, y, metadata = make_feature_vectors_version_seven(tracks, labels, stride)
 
 
     X = X[y > -1]
