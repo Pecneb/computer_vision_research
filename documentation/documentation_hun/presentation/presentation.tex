@@ -34,7 +34,7 @@
 \begin{frame}{Bevezetés}
 \centering
 %\includegraphics[scale=0.3]{deepsort_yolo_figs/gépilátás_modified.jpg}
-\movie[showcontrols=true]{\includegraphics[scale=0.3]{../deepsort_yolo_figs/gépilátás_modified.jpg}}{./demo_bevezetes.mp4}
+\movie[showcontrols=true]{\includegraphics[scale=0.3]{../deepsort_yolo_figs/gépilátás_modified.jpg}}{demo_bevezetes.mp4}
 \end{frame}
 
 
@@ -148,15 +148,85 @@
     \end{figure}
 \end{frame}
 
+\subsection{OPTICS vs KMeans, BIRCH}
+\begin{frame}{OPTICS vs KMeans, BIRCH}
+    \begin{itemize}
+        \item Klaszterezést több algoritmussal teszteltük
+        \item KMeans, BIRCH, DBSCAN, OPTICS
+        \item OPTICS adta a legjobb eredményeket
+    \end{itemize}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.08]{../bad_clustering/example_kmeans_vs_optics.png}
+        \end{figure}
+        \column{0.5\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.08]{../bad_clustering/example_birch_vs_optics.png}
+        \end{figure}
+    \end{columns}
+\end{frame}
+
+\subsection{OPTICS vs DBSCAN}
+\begin{frame}{OPTICS vs DBSCAN}
+    \centering
+    \begin{figure}
+        \includegraphics[scale=0.2]{../bad_clustering/example_dbscan_vs_optics_merged_cluster.png}
+    \end{figure}
+\end{frame}
+
 \section{Klasszifikáció}
 \begin{frame}{Klasszifikáció}
-
+    \begin{itemize}
+        \item Feature vektorok: trajektóriák felosztása több kisebb részre, amik a valós idejű futásból származó trajektóriákhoz hasonlít
+        \begin{itemize}
+            \item v1: trajektória kezdőkoordinátája, sebessége, középső koordinátája, utolsó koordinátája, sebessége 
+            \item v7: trajektória kezdőkoordinátája $\cdot 1$, sebessége $\cdot 100$, utolsó koordinátája $\cdot 2$, sebessége $\cdot 200$
+        \end{itemize}
+        \item Adathalmaz dúsítása: mivel egy trajektóriából több feature vektort csináltunk, így a tanító adathalmazt is megnöveltük
+    \end{itemize}
 \end{frame}
+
+\subsection{Klasszifikációs algoritmusok}
+\begin{frame}{Klasszifikációs algoritmusok}
+    \begin{itemize}   
+        \item K-NearestNeighbors, SupportVectorMachine, DecisionTree 
+    \end{itemize}
+    \begin{table}[]
+    \begin{tabular}{|lccc|}
+    \hline
+    \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v1\end{tabular}}    \\ \hline
+    \hline
+    \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.16\%}  & \multicolumn{1}{c|}{96.71\%} & 99.46\% \\ \hline
+    \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.65\%}  & \multicolumn{1}{c|}{90.82\%} & 98.05\% \\ \hline
+    \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.11\%}  & \multicolumn{1}{c|}{94.88\%} & 96.03\% \\ \hline
+    \end{tabular}
+    %\caption{Testset Feature Vektor V1}
+    %\label{table:2}
+    \end{table}
+
+    \begin{table}[]
+    \begin{tabular}{|lccc|}
+    \hline
+    \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v7\end{tabular}}    \\ \hline
+    \hline
+    \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{92.08\%}  & \multicolumn{1}{c|}{95.61\%} & 98.66\% \\ \hline
+    \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & 98.92\% \\ \hline
+    \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{89.46\%}  & \multicolumn{1}{c|}{93.30\%} & 94.55\% \\ \hline
+    \end{tabular}
+    %\caption{Testset Feature Vektor V7 Stride 15}
+    %\label{table:3}
+    \end{table}
+\end{frame}
+
+\subsection{}
 
 \section{Alkalmazás}
 \begin{frame}{Alkalmazás}
     \centering
-    \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_newport.png}}{./Newport_binary_KNN_n_neighbors_15_stride-15_v7.mp4}
+    \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_newport.png}}{Newport_binary_KNN_n_neighbors_15_stride-15_v7.mp4}
 \end{frame}
 
 
