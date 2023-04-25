@@ -16,10 +16,14 @@
 \urlstyle{same}
 
 \title[Jármű trajektóriák előrejelzése]{Járművek trajektóriáinak előrejelzése machine learning modellekkel}
-\author{Péter Bence Mérnökinformatika BSc 6. félév\\Témavezetők:\\Dr. Horváth András egyetemi docens\\Agg Áron PhD hallgató}
-\institute{Széchenyi István University}
+\author{Péter Bence Mérnökinformatika BSc 6. félév\\
+        \vspace{5mm}
+        Témavezetők:\\
+        Dr. Horváth András egyetemi docens\\
+        Agg Áron PhD hallgató}
+\institute{Széchenyi István Egyetem}
 
-\date{TMDK April 26, 2023}
+\date{TMDK 2023. április 26.}
 
 \begin{document}
 
@@ -37,8 +41,8 @@
     \begin{itemize}
         \item Adathalmaz: 
         \begin{itemize}
-            \item 5 különböző helyszín Amerikai városokból
-            \item 10 órányi felvétel
+            \item 5 különböző helyszín amerikai városokból
+            \item 20 órányi felvétel
         \end{itemize}
     \end{itemize}
     \centering
@@ -118,18 +122,17 @@
     \begin{itemize}
         \item Előre meghatározott osztályok alapján
         \item Az algoritmust tanítani kell példa adatokkal 
-        \item Amiket vagy kézzel, vagy klaszterezéssel rendezünk osztályokba
     \end{itemize}
     \begin{figure}
         \includegraphics[scale=0.25]{supervised_learning.jpeg}
     \end{figure}
 \end{frame}
 
-\section{Tipikus viselkedesi formak meghatarozasa: Klaszterezes (Unsupervised)}
-\begin{frame}{Tipikus viselkedesi formak meghatarozasa: Klaszterezes (Unsupervised)}
+\section{Tipikus viselkedési formák meghatározása: Klaszterezés (Unsupervised)}
+\begin{frame}{Tipikus viselkedési formák meghatározása: Klaszterezés (Unsupervised)}
     \begin{itemize}
         \item Bemeneti adatok: gyűjtött trajektóriák objektumdetektálás és követés segítségével
-        \item Feature vektorok: trajektóriák be és kimeneti pontjai
+        \item Feature vektorok: [bemeneti x,y koordináta, kimeneti x,y koordináta]
     \end{itemize}
     \begin{columns}
         \column{0.33\textwidth}
@@ -177,10 +180,10 @@
 \subsection{OPTICS vs KMeans, BIRCH}
 \begin{frame}{OPTICS vs KMeans, BIRCH}
     \begin{itemize}
-        \item Klaszterezést nem triviális feladat
+        \item Klaszterezés nem triviális feladat
         \item Több algoritmus tesztelése
         \item KMeans, BIRCH, DBSCAN, OPTICS
-        \item OPTICS adta a legjobb eredményeket
+        \item OPTICS adta a legjobb eredményeket 
     \end{itemize}
     \begin{columns}
         \column{0.5\textwidth}
@@ -205,13 +208,17 @@
 \section{Klasszifikáció (Supervised)}
 \begin{frame}{Klasszifikáció (Supervised)}
     \begin{itemize}
-        \item Megfigyelt autó besorolása a klaszterezés alapján megfigyelt csoportba.
+        \item Megfigyelt autó besorolása a klaszterezés alapján meghatározott csoportba.
         \item Feature vektorok: trajektóriák felosztása több kisebb részre, amik valós idejű futásból származó trajektóriákhoz hasonlítanak
         \begin{itemize}
             \item v1: [kezdőkoordinátája, sebessége, középső koordinátája, utolsó koordinátája, sebessége]
             \item v7: [kezdőkoordinátája $\cdot 1$, sebessége $\cdot 100$, utolsó koordinátája $\cdot 2$, sebessége $\cdot 200$]
         \end{itemize}
-        \item Adathalmaz dúsítása: egy trajektóriából több feature vektor generálása, tanító adathalmaz megnövelése
+        \item Adathalmaz dúsítása:
+        \begin{itemize}
+            \item Cél: kiegyenlítettebb darabszámok
+            \item egy trajektóriából több feature vektor generálása, tanító adathalmaz megnövelése
+        \end{itemize}
         \item Trajektóriák hossza: 15 és 30 hosszúságú trajektóriák tesztelése
         \item Eredmény: hossz növeléssel nem történik pontosságban javulás
     \end{itemize}
@@ -231,7 +238,7 @@
     \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v1\end{tabular}}    \\ \hline
     \hline
     \multicolumn{1}{|l|}{} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
-    \multicolumn{1}{|l|}{\textcolor[rgb]{1,0,0}{KNN}}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{94.16\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{96.71\%}} & \textcolor[rgb]{1,0,0}{99.46\%} \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{94.16\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{96.71\%}} & \textcolor[rgb]{1,0,0}{99.46\%} \\ \hline
     \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.65\%}  & \multicolumn{1}{c|}{90.82\%} & 98.05\% \\ \hline
     \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.11\%}  & \multicolumn{1}{c|}{94.88\%} & 96.03\% \\ \hline
     \end{tabular}
@@ -245,7 +252,7 @@
     \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v7\end{tabular}}    \\ \hline
     \hline
     \multicolumn{1}{|l|}{} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
-    \multicolumn{1}{|l|}{\textcolor[rgb]{1,0,0}{KNN}}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{92.08\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{95.61\%}} & 98.66\% \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{92.08\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{95.61\%}} & 98.66\% \\ \hline
     \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & \textcolor[rgb]{1,0,0}{98.92\%} \\ \hline
     \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{89.46\%}  & \multicolumn{1}{c|}{93.30\%} & 94.55\% \\ \hline
     \end{tabular}
@@ -254,8 +261,8 @@
     \end{table}
 \end{frame}
 
-\section{Megjelenítő Alkalmazás}
-\begin{frame}{Megjelenítő Alkalmazás}
+\section{Megjelenítő alkalmazás}
+\begin{frame}{Megjelenítő alkalmazás}
     \begin{itemize}
         \item Saját fejlesztésű megjeleítő alkalmazás
         \item Zöld: legvalószínűbb előrejelzés
@@ -265,8 +272,8 @@
     \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_newport.png}}{Newport_binary_KNN_n_neighbors_15_stride-15_v7.mp4}
 \end{frame}
 
-\section{Elmélet implementálása}
-\begin{frame}{Elmélet implementálása}
+\section{Összefoglalás}
+\begin{frame}{Összefoglalás}
     \begin{itemize}
         \item YOLOv7 és DeepSORT detektáló alkalmazásba integrálása
         \item SQL Adatbázis architektúra tervezése, implementálása
@@ -276,7 +283,15 @@
         \item Megjelenítő alkalmazás
         \item Fejlesztői környezet: Linux, Python, Codium
         \item Saját forráskód mérete: 7460 sor
+        \item Implementáció megtalálható itt: \url{https://github.com/Pecneb/computer_vision_research}
     \end{itemize}
+\end{frame}
+
+\section{Vége}
+\begin{frame}{Vége}
+    \begin{center}\huge{Köszönöm a figyelmet}\end{center}
+    \centering
+    \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_se.png}}{Bellevue_150th_SE38th__2017-09-11_11-08-34_binary_KNN_n_neighbors_15_stride-15_v7.mp4}   
 \end{frame}
 
 
