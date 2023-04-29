@@ -24,7 +24,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-from processing_utils import load_model, save_model, data_preprocessing_for_calibrated_classifier, data_preprocessing_for_classifier, data_preprocessing_for_classifier_from_joblib_model, checkDir
+from processing_utils import (
+    load_model, 
+    save_model, 
+    data_preprocessing_for_calibrated_classifier, 
+    data_preprocessing_for_classifier, 
+    data_preprocessing_for_classifier_from_joblib_model, 
+    preprocess_dataset_for_training,
+    load_joblib_tracks,
+    level_features,
+    )
+from tqdm import tqdm
 np.seterr(divide='ignore', invalid='ignore')
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
@@ -385,12 +395,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
+    from processing_utils import strfy_dict_params
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
     if path2model is not None:
         model = load_model(path2model)
-        tracks = model.trackData
+        tracks = model.tracks
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = data_preprocessing_for_classifier_from_joblib_model(model, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
                                                             xi=argv['xi'], 
@@ -398,7 +409,8 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             n_jobs=argv['n_jobs'], 
                                                             from_half=argv['from_half'],
                                                             features_v2=argv['features_v2'],
-                                                            features_v2_half=argv['features_v2_half'])
+                                                            features_v2_half=argv['features_v2_half'],
+                                                            features_v3=argv['features_v3'])
     else:
         X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
                                                             max_eps=argv['max_eps'], 
@@ -406,7 +418,21 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
                                                             min_cluster_size=argv['min_cluster_size'],
                                                             n_jobs=argv['n_jobs'], from_half=argv['from_half'],
                                                             features_v2=argv['features_v2'],
-                                                            features_v2_half=argv['features_v2_half'])
+                                                            features_v2_half=argv['features_v2_half'],
+                                                            features_v3=argv['features_v3'])
+
+    """X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks, cluster_centroids = preprocess_dataset_for_training(
+        path2dataset=path2db, 
+        min_samples=argv['min_samples'], 
+        max_eps=argv['max_eps'], 
+        xi=argv['xi'], 
+        min_cluster_size=argv['min_cluster_size'],
+        n_jobs=argv['n_jobs'], 
+        from_half=argv['from_half'],
+        features_v2=argv['features_v2'],
+        features_v2_half=argv['features_v2_half'],
+        features_v3=argv['features_v3']
+    )"""
 
     models = {
         'KNN' : KNeighborsClassifier,
@@ -436,7 +462,7 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             os.mkdir(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
     savepath = os.path.join(os.path.join('research_data', path2db.split('/')[-1].split('.')[0], "tables"))
 
-    for clr in models:
+    for clr in tqdm(models, desc="Classifier trained."):
         binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks, n_jobs=argv['n_jobs'])
         #binaryModel = BinaryClassifier(trackData=tracks, classifier=models[clr], classifier_argv=parameters[clr])
         #binaryModel.init_models(models[clr])
@@ -467,8 +493,16 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
             table.to_excel(writer, sheet_name="Top_Picks") # top n accuracy
             table2.to_excel(writer, sheet_name="Balanced") # balanced accuracy
 
-        #TODO: name models according to their classifier parameters
-        save_model(path2db, str("binary_"+clr), binaryModel) 
+        #TODO: somehow show in title which feature vectors were used for the tarining 
+        if argv['from_half']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_from_half"), binaryModel) 
+        elif argv['features_v2']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2"), binaryModel)
+        elif argv['features_v2_half']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2_from_half"), binaryModel)
+        elif argv['features_v3']:
+            save_model(path2db, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3"), binaryModel)
+
 
     table.index += 1
     print("Top picks")
@@ -476,6 +510,114 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     print("Threshold")
     print(table2.to_markdown())
     print(table2.aggregate(np.average).to_markdown())
+
+def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
+    from classifier import OneVSRestClassifierExtended
+    from sklearn.tree import DecisionTreeClassifier
+    from processing_utils import strfy_dict_params, iter_minibatches
+    from visualizer import aoiextraction
+
+    X, y, metadata, tracks, labels = preprocess_dataset_for_training(
+        path2dataset=path2dataset, 
+        min_samples=argv['min_samples'], 
+        max_eps=argv['max_eps'], 
+        xi=argv['xi'], 
+        min_cluster_size=argv['min_cluster_size'],
+        n_jobs=argv['n_jobs'], 
+        cluster_features_version=argv['cluster_features_version'],
+        classification_features_version=argv['classification_features_version'],
+        stride=argv['stride'],
+        level=argv['level'],
+        threshold=argv['threshold'],
+        n_weights=argv['n_weights'],
+        weights_preset=argv['weights_preset'],
+        p_norm=argv['p_norm']
+    )
+    tracks_filtered = [t for i, t in enumerate(tracks) if labels[i] > -1] 
+    labels_filtered = [l for l in labels if l > -1]  
+
+    tracks_labels = []
+    for i in range(len(tracks_filtered)):
+        tracks_labels.append({
+            "track" : tracks_filtered[i],
+            "class" : labels_filtered[i]
+        })
+
+    cluster_centroids = None
+    if argv['classification_features_version'] == 'v3' or argv['classification_features_version'] == 'v3_half':
+        cluster_centroids = aoiextraction(tracks_filtered, labels_filtered)
+
+    models = {
+        'KNN' : KNeighborsClassifier,
+        #'GP' : GaussianProcessClassifier,
+        'SVM' : SVC,
+        'DT' : DecisionTreeClassifier
+    }
+    
+    parameters = {
+        'KNN' : {'n_neighbors' : 15},
+        #'GP' :  {},
+        'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
+        'DT': {}
+    }
+
+    if not os.path.isdir(os.path.join(outdir, "tables")):
+            os.mkdir(os.path.join(outdir, "tables"))
+
+    if argv['batch_size'] is not None:
+        batch_size = argv['batch_size']
+        if X.shape[0] < batch_size:
+            batch_size = X.shape[0]
+
+    all_classes = np.array(list(set(y)))
+
+    for clr in tqdm(models, desc="Classifier trained."):
+        binaryModel = OneVSRestClassifierExtended(models[clr](**parameters[clr]), tracks_labels, n_jobs=argv['n_jobs'])
+
+        # if batch size is given, use partial_fit() method and train with minibatches
+        if argv['batch_size'] is not None:
+            try:
+                iteration = 1
+                for X_batch, y_batch in iter_minibatches(X, y, batch_size):
+                    print(f"Iteration {iteration} started")
+                    binaryModel.partial_fit(X_batch, y_batch, classes=all_classes, centroids=cluster_centroids)
+                    iteration+=1
+                print(f"\nTraining with batchsize: {batch_size:10d}.\n")
+            except:
+                print(f"\nClassifier {clr} does not have partial_fit() method, cant train with minibatches.")
+                print(f"Training without minibatches. Batchsize is: {X.shape[0]:10d}\n")
+                binaryModel.fit(X, y, centroids=cluster_centroids)            
+        else:
+            print(f"\nTraining without minibatches. Batchsize is: {X.shape[0]:10d}\n")
+            binaryModel.fit(X, y, centroids=cluster_centroids)
+
+        # save models with names corresponding to the feature version and parameters
+        if argv['classification_features_version'] == 'v1':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])), binaryModel)
+        elif argv['classification_features_version'] == 'v1_half':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_from_half"), binaryModel) 
+        elif argv['classification_features_version'] == 'v2':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2"), binaryModel)
+        elif argv['classification_features_version'] == 'v2_half':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v2_from_half"), binaryModel)
+        elif argv['classification_features_version'] == 'v3':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3"), binaryModel)
+        elif argv['classification_features_version'] == 'v3_half':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v3_from_half"), binaryModel)
+        elif argv['classification_features_version'] == 'v4':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+"_v4"), binaryModel)
+        elif argv['classification_features_version'] == 'v5':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v5"), binaryModel)
+        elif argv['classification_features_version'] == 'v6':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_{argv['n_weights']}_v6"), binaryModel)
+        elif argv['classification_features_version'] == 'v7':
+            save_model(outdir, str("binary_"+clr+strfy_dict_params(parameters[clr])+f"_stride-{argv['stride']}_v7"), binaryModel)
     
 def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     """Deprecated, dont use.
@@ -703,61 +845,140 @@ def plot_decision_tree(path2model: str):
     """
     from sklearn.tree import plot_tree
     model = load_model(path2model=path2model)
-    for i, m in enumerate(model.models_):
+    for i, m in enumerate(model.estimators_):
         print(f"Class {i}")
         plot_tree(m)
         plt.show()
 
-def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1):
-    """Calculate classification model accuracy with cross validation method.
+def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, threshold: float = 0.7, **estkwargs):
+    """Run cross validation on chosen classifiers with different feature vectors.
 
     Args:
-        path2dataset (str): Path to dataset. File with joblib extension. 
-        train_ratio (float, optional): Split ratio of the tracks. Defaults to 0.75.
-        seed (int, optional): Seed for reproducable track splitting. Defaults to 1.
-        n_splits (int, optional): Number of splits to perform with k-fold cross validation method. Defaults to 5.
-        n_jobs (int, optional): Number of jobs to run. Defaults to 18.
+        path2dataset (str): dataset path.
+        outputPath (str, optional): The path to the output table to save the results. Defaults to None.
+        train_ratio (float, optional): The ratio of the training dataset compared to the test dataset. Defaults to 0.75.
+        seed (int, optional): Seed value to be able reproduce shuffle on dataset. Defaults to 1.
+        n_splits (int, optional): Cross validation split number. Defaults to 5.
+        n_jobs (int, optional): Number of paralell processes to run. Defaults to 18.
+        estimator_params_set (int, optional): Choose classifier parameter set. Defaults to 1.
+        classification_features_version (str, optional): Choose which feature vector to use for classification. Defaults to "v1".
+        stride (int, optional): Size of the sliding window used to generate feature vectors from detection history. Defaults to 15.
+        level (bool, optional): Choose if dataset should be balanced or stay as it is after enrichment. Defaults to False.
+        n_weights (int, optional): The number of dimensions, that is going to be added between the first and last dimension in the feature vector. Defaults to n_weights.
+
+    Returns:
+        tuple: cross validation results in pandas datastructure 
     """
-    from processing_utils import load_joblib_tracks, random_split_tracks, make_feature_vectors_version_two, make_feature_vectors_version_two_half
+    from processing_utils import (
+                                    load_joblib_tracks, 
+                                    random_split_tracks,
+                                    filter_out_edge_detections,
+                                    make_4D_feature_vectors
+                                )
+    from clustering import clustering_on_feature_vectors
+    from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
+    from sklearn.svm import SVC
     from sklearn.gaussian_process import GaussianProcessClassifier
     from sklearn.naive_bayes import GaussianNB
     from sklearn.neural_network import MLPClassifier
-    from sklearn.svm import SVC
-    from classifier import OneVSRestClassifierExtended
+    from sklearn.linear_model import SGDClassifier
     from sklearn.tree import DecisionTreeClassifier
-    from sklearn.model_selection import cross_val_score
+    from classifier import OneVSRestClassifierExtended
+    from sklearn.model_selection import cross_val_score, cross_validate
+    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
+    from visualizer import aoiextraction
 
-    # load tracks from joblib file
-    # tracks stored as list[dict]
-    # {
-    #   "track": t,
-    #   "class": c
-    # }
     tracks = load_joblib_tracks(path2dataset)
-    tracks_filteted = []
-    for t in tracks:
-        if t["class"] != -1:
-            tracks_filteted.append(t)
+
+    # cluster tracks
+    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    train_dict = []
+    for i in range(len(tracks_labeled)):
+        train_dict.append({
+            "track" : tracks_labeled[i],
+            "class" : cluster_labels[i]
+        })
 
     # shuffle tracks, and separate into a train and test dataset
-    train, test = random_split_tracks(tracks_filteted, train_ratio, seed)
+    train, test = random_split_tracks(train_dict, train_ratio, seed)
 
     tracks_train = [t["track"] for t in train]
     labels_train = np.array([t["class"] for t in train])
     tracks_test = [t["track"] for t in test]
     labels_test = np.array([t["class"] for t in test])
 
-    X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
-    X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+    cluster_centroids = None
+    fit_params = None
+
+    if classification_features_version == "v1":
+        from processing_utils import make_feature_vectors_version_one
+        X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v1_half":
+        from processing_utils import make_feature_vectors_version_one_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v2":
+        from processing_utils import make_feature_vectors_version_two
+        X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v2_half":
+        from processing_utils import make_feature_vectors_version_two_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v3":
+        from processing_utils import make_feature_vectors_version_three
+        X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        fit_params = {
+            'centroids' : cluster_centroids
+        }
+    elif classification_features_version == "v3_half":
+        from processing_utils import make_feature_vectors_version_three_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        fit_params = {
+            'centroids' : cluster_centroids
+        }
+    elif classification_features_version == "v4":
+        from processing_utils import make_feature_vectors_version_four
+        X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
+    elif classification_features_version == "v5":
+        from processing_utils import make_feature_vectors_version_five
+        X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
+        X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
+    elif classification_features_version == "v6":
+        from processing_utils import make_feature_vectors_version_six
+        weights_presets = {
+            1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
+            2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
+        }
+        X_train, y_train, metadata_train = make_feature_vectors_version_six(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, weights=weights_presets[weights_preset])
+        X_test, y_test, metadata_test = make_feature_vectors_version_six(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, weights=weights_presets[weights_preset])
+    if level is not None:
+        X_train, y_train = level_features(X_train, y_train, level)
+        X_test, y_test = level_features(X_test, y_test, level)
+    elif classification_features_version == "v7":
+        from processing_utils import make_feature_vectors_version_seven
+        X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
+        X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
 
     models = {
         'KNN' : KNeighborsClassifier,
-        'GP' : GaussianProcessClassifier,
+        #'GP' : GaussianProcessClassifier,
         'GNB' : GaussianNB,
         'MLP' : MLPClassifier,
-        'SGD' : SGDClassifier,
+        'SGD_modified_huber' : SGDClassifier,
+        'SGD_log_loss' : SGDClassifier,
         'SVM' : SVC,
         'DT' : DecisionTreeClassifier
     }
@@ -766,40 +987,46 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
                     'KNN' : {'n_neighbors' : 15},
                     'GP' :  {},
                     'GNB' : {},
-                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    'SGD' : {'loss' : 'modified_huber'},
-                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
+                    'MLP' : {'max_iter' : 5000, 'solver' : 'sgd'},
+                    'SGD_modified_huber' : {'loss' : 'modified_huber'},
+                    'SGD_log_loss' : {'loss' : 'log_loss'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
                     'DT' : {} 
                 }, {
                     'KNN' : {'n_neighbors' : 3},
-                    'GP' :  {},
-                    'GNB' : {},
-                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    'SGD' : {'loss' : 'modified_huber'},
-                    'SVM' : {'kernel' : 'linear', 'probability' : True},
-                    'DT' : {} 
+                    #'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 2000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 2000},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True,'max_iter': 2000},
+                    #'DT' : {} 
                 }, {
                     'KNN' : {'n_neighbors' : 1},
-                    'GP' :  {},
-                    'GNB' : {},
-                    'MLP' : {'max_iter' : 1000, 'solver' : 'sgd'},
-                    'SGD' : {'loss' : 'modified_huber'},
-                    'SVM' : {'kernel' : 'linear', 'probability' : True},
-                    'DT' : {} 
+                    #'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 3000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 3000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 3000},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True, 'max_iter': 4000},
+                    #'DT' : {} 
                 }, {
-                    'KNN' : {'n_neighbors' : 15},
-                    'GP' :  {},
-                    'GNB' : {},
-                    'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
-                    'SGD' : {'loss' : 'modified_huber'},
-                    'SVM' : {'kernel' : 'rbf', 'probability' : True},
-                    'DT' : {} 
+                    'KNN' : {'n_neighbors' : 7},
+                    #'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 4000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 16000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 16000},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter': 8000},
+                    #'DT' : {} 
                 }]
     
     splits = np.append(np.arange(1,6,1), ["Max split", "Mean", "Standart deviation"])
     basic_table = pd.DataFrame()
     balanced_table = pd.DataFrame()
-    top_k_table = pd.DataFrame()
+    top_1_table = pd.DataFrame()
+    top_2_table = pd.DataFrame()
+    top_3_table = pd.DataFrame()
     final_test_basic = pd.DataFrame()
     final_test_balanced = pd.DataFrame()
     final_test_top_k_idx = ["Top_1", "Top_2", "Top_3"]
@@ -807,171 +1034,619 @@ def cross_validate(path2dataset: str, train_ratio=0.75, seed=1, n_splits=5, n_jo
 
     basic_table["Split"] = splits
     balanced_table["Split"] = splits
-    top_k_table["Split"] = splits
+    top_1_table["Split"] = splits
+    top_2_table["Split"] = splits
+    top_3_table["Split"] = splits
     final_test_top_k["Top"] = final_test_top_k_idx
 
-    t1 = time.time()
-    for m in models:
-        clf = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
+    parameters_table = pd.DataFrame(parameters[estimator_params_set-1])
 
-        basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits)
+    # makeing top_k scorer callables, to be able to set their k parameter
+    #top_1_scorer = make_scorer(top_k_accuracy_score, k=1)
+    #top_2_scorer = make_scorer(top_k_accuracy_score, k=2)
+    #top_3_scorer = make_scorer(top_k_accuracy_score, k=3)
+    top_k_scorers = {
+        'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
+        'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
+        'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
+    }
+
+    print(f"\nTraining dataset size: {X_train.shape[0]}")
+    print(f"Validation dataset size: {X_test.shape[0]}\n")
+
+    print(f"Number of clusters: {len(set(labels_train))}")
+
+    t1 = time.time()
+    for m in tqdm(models, desc="Cross validate models"):
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
+
+        basic_scores = cross_val_score(clf_ovr, X_train, y_train, cv=n_splits, fit_params=fit_params, n_jobs=n_jobs)
         basic_table[m] = np.append(basic_scores, [np.max(basic_scores), basic_scores.mean(), basic_scores.std()]) 
 
-        balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy')
+        balanced_scores = cross_val_score(clf_ovr, X_train, y_train, cv=n_splits, scoring='balanced_accuracy', fit_params=fit_params, n_jobs=n_jobs)
         balanced_table[m] = np.append(balanced_scores, [np.max(balanced_scores), balanced_scores.mean(), balanced_scores.std()]) 
 
-        top_k_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='top_k_accuracy')
-        top_k_table[m] = np.append(top_k_scores, [np.max(top_k_scores), top_k_scores.mean(), top_k_scores.std()])
+        top_k_scores = cross_validate(clf_ovr, X_train, y_train, scoring=top_k_scorers, cv=5, fit_params=fit_params, n_jobs=n_jobs)
+        top_1_table[m] = np.append(top_k_scores['test_top_1'], [np.max(top_k_scores['test_top_1']), top_k_scores['test_top_1'].mean(), top_k_scores['test_top_1'].std()])
+        top_2_table[m] = np.append(top_k_scores['test_top_2'], [np.max(top_k_scores['test_top_2']), top_k_scores['test_top_2'].mean(), top_k_scores['test_top_2'].std()])
+        top_3_table[m] = np.append(top_k_scores['test_top_3'], [np.max(top_k_scores['test_top_3']), top_k_scores['test_top_3'].mean(), top_k_scores['test_top_3'].std()])
 
-        clf.fit(X_train, y_train)
+        clf_ovr.fit(X_train, y_train, centroids=cluster_centroids)
 
-        final_balanced = clf.validate(X_test, y_test, threshold=0.5)
-        final_balanced_avg = np.average(final_balanced)
-        final_balanced_std = np.std(final_balanced)
-        final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
-        final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
+        y_pred = clf_ovr.predict(X_test)
+        y_pred_2 = clf_ovr.predict_proba(X_test)
+
+        #final_balanced = clf.validate(X_test, y_test, threshold=0.5, centroids=cluster_centroids)
+        #final_balanced_avg = np.average(final_balanced)
+        #final_balanced_std = np.std(final_balanced)
+        #final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
+        #final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
 
         final_top_k = []
         for i in range(1,4):
-            final_top_k.append(clf.validate_predictions(X_test, y_test, top=i))
+            final_top_k.append(top_k_accuracy_score(y_test, y_pred_2, k=i, labels=list(set(y_train))))
+        final_test_top_k[m] = final_top_k
+
+        final_basic = np.array([clf_ovr.score(X_test, y_test)])
+        final_test_basic[m] = final_basic
+
+        final_balanced = balanced_accuracy_score(y_test, y_pred)
+        final_test_balanced[m] = np.array([final_balanced])
+
+    t2 = time.time()
+    td = t2 - t1
+    print("\n*Time: %d s*" % td)
+
+    print("\n#### Classifier parameters\n")
+    print(parameters[estimator_params_set-1])
+
+    print("\n#### Cross-val Basic accuracy\n")
+    print(basic_table.to_markdown())
+    
+    print("\n#### Cross-val Balanced accuracy\n")
+    print(balanced_table.to_markdown())
+
+    print("\n#### Cross-val Top 1 accuracy\n")
+    print(top_1_table.to_markdown())
+
+    print("\n#### Cross-val Top 2 accuracy\n")
+    print(top_2_table.to_markdown())
+
+    print("\n#### Cross-val Top 3 accuracy\n")
+    print(top_3_table.to_markdown())
+
+    print("\n#### Test set basic\n")
+    print(final_test_basic.to_markdown())
+
+    print("\n#### Test set balanced\n")
+    print(final_test_balanced.to_markdown())
+
+    print("\n#### Test set top k\n")
+    print(final_test_top_k.to_markdown())
+
+    print("\n#### Cross-val Basic accuracy\n")
+    print(basic_table.to_latex())
+    
+    print("\n#### Cross-val Balanced accuracy\n")
+    print(balanced_table.to_latex())
+
+    print("\n#### Cross-val Top 1 accuracy\n")
+    print(top_1_table.to_latex())
+
+    print("\n#### Cross-val Top 2 accuracy\n")
+    print(top_2_table.to_latex())
+
+    print("\n#### Cross-val Top 3 accuracy\n")
+    print(top_3_table.to_latex())
+
+    print("\n#### Test set basic\n")
+    print(final_test_basic.to_latex())
+
+    print("\n#### Test set balanced\n")
+    print(final_test_balanced.to_latex())
+
+    print("\n#### Test set top k\n")
+    print(final_test_top_k.to_latex())
+
+    if outputPath is not None:
+        with pd.ExcelWriter(outputPath) as writer:
+            parameters_table.to_excel(writer, sheet_name="Classifier parameters")
+            basic_table.to_excel(writer, sheet_name="Cross Validation Basic scores")
+            balanced_table.to_excel(writer, sheet_name="Cross Validation Balanced scores")
+            top_1_table.to_excel(writer, sheet_name="Cross Validation Top 1 scores")
+            top_2_table.to_excel(writer, sheet_name="Cross Validation Top 2 scores")
+            top_3_table.to_excel(writer, sheet_name="Cross Validation Top 3 scores")
+            final_test_basic.to_excel(writer, sheet_name="Validation set Basic scores")
+            final_test_balanced.to_excel(writer, sheet_name="Validation set Balanced scores")
+            final_test_top_k.to_excel(writer, sheet_name="Validation set Top K scores")
+
+    print()
+    return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
+
+def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_ratio=0.75, seed=1, n_splits=5, n_jobs=18, estimator_params_set=1, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, threshold: float = 0.7, **estkwargs):
+    """Run cross validation on chosen classifiers with different feature vectors.
+
+    Args:
+        path2dataset (str): dataset path.
+        outputPath (str, optional): The path to the output table to save the results. Defaults to None.
+        train_ratio (float, optional): The ratio of the training dataset compared to the test dataset. Defaults to 0.75.
+        seed (int, optional): Seed value to be able reproduce shuffle on dataset. Defaults to 1.
+        n_splits (int, optional): Cross validation split number. Defaults to 5.
+        n_jobs (int, optional): Number of paralell processes to run. Defaults to 18.
+        estimator_params_set (int, optional): Choose classifier parameter set. Defaults to 1.
+        classification_features_version (str, optional): Choose which feature vector to use for classification. Defaults to "v1".
+        stride (int, optional): Size of the sliding window used to generate feature vectors from detection history. Defaults to 15.
+        level (bool, optional): Choose if dataset should be balanced or stay as it is after enrichment. Defaults to False.
+        n_weights (int, optional): The number of dimensions, that is going to be added between the first and last dimension in the feature vector. Defaults to n_weights.
+
+    Returns:
+        tuple: cross validation results in pandas datastructure 
+    """
+    from processing_utils import (
+                                    load_joblib_tracks, 
+                                    random_split_tracks,
+                                    filter_out_edge_detections,
+                                    make_4D_feature_vectors
+                                )
+    from clustering import clustering_on_feature_vectors
+    from sklearn.cluster import OPTICS
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.svm import SVC
+    from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    from classifier import OneVSRestClassifierExtended
+    from sklearn.model_selection import cross_val_score, cross_validate
+    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
+    from visualizer import aoiextraction
+
+    tracks = load_joblib_tracks(path2dataset)
+
+    # cluster tracks
+    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    train_dict = []
+    for i in range(len(tracks_labeled)):
+        train_dict.append({
+            "track" : tracks_labeled[i],
+            "class" : cluster_labels[i]
+        })
+
+    # shuffle tracks, and separate into a train and test dataset
+    train, test = random_split_tracks(train_dict, train_ratio, seed)
+
+    tracks_train = [t["track"] for t in train]
+    labels_train = np.array([t["class"] for t in train])
+    tracks_test = [t["track"] for t in test]
+    labels_test = np.array([t["class"] for t in test])
+
+    cluster_centroids = None
+    fit_params = None
+
+    if classification_features_version == "v1":
+        from processing_utils import make_feature_vectors_version_one
+        X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v1_half":
+        from processing_utils import make_feature_vectors_version_one_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v2":
+        from processing_utils import make_feature_vectors_version_two
+        X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v2_half":
+        from processing_utils import make_feature_vectors_version_two_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+    elif classification_features_version == "v3":
+        from processing_utils import make_feature_vectors_version_three
+        X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        fit_params = {
+            'centroids' : cluster_centroids
+        }
+    elif classification_features_version == "v3_half":
+        from processing_utils import make_feature_vectors_version_three_half
+        X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        fit_params = {
+            'centroids' : cluster_centroids
+        }
+    elif classification_features_version == "v4":
+        from processing_utils import make_feature_vectors_version_four
+        X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
+        X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
+    elif classification_features_version == "v5":
+        from processing_utils import make_feature_vectors_version_five
+        X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
+        X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
+    elif classification_features_version == "v6":
+        from processing_utils import make_feature_vectors_version_six
+        weights_presets = {
+            1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
+            2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
+        }
+        X_train, y_train, metadata_train = make_feature_vectors_version_six(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, weights=weights_presets[weights_preset])
+        X_test, y_test, metadata_test = make_feature_vectors_version_six(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, weights=weights_presets[weights_preset])
+    if level is not None:
+        X_train, y_train = level_features(X_train, y_train, level)
+        X_test, y_test = level_features(X_test, y_test, level)
+    elif classification_features_version == "v7":
+        from processing_utils import make_feature_vectors_version_seven
+        X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
+        X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
+
+    models = {
+        'KNN' : KNeighborsClassifier,
+        #'GP' : GaussianProcessClassifier,
+        #'GNB' : GaussianNB,
+        #'MLP' : MLPClassifier,
+        #'SGD_modified_huber' : SGDClassifier,
+        #'SGD_log_loss' : SGDClassifier,
+        'SVM' : SVC,
+        'DT' : DecisionTreeClassifier
+    }
+    
+    parameters = [{
+                    'KNN' : {'n_neighbors' : 15},
+                    'GP' :  {},
+                    'GNB' : {},
+                    'MLP' : {'max_iter' : 26000, 'solver' : 'sgd'},
+                    'SGD_modified_huber' : {'loss' : 'modified_huber'},
+                    'SGD_log_loss' : {'loss' : 'log_loss'},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
+                    'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 3},
+                    'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 2000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 2000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 2000},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True,'max_iter': 2000},
+                    #'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 1},
+                    #'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 3000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 3000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 3000},
+                    'SVM' : {'kernel' : 'linear', 'probability' : True, 'max_iter': 4000},
+                    #'DT' : {} 
+                }, {
+                    'KNN' : {'n_neighbors' : 7},
+                    #'GP' :  {},
+                    #'GNB' : {},
+                    #'MLP' : {'max_iter' : 4000, 'solver' : 'sgd'},
+                    #'SGD_modified_huber' : {'loss' : 'modified_huber', 'max_iter' : 16000},
+                    #'SGD_log_loss' : {'loss' : 'log_loss', 'max_iter' : 16000},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter': 8000},
+                    #'DT' : {} 
+                }]
+    
+    splits = np.append(np.arange(1,6,1), ["Max split", "Mean", "Standart deviation"])
+    basic_table = pd.DataFrame()
+    balanced_table = pd.DataFrame()
+    top_1_table = pd.DataFrame()
+    top_2_table = pd.DataFrame()
+    top_3_table = pd.DataFrame()
+    final_test_basic = pd.DataFrame()
+    final_test_balanced = pd.DataFrame()
+    final_test_top_k_idx = ["Top_1", "Top_2", "Top_3"]
+    final_test_top_k = pd.DataFrame()
+
+    basic_table["Split"] = splits
+    balanced_table["Split"] = splits
+    top_1_table["Split"] = splits
+    top_2_table["Split"] = splits
+    top_3_table["Split"] = splits
+    final_test_top_k["Top"] = final_test_top_k_idx
+
+    parameters_table = pd.DataFrame(parameters[estimator_params_set-1])
+
+    # makeing top_k scorer callables, to be able to set their k parameter
+    #top_1_scorer = make_scorer(top_k_accuracy_score, k=1)
+    #top_2_scorer = make_scorer(top_k_accuracy_score, k=2)
+    #top_3_scorer = make_scorer(top_k_accuracy_score, k=3)
+    top_k_scorers = {
+        'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
+        'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
+        'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
+    }
+
+    print(f"\nTraining dataset size: {X_train.shape[0]}")
+    print(f"Validation dataset size: {X_test.shape[0]}\n")
+
+    print(f"Number of clusters: {len(set(labels_train))}")
+
+    t1 = time.time()
+    for m in tqdm(models, desc="Cross validate models"):
+        clf = models[m](**parameters[estimator_params_set][m])
+
+        basic_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, n_jobs=n_jobs)
+        basic_table[m] = np.append(basic_scores, [np.max(basic_scores), basic_scores.mean(), basic_scores.std()]) 
+
+        balanced_scores = cross_val_score(clf, X_train, y_train, cv=n_splits, scoring='balanced_accuracy', n_jobs=n_jobs)
+        balanced_table[m] = np.append(balanced_scores, [np.max(balanced_scores), balanced_scores.mean(), balanced_scores.std()]) 
+
+        top_k_scores = cross_validate(clf, X_train, y_train, scoring=top_k_scorers, cv=5, n_jobs=n_jobs)
+        top_1_table[m] = np.append(top_k_scores['test_top_1'], [np.max(top_k_scores['test_top_1']), top_k_scores['test_top_1'].mean(), top_k_scores['test_top_1'].std()])
+        top_2_table[m] = np.append(top_k_scores['test_top_2'], [np.max(top_k_scores['test_top_2']), top_k_scores['test_top_2'].mean(), top_k_scores['test_top_2'].std()])
+        top_3_table[m] = np.append(top_k_scores['test_top_3'], [np.max(top_k_scores['test_top_3']), top_k_scores['test_top_3'].mean(), top_k_scores['test_top_3'].std()])
+
+        clf.fit(X_train, y_train)
+
+        y_pred = clf.predict(X_test)
+        y_pred_2 = clf.predict_proba(X_test)
+
+        #final_balanced = clf.validate(X_test, y_test, threshold=0.5, centroids=cluster_centroids)
+        #final_balanced_avg = np.average(final_balanced)
+        #final_balanced_std = np.std(final_balanced)
+        #final_test_balanced["Class"] = np.append(np.arange(len(final_balanced)), ["Mean", "Standart deviation"])
+        #final_test_balanced[m] = np.append(final_balanced, [final_balanced_avg, final_balanced_std])
+
+        final_top_k = []
+        for i in range(1,4):
+            final_top_k.append(top_k_accuracy_score(y_test, y_pred_2, k=i, labels=list(set(y_train))))
         final_test_top_k[m] = final_top_k
 
         final_basic = np.array([clf.score(X_test, y_test)])
         final_test_basic[m] = final_basic
 
+        final_balanced = balanced_accuracy_score(y_test, y_pred)
+        final_test_balanced[m] = np.array([final_balanced])
+
     t2 = time.time()
     td = t2 - t1
-    print("\nTime: %d s" % td)
+    print("\n*Time: %d s*" % td)
 
-    print("\nClassifier parameters\n")
+    print("\n#### Classifier parameters\n")
     print(parameters[estimator_params_set-1])
 
-    print("\nCross-val Basic accuracy\n")
+    print("\n#### Cross-val Basic accuracy\n")
     print(basic_table.to_markdown())
     
-    print("\nCross-val Balanced accuracy\n")
+    print("\n#### Cross-val Balanced accuracy\n")
     print(balanced_table.to_markdown())
 
-    print("\nCross-val Top k accuracy\n")
-    print(top_k_table.to_markdown())
+    print("\n#### Cross-val Top 1 accuracy\n")
+    print(top_1_table.to_markdown())
 
-    print("\nTest set basic\n")
+    print("\n#### Cross-val Top 2 accuracy\n")
+    print(top_2_table.to_markdown())
+
+    print("\n#### Cross-val Top 3 accuracy\n")
+    print(top_3_table.to_markdown())
+
+    print("\n#### Test set basic\n")
     print(final_test_basic.to_markdown())
 
-    print("\nTest set balanced\n")
+    print("\n#### Test set balanced\n")
     print(final_test_balanced.to_markdown())
 
-    print("\nTest set top k\n")
+    print("\n#### Test set top k\n")
     print(final_test_top_k.to_markdown())
 
-    print()
-    return basic_table, balanced_table, top_k_table, final_test_basic, final_test_balanced, final_test_top_k
+    print("\n#### Cross-val Basic accuracy\n")
+    print(basic_table.to_latex())
     
+    print("\n#### Cross-val Balanced accuracy\n")
+    print(balanced_table.to_latex())
+
+    print("\n#### Cross-val Top 1 accuracy\n")
+    print(top_1_table.to_latex())
+
+    print("\n#### Cross-val Top 2 accuracy\n")
+    print(top_2_table.to_latex())
+
+    print("\n#### Cross-val Top 3 accuracy\n")
+    print(top_3_table.to_latex())
+
+    print("\n#### Test set basic\n")
+    print(final_test_basic.to_latex())
+
+    print("\n#### Test set balanced\n")
+    print(final_test_balanced.to_latex())
+
+    print("\n#### Test set top k\n")
+    print(final_test_top_k.to_latex())
+
+    if outputPath is not None:
+        with pd.ExcelWriter(outputPath) as writer:
+            parameters_table.to_excel(writer, sheet_name="Classifier parameters")
+            basic_table.to_excel(writer, sheet_name="Cross Validation Basic scores")
+            balanced_table.to_excel(writer, sheet_name="Cross Validation Balanced scores")
+            top_1_table.to_excel(writer, sheet_name="Cross Validation Top 1 scores")
+            top_2_table.to_excel(writer, sheet_name="Cross Validation Top 2 scores")
+            top_3_table.to_excel(writer, sheet_name="Cross Validation Top 3 scores")
+            final_test_basic.to_excel(writer, sheet_name="Validation set Basic scores")
+            final_test_balanced.to_excel(writer, sheet_name="Validation set Balanced scores")
+            final_test_top_k.to_excel(writer, sheet_name="Validation set Top K scores")
+
+    print()
+    return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
+ 
+    
+# submodule functions
+def train_binary_classifiers_submodule(args):
+    train_binary_classifiers(args.database, args.outdir, 
+                            min_samples=args.min_samples, 
+                            max_eps=args.max_eps,xi=args.xi, 
+                            min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
+                            cluster_features_version=args.cluster_features_version,
+                            classification_features_version=args.classification_features_version,
+                            stride=args.stride,
+                            batch_size=args.batchsize,
+                            level=args.level, n_weights=args.n_weights,
+                            weights_preset=args.weights_preset,
+                            threshold=args.threshold,
+                            p_norm=args.p_norm)
+
+def cross_validation_submodule(args):
+    cross_validate(args.database, 
+                args.output, 
+                args.train_ratio, 
+                args.seed, 
+                n_jobs=args.n_jobs, 
+                estimator_params_set=args.param_set, 
+                #cluster_features_version=args.cluster_features_version,
+                classification_features_version=args.classification_features_version,
+                stride=args.stride, 
+                level=args.level, 
+                n_weights=args.n_weights, 
+                weights_preset=args.weights_preset,
+                threshold=args.threshold,
+                min_samples=args.min_samples, # clustering param
+                max_eps=args.max_eps, # clustering param
+                xi=args.xi, # clustering param
+                p=args.p_norm) # clustering param
+
+def cross_validation_multiclass_submodule(args):
+    cross_validate_multiclass(args.database, 
+                args.output, 
+                args.train_ratio, 
+                args.seed, 
+                n_jobs=args.n_jobs, 
+                estimator_params_set=args.param_set, 
+                #cluster_features_version=args.cluster_features_version,
+                classification_features_version=args.classification_features_version,
+                stride=args.stride, 
+                level=args.level, 
+                n_weights=args.n_weights, 
+                weights_preset=args.weights_preset,
+                threshold=args.threshold,
+                min_samples=args.min_samples, # clustering param
+                max_eps=args.max_eps, # clustering param
+                xi=args.xi, # clustering param
+                p=args.p_norm) # clustering param
+
+def investigate_renitent_features(args):
+    investigateRenitent(args.model, args.threshold, 
+                        min_samples=args.min_samples, 
+                        max_eps=args.max_eps, xi=args.xi, 
+                        min_cluster_size=args.min_samples, 
+                        n_jobs=args.n_jobs)
+
+def plot_module(args):
+    plot_decision_tree(args.decision_tree)
+
 def main():
     import argparse
-    from classification import Classification, ClassificationWorker, CalibratedClassification, \
-        CalibratedClassificationWorker, BinaryClassificationTrain, BinaryClassificationWorkerTrain, \
-        validate_models, investigateRenitent
-    argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use "
-                                        "clustering on data stored in the database.")
-    argparser.add_argument("-db", "--database", help="Path to database file.")
-    argparser.add_argument("--threshold", type=float, default=0.5, help="Threshold value for filtering algorithm that"
-                                                                        " filters out the best detections.")
+    argparser = argparse.ArgumentParser("Train, validate and test for renitent detection.")
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=1)
-    argparser.add_argument("--eps", default=0.1, type=float, help="DBSCAN and OPTICS_DBSCAN parameter: The maximum "
-                                                                  "distance between two samples for one to be "
-                                                                  "considered as in the neighborhood of the other.")
-    argparser.add_argument("--min_samples", default=10, type=int, help="DBSCAN and OPTICS parameter: The number of "
-                                                                       "samples (or total weight) in a neighborhood "
-                                                                       "for a point to be considered as a core point.")
-    argparser.add_argument("--max_eps", help="OPTICS parameter: The maximum distance between two samples for one to be "
-                                             "considered as in the neighborhood of the other.", type=float, default=0.2)
-    argparser.add_argument("--xi", help="OPTICS parameter: Determines the minimum steepness on the reachability plot "
-                                        "that constitutes a cluster boundary.", type=float, default=0.15)
-    argparser.add_argument("--min_cluster_size", default=10, type=float, help="OPTICS parameter: Minimum number of "
-                                                                              "samples in an OPTICS cluster, expressed "
-                                                                              "as an absolute number or a fraction of "
-                                                                              "the number of samples (rounded to be at "
-                                                                              "least 2).")
-    argparser.add_argument("--Classification", help="Train model with classification.", default=False,
-                           choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE', 'SVM', 'DT'])
-    argparser.add_argument("--CalibratedClassification", help="Train model with calibrated classification.",
-                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'VOTE'])
-    argparser.add_argument("--n_neighbours", help="KNN parameter: Number of neighbours for clustering.", type=int)
-    argparser.add_argument("--ClassificationWorker", help="Runs all available Classifications and Validate them.",
-                           default=False, action="store_true")
-    argparser.add_argument("--CalibratedClassificationWorker",
-                           help="Runs all available Classifications calibrated and Validate them.",
-                           default=False, action="store_true")
-    argparser.add_argument("--BinaryClassificationWorkerTrain", default=False, action="store_true",
-                           help="Run Classification on dataset, but not as a multi class classification, rather do "
-                                "binary classification for each cluster.")
-    argparser.add_argument("--BinaryClassificationTrain", help="Train model with binary classification.",
-                           default=False, choices=['KNN', 'SGD', 'GP', 'GNB', 'MLP', 'SVM'])
-    argparser.add_argument("--from_half",
-                           help="Use this flag, if want to make feature vectors only from second half of trajectories "
-                                "history.", action="store_true", default=False)
-    argparser.add_argument("--model", help="Load classifier.", type=str, default=None)
-    argparser.add_argument("--validate_classifiers", help="Validate accuracy of trained classifier models.",
-                           action="store_true", default=False)
-    argparser.add_argument("--plot_renitent_features", help="Draw diagram of renitent feature vectors.",
-                           action="store_true", default=False)
-    argparser.add_argument("--decision_tree_accuracy_over_depth", action="store_true", default=False)
-    argparser.add_argument("--plot_decision_tree", help="Plot out the decision trees of the binary classifier.",
-                           action="store_true", default=False)
-    argparser.add_argument("--features_v2", help="Use second version of feature vectors.", action="store_true", default=False)
-    argparser.add_argument("--features_v2_half", help="Make second version feature vectors from half of the history.", action="store_true", default=False)
-    argparser.add_argument("--cross_val", help="Use cross validation to calculate accuracy of trained models.", action="store_true", default=False)
-    argparser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
-    argparser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
-    argparser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+
+    submodule_parser = argparser.add_subparsers(help="Program functionalities.")
+
+    # add subcommands for training binary classifiers
+    train_binary_classifiers_parser = submodule_parser.add_parser(
+        "train",
+        help="Run Classification on dataset, but not as a multi class classification, rather do "
+             "binary classification for each cluster."
+    )
+    train_binary_classifiers_parser.add_argument("-db", "--database", help="Path to database file. This should be an unclustered joblib dataset file.", type=str)
+    train_binary_classifiers_parser.add_argument("--outdir", "-o", help="Output directory path.", type=str)
+    train_binary_classifiers_parser.add_argument("--min_samples", default=10, type=int, 
+        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    train_binary_classifiers_parser.add_argument("--max_eps", type=float, default=0.2, 
+        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    train_binary_classifiers_parser.add_argument("--xi", type=float, default=0.15, 
+        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
+        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
+    train_binary_classifiers_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
+    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    train_binary_classifiers_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    train_binary_classifiers_parser.add_argument("--batchsize", type=int, default=None, help="Set training batch size.")
+    train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    train_binary_classifiers_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    train_binary_classifiers_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.4, help="Threshold value for clustering.")
+    train_binary_classifiers_parser.add_argument("-p", "--p_norm", default=2, type=int, help="P parameter of the clustering algorithm.")
+    train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
+
+    # add subcommands for cross validating classifiers 
+    cross_validation_parser = submodule_parser.add_parser(
+        "cross-validation",
+        help="Run cross validation with given dataset."
+    )
+    cross_validation_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
+    cross_validation_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
+    cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    cross_validation_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    #cross_validation_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
+    cross_validation_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    cross_validation_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    cross_validation_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    cross_validation_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
+    cross_validation_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    cross_validation_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    cross_validation_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    cross_validation_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    cross_validation_parser.set_defaults(func=cross_validation_submodule)
+
+    # add subcommands for renitent investigation module
+    renitent_filter_parser = submodule_parser.add_parser(
+        "renitent-filter",
+        help="Look at detections, that cant be predicted above a given threshold value."
+    )
+    renitent_filter_parser.add_argument("--model", help="Trained classifier.", type=str)
+    renitent_filter_parser.add_argument("--threshold", type=float, default=0.5, help="Balanced accuracy threshold.")
+    renitent_filter_parser.add_argument("--min_samples", default=10, type=int, 
+        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    renitent_filter_parser.add_argument("--max_eps", type=float, default=0.2,
+        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    renitent_filter_parser.add_argument("--xi", type=float, default=0.15,
+        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    renitent_filter_parser.add_argument("--min_cluster_size", default=10, type=float, 
+        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction" 
+             "of the number of samples (rounded to be at least 2).")
+    renitent_filter_parser.set_defaults(func=investigate_renitent_features)
+
+    cross_validation_multiclass_parser = submodule_parser.add_parser(
+        "cross-val-multiclass",
+        help="Run classification with stock multiclass models."
+    )
+    cross_validation_multiclass_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
+    cross_validation_multiclass_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
+    cross_validation_multiclass_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    cross_validation_multiclass_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    cross_validation_multiclass_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+    cross_validation_multiclass_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    cross_validation_multiclass_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    cross_validation_multiclass_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    cross_validation_multiclass_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    cross_validation_multiclass_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    cross_validation_multiclass_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
+    cross_validation_multiclass_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    cross_validation_multiclass_parser.set_defaults(func=cross_validation_multiclass_submodule)
+
+    plot_parser = submodule_parser.add_parser(
+        "plot",
+        help="Run plotting functions."
+    )
+    plot_parser.add_argument("--decision_tree", help="Path to decision tree joblib modell.")
+    plot_parser.set_defaults(func=plot_module)
+
+
     args = argparser.parse_args()
 
-    if args.database is not None:
-        checkDir(args.database)
-    if args.Classification:
-        Classification(args.Classification, args.database, min_samples=args.min_samples, max_eps=args.max_eps,
-                       xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.ClassificationWorker:
-        ClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                             min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.CalibratedClassification:
-        CalibratedClassification(args.CalibratedClassification, args.database, min_samples=args.min_samples,
-                                 max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.CalibratedClassificationWorker:
-        CalibratedClassificationWorker(args.database, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                                       min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.BinaryClassificationWorkerTrain:
-        BinaryClassificationWorkerTrain(args.database, args.model, min_samples=args.min_samples, max_eps=args.max_eps,
-                                        xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs,
-                                        threshold=args.threshold, from_half=args.from_half, 
-                                        features_v2=args.features_v2, 
-                                        features_v2_half=args.features_v2_half)
-    #if args.BinaryClassificationTrain:
-    #    BinaryClassificationTrain(args.BinaryClassification, args.database, min_samples=args.min_samples,
-    #                              max_eps=args.max_eps, xi=args.xi, min_cluster_size=args.min_samples,
-    #                              n_jobs=args.n_jobs)
-    if args.plot_renitent_features:
-        investigateRenitent(args.model, args.threshold, min_samples=args.min_samples, max_eps=args.max_eps,
-                            xi=args.xi, min_cluster_size=args.min_samples, n_jobs=args.n_jobs)
-    if args.validate_classifiers and args.threshold:
-        validate_models(args.model, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi,
-                        min_cluster_size=args.min_samples, n_jobs=args.n_jobs, threshold=args.threshold,
-                        features_v2=args.features_v2, features_v2_half=args.features_v2_half)
-    if args.decision_tree_accuracy_over_depth:
-        if args.database:
-            BinaryDecisionTreeClassification(args.database, args.min_samples, args.max_eps, args.xi,
-                                             args.min_cluster_size, args.n_jobs, args.from_half)
-        elif args.model:
-            BinaryDecisionTreeClassification(args.model, args.min_samples, args.max_eps, args.xi,
-                                             args.min_cluster_size, args.n_jobs, args.from_half)
-    if args.cross_val:
-        cross_validate(args.database, args.train_ratio, args.seed, n_jobs=args.n_jobs, estimator_params_set=args.param_set)
-    if args.plot_decision_tree:
-        if args.model:
-            plot_decision_tree(args.model)
-        else:
-            argparser.print_help()
+    args.func(args)
 
 
 if __name__ == "__main__":

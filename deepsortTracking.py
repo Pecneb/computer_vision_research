@@ -40,7 +40,7 @@ def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
     return nn_matching.NearestNeighborDistanceMetric(
         metric, max_cosine_distance, nn_budget)
 
-def getTracker(metricObj, historyDepth, db_connection = None):
+def getTracker(metricObj, max_iou_distance, historyDepth, db_connection = None):
     """DeepSort Tracker object fractory
 
     Args:
@@ -50,9 +50,9 @@ def getTracker(metricObj, historyDepth, db_connection = None):
         tracker: deep_sort Tracker object 
     """
     if db_connection is not None:
-        return Tracker(metricObj, historyDepth, _next_id=databaseLoader.queryLastObjID(db_connection))
+        return Tracker(metric=metricObj, max_age=10, historyDepth=historyDepth, _next_id=databaseLoader.queryLastObjID(db_connection), max_iou_distance=max_iou_distance)
     else:
-        return Tracker(metricObj, historyDepth)
+        return Tracker(metric=metricObj, max_age=10, historyDepth=historyDepth, max_iou_distance=max_iou_distance)
 
 def makeDetectionObject(darknetDetection: darknetDetection):
     """DeepSort Detection object factory
@@ -68,11 +68,11 @@ def makeDetectionObject(darknetDetection: darknetDetection):
         darknetDetection.Height, darknetDetection.Height], 
         float(darknetDetection.confidence), [], darknetDetection)
 
-def updateHistory(history: list, Tracker: Tracker, detections: list, db_connection = None, historyDepth=30):
+def updateHistory(trackedObjects: list, Tracker: Tracker, detections: list, db_connection = None, k_velocity=10, k_acceleration=2, historyDepth=30, joblibdb: list = None):
     """Update TrackedObject history
 
     Args:
-        history (list[TrackedObject]): the history of tracked objects 
+        trackedObjects (list[TrackedObject]): the history of tracked objects 
         Tracker (Tracker): deep_sort Tracker obj 
         detections (list[Detection]): list of new detections fresh from darknet 
         db_connection (sqlite3.Connection): Connection object to database, to log objects.
@@ -83,32 +83,24 @@ def updateHistory(history: list, Tracker: Tracker, detections: list, db_connecti
     Tracker.update(wrapped_Detections)
     for track in Tracker.tracks:
         updated = False
-        #prevTO = None
-        for trackedObject in history:
+        for trackedObject in trackedObjects:
             if track.track_id == trackedObject.objID:
                 if track.time_since_update == 0:
-                    trackedObject.update(track.darknetDet, track.mean, historyDepth)
+                    trackedObject.update(track.darknetDet, track.mean, k_velocity, k_acceleration)
                     if len(trackedObject.history) > historyDepth:
-                        trackedObject.history.remove(trackedObject.history[0])
+                        trackedObject.history.pop(0)
                 else:
                     # if arg in update is None, then time_since_update += 1
                     trackedObject.update()
-                    if trackedObject.max_age <= trackedObject.time_since_update: # or trackedObject.max_age <= trackedObject.bugged:
-                        history.remove(trackedObject)
+                    if trackedObject.max_age <= trackedObject.time_since_update:
+                        if joblibdb is not None:
+                            joblibdb.append(trackedObject)
+                        trackedObjects.remove(trackedObject)
                 updated = True 
-                # prevTO = trackedObject
                 break
-        #if prevTO is not None:
-        #    if prevTO.max_age == prevTO.time_since_update:
-        #        try:
-        #            history.remove(prevTO)
-        #            print(len(history))
-        #        except Exception as e:
-        #            print("Warning at removal of obj ID {}".format(prevTO.objID))
-        #            print(e)
         if not updated:
             newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
-            history.append(newTrack)
+            trackedObjects.append(newTrack)
             if db_connection is not None:
                 databaseLogger.logObject(db_connection, newTrack.objID, newTrack.label)
             

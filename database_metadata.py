@@ -22,7 +22,7 @@ import databaseLoader
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from utils import detectionParser, cvCoord2npCoord, makeColormap, checkDir
+from processing_utils import detectionParser, cvCoord2npCoord, makeColormap, checkDir
 
 # disable sklearn warning
 def warn(*arg, **args):

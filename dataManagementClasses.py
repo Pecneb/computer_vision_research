@@ -20,6 +20,7 @@
 
 from dataclasses import dataclass, field
 import numpy as np
+import processing_utils
 
 @dataclass
 class Detection:
@@ -33,19 +34,20 @@ class Detection:
         Width(int): width of the bounding box
         Height(int): height of the bounding box
         frameID(int): the number of the frame, the detection is oqqured
+        VX(int)
     """
     label: str
     confidence: float
-    X: int
-    Y: int
-    Width: int
-    Height: int
+    X: float 
+    Y: float 
+    Width: float 
+    Height: float 
     frameID: int
     # These variables are optional, not needed in the main loop. These are used in the analyzer script and databaseLoader script.
-    VX: int = field(init=False,)
-    VY: int = field(init=False)
-    AX: int = field(init=False)
-    AY: int = field(init=False)
+    VX: float = field(init=False,)
+    VY: float = field(init=False)
+    AX: float = field(init=False)
+    AY: float = field(init=False)
     objID: int = field(init=False)
 
     def __repr__(self) -> str:
@@ -53,32 +55,48 @@ class Detection:
 
 @dataclass
 class TrackedObject():
-    """Class for storing a detected object's tracking history
-    
-       Fields:
-        objID(int): a unique identification number of the detected object
-        label(str): the label of detected object ex. car, person, etc.
-        history(list of Detections): list of Detection that are propably the same object 
-        futureX(int): the predicrted X position
-        futureY(int): the predicted Y position
-        isMoving(bool): True if object is in motion
-        time_since_update(int): keeping track of missed detections of the object
-        max_age(int): when time_since_update hits max_age, tracking is deleted
-        mean(list[int]): output of kalman filter, (x,y,a,h,vx,vy,va,vh)
-        X(int): last detected x coord of the object
-        Y(int): last detected y coord of the object
-        VX(float): last calculated velocity of X
-        VY(float): last calculated velocity of Y
-        bugged(int): int value to count stuck tracks, this happens when the program is running for a long time, this is a bit hacky but necessary, still dont know what causes this problem
-        Methods:
-         avgArea(): returns the average bbox area of all the detections in the history
-         update(): called when tracking can be updated
+    """This class is used to represent a tracked objects lifetime.
+
+
+    Attributes
+    ----------
+    objID : int
+        unique identification number of the object
+    label : str
+        class label of the object ie. car, person, etc.
+    futureX : list 
+        predicted X coordinates, this attribute is not used anymore, it is being held, due to compatibility reasons
+    futureY : list 
+        predicted Y coordinates, this attribute is not used anymore, it is being held, due to compatibility reasons
+    history : ndarray
+        a list of previous detections of the object        
+    history_X : ndarray
+        numpy array of previous X coordintates
+    history_Y : ndarray
+        numpy array of previous Y coordintates
+    history_VX_calculated : ndarray
+        the velocity of dimension X calculated from the history_X numpy array
+    history_VY_calculated : ndarray
+        the velocity of dimension Y calculated from the history_Y numpy array
+    history_AX_calculated : ndarray
+        the acceleration of dimension X calculated from the history_VX_calculated numpy array
+    history_VY_calculated : ndarray
+        the acceleration of dimension Y calculated from the history_VY_calculated numpy array
+
+    Returns:
+        _type_: _description_
     """
     objID: int
     label: int = field(init=False)
     futureX: list = field(init=False)
     futureY: list = field(init=False)
-    history: list
+    history: np.ndarray 
+    history_X: np.ndarray = field(init=False) 
+    history_Y: np.ndarray = field(init=False) 
+    history_VX_calculated: np.ndarray = field(init=False) 
+    history_VY_calculated: np.ndarray = field(init=False) 
+    history_AX_calculated: np.ndarray = field(init=False) 
+    history_AY_calculated: np.ndarray = field(init=False) 
     isMoving: bool = field(init=False)
     time_since_update : int = field(init=False)
     max_age : int
@@ -95,6 +113,13 @@ class TrackedObject():
     def __init__(self, id, first, max_age=30):
         self.objID = id
         self.history = [first]
+        self.history_X = np.array([first.X])
+        self.history_Y = np.array([first.Y])
+        self.history_VX_calculated = np.array([])
+        self.history_VY_calculated = np.array([])
+        self.history_VT = np.array([])
+        self.history_AX_calculated = np.array([])
+        self.history_AY_calculated = np.array([])
         self.X = first.X
         self.Y = first.Y
         self.VX = 0 
@@ -115,15 +140,15 @@ class TrackedObject():
         #self.bugged = 0 
     
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {}, Y: {}, VX: {}, VY: {}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.VX, self.VY, self.time_since_update, len(self.history))
+        return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
 
     def avgArea(self):
         areas = [(det.Width*det.Height) for det in self.history]
         return np.average(areas)
     
     def updateAccel(self, new_vx, old_vx, new_vy, old_vy):
-        """Calculate accelaration based on kalman filters velocity.
-        Normal accelaration calculation (new_v - old_v) / (new_time - old_time).
+        """Calculate acceleration based on kalman filters velocity.
+        Normal acceleration calculation (new_v - old_v) / (new_time - old_time).
         The time between the two detection is the (new_time-old_time).
 
         Args:
@@ -136,7 +161,7 @@ class TrackedObject():
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
     @staticmethod
-    def upscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
+    def upscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080):
         """Rescale normalized coordinates with the given frame sizes.
 
         Args:
@@ -147,15 +172,33 @@ class TrackedObject():
         Returns:
             np.ndarray: upscaled feature vector
         """
+        if featureVector is None:
+            return None
         ratio = framewidth / frameheight
+
+        ret_featureVector = np.array([])
+        for i in range(featureVector.shape[0]):
+            if i == 0 or i % 2 == 0:
+                ret_featureVector = np.append(ret_featureVector, [featureVector[i]*framewidth/ratio])
+            else:
+                ret_featureVector = np.append(ret_featureVector, [frameheight*featureVector[i]])
+        return ret_featureVector
+
+        """
+        if feature_v3:
+            return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], 
+                            framewidth/ratio*featureVector[2], frameheight*featureVector[3], 
+                            framewidth/ratio*featureVector[4], frameheight*featureVector[5]])
         return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], framewidth/ratio*featureVector[2],
                         frameheight*featureVector[3], framewidth/ratio*featureVector[4], frameheight*featureVector[5],
                         framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
                         frameheight*featureVector[9]])
 
+        """
+
     @staticmethod
-    def downscale_feature(featureVector: np.ndarray, framewidth: int, frameheight: int):
-        """Downscale coordinates to normalized coordinates with the given frame sizes.
+    def downscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080):
+        """Rescale normalized coordinates with the given frame sizes.
 
         Args:
             featureVector (np.ndarray): Feature vector of the track.
@@ -163,13 +206,31 @@ class TrackedObject():
             frameheight (int): Height of the video frame. 
 
         Returns:
-            np.ndarray: downscaled feature vector
+            np.ndarray: upscaled feature vector
         """
+        if featureVector is None:
+            return None
         ratio = framewidth / frameheight
+
+        ret_featureVector = np.array([])
+        for i in range(featureVector.shape[0]):
+            if i == 0 or i % 2 == 0:
+                ret_featureVector = np.append(ret_featureVector, [featureVector[i]/framewidth*ratio])
+            else:
+                ret_featureVector = np.append(ret_featureVector, [featureVector[i]/frameheight])
+        return ret_featureVector
+
+        """
+        if feature_v3:
+            return np.array([featureVector[0] / framewidth*ratio, featureVector[1] / frameheight, 
+                            featureVector[2] / framewidth*ratio, featureVector[3] / frameheight, 
+                            featureVector[4] / framewidth*ratio, featureVector[5] / frameheight,])
         return np.array([featureVector[0] / framewidth*ratio, featureVector[1] / frameheight, featureVector[2] / framewidth*ratio,
                         featureVector[3] / frameheight, featureVector[4] / framewidth*ratio, featureVector[5] / frameheight,
                         featureVector[6] / framewidth*ratio, featureVector[7] / frameheight, featureVector[8] / framewidth*ratio,
                         featureVector[9] / frameheight])
+
+        """
                         
     def feature_(self):
         """Return feature vector of track.
@@ -185,8 +246,97 @@ class TrackedObject():
                         self.history[0].VY, self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
                         self.history[n].VY])
+    
+    def feature_v3(self):
+        """Return feature vector of track.
 
-    def update(self, detection=None, mean=None, historyDepth = 30):
+        Args:
+            framewidth/ratio (int): Width of the video frame.
+            frameheight (int): Height of the video frame. 
+        """
+        n = len(self.history)-1
+        if n < 3:
+            return None
+        return np.array([self.history[0].X, self.history[0].Y,
+                        self.history[n//2].X, self.history[n//2].Y,
+                        self.history[n].X, self.history[n].Y])
+
+    def feature_v4(self):
+        """Return feature vector of track.
+
+        Args:
+            framewidth/ratio (int): Width of the video frame.
+            frameheight (int): Height of the video frame. 
+        """
+        n = len(self.history)-1
+        if n < 3:
+            return None
+        return np.array([self.history[0].X, self.history[0].Y, 
+                        self.history[n//2].X, self.history[n//2].Y, 
+                        self.history[n].X, self.history[n].Y])
+    
+    def feature_v7(self, k_velocity=10):
+        """Return feature vector of track.
+
+        Args:
+            framewidth/ratio (int): Width of the video frame.
+            frameheight (int): Height of the video frame. 
+        """
+        n = len(self.history_X)-1
+        if self.history_X.shape[0] < self.max_age:
+            return None
+        return np.array([self.history_X[0], self.history_Y[0], 
+                        self.history_VX_calculated[0], self.history_VY_calculated[0], 
+                        self.history_X[n], self.history_Y[n],
+                        self.history_VX_calculated[n-1], self.history_VY_calculated[n-1]]) * np.array([1, 1, 100, 100, 2, 2, 200, 200])
+
+    def feature_v5(self, n_weights: int):
+        n = (self.history_X.shape[0] // 2)
+        if (n // n_weights) < 1:
+            return None
+        feature = np.array([self.history_X[0], self.history_Y[0],
+                            self.history_X[-1], self.history_Y[-1]])
+        feature = processing_utils.insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
+        return feature
+
+
+    def update_velocity(self, k: int = 10):
+        """Calculate velocity from X,Y coordinates.
+        """
+        if self.history_X.shape[0] < k:
+            self.history_VX_calculated = np.append(self.history_VX_calculated, [0]) 
+            self.history_VY_calculated = np.append(self.history_VY_calculated, [0]) 
+        else:
+            #self.history_DT = np.append(self.history_DT, [self.history[-1].frameID - self.history[-k].frameID])
+            #if self.history_DT[-1] == 0:
+            #    dx = 0 
+            #    dy = 0
+            #else:
+            dx = (self.history_X[-1] - self.history_X[-k]) / (self.history[-1].frameID - self.history[-k].frameID)
+            dy = (self.history_Y[-1] - self.history_Y[-k]) / (self.history[-1].frameID - self.history[-k].frameID)
+            self.history_VX_calculated = np.append(self.history_VX_calculated, [dx]) 
+            self.history_VY_calculated = np.append(self.history_VY_calculated, [dy])  
+        self.history_VT = np.append(self.history_VT, [self.history[-1].frameID])
+
+
+    def update_accel(self, k: int = 2):
+        """Calculate velocity from X,Y coordinates.
+        """
+        if self.history_VX_calculated.shape[0] < k:
+            self.history_AX_calculated = np.append(self.history_AX_calculated, [0]) 
+            self.history_AY_calculated = np.append(self.history_AY_calculated, [0]) 
+        else:
+            dt =(self.history_VT[-1] - self.history_VT[-k]) 
+            if dt == 0:
+                dvx = 0 
+                dvy = 0
+            else:
+                dvx = (self.history_VX_calculated[-1] - self.history_VX_calculated[-k]) / dt 
+                dvy = (self.history_VY_calculated[-1] - self.history_VY_calculated[-k]) / dt
+            self.history_AX_calculated = np.append(self.history_AX_calculated, [dvx]) 
+            self.history_AY_calculated = np.append(self.history_AY_calculated, [dvy])  
+
+    def update(self, detection=None, mean=None, k_velocity=10, k_acceleration=2, historyDepth = 30):
         """Update tracking
 
         Args:
@@ -195,9 +345,13 @@ class TrackedObject():
         """
         if detection is not None and mean is not None:
             self.history.append(detection)
+            self.history_X = np.append(self.history_X, [detection.X])
+            self.history_Y = np.append(self.history_Y, [detection.Y])
+            self.update_velocity(k=k_velocity)
+            self.update_accel(k=k_acceleration)
             self.mean = mean 
-            self.X = mean[0]
-            self.Y = mean[1]
+            self.X = detection.X 
+            self.Y = detection.Y
             VX_old = self.VX
             VY_old = self.VY
             self.VX = mean[4]
@@ -217,13 +371,12 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        if len(self.history) > historyDepth:
+        if (np.abs(self.history_VX_calculated[-1]) > 0.0 or np.abs(self.history_VY_calculated[-1]) > 0.0) and len(self.history) >= 5:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
-            self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
-        if not self.isMoving:
-            self.VX = 0.0
-            self.VY = 0.0
+            self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (self.history[-5].Y-self.history[-1].Y)**2)**(1/2) > 5.0  
+        else:
+            self.isMoving = False
         # this is a fix for a specific problem, when an track is stuck, and showed as moving object
         # this is just a hack for now, TODO: find real solution
         #if len(self.history) == 2:

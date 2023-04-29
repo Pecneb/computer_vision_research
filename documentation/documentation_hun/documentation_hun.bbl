@@ -1,0 +1,365 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{22}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{}, \showDOI{}, and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showDOI}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showDOI #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showDOI      \undefined \def \showDOI       #1{#1}\fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[Anguita et~al\mbox{.}(2012)]%
+        {Anguita2012TheI}
+\bibfield{author}{\bibinfo{person}{D. Anguita}, \bibinfo{person}{Luca
+  Ghelardoni}, \bibinfo{person}{Alessandro Ghio}, \bibinfo{person}{L. Oneto},
+  {and} \bibinfo{person}{Sandro Ridella}.} \bibinfo{year}{2012}\natexlab{}.
+\newblock \showarticletitle{The 'K' in K-fold Cross Validation}. In
+  \bibinfo{booktitle}{\emph{The European Symposium on Artificial Neural
+  Networks}}.
+\newblock
+
+
+\bibitem[Ankerst et~al\mbox{.}(1999)]%
+        {10.1145/304181.304187}
+\bibfield{author}{\bibinfo{person}{Mihael Ankerst}, \bibinfo{person}{Markus~M.
+  Breunig}, \bibinfo{person}{Hans-Peter Kriegel}, {and}
+  \bibinfo{person}{J\"{o}rg Sander}.} \bibinfo{year}{1999}\natexlab{}.
+\newblock \showarticletitle{OPTICS: Ordering Points to Identify the Clustering
+  Structure}.
+\newblock \bibinfo{journal}{\emph{SIGMOD Rec.}} \bibinfo{volume}{28},
+  \bibinfo{number}{2} (\bibinfo{date}{jun} \bibinfo{year}{1999}),
+  \bibinfo{pages}{49–60}.
+\newblock
+\showISSN{0163-5808}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/304181.304187}
+\showDOI{\tempurl}
+
+
+\bibitem[Bradski(2000)]%
+        {opencv_library}
+\bibfield{author}{\bibinfo{person}{G. Bradski}.}
+  \bibinfo{year}{2000}\natexlab{}.
+\newblock \showarticletitle{{The OpenCV Library}}.
+\newblock \bibinfo{journal}{\emph{Dr. Dobb's Journal of Software Tools}}
+  (\bibinfo{year}{2000}).
+\newblock
+
+
+\bibitem[Breiman et~al\mbox{.}(1984)]%
+        {Breiman1984ClassificationAR}
+\bibfield{author}{\bibinfo{person}{L. Breiman}, \bibinfo{person}{Jerome~H.
+  Friedman}, \bibinfo{person}{Richard~A. Olshen}, {and} \bibinfo{person}{C.~J.
+  Stone}.} \bibinfo{year}{1984}\natexlab{}.
+\newblock \showarticletitle{Classification and Regression Trees}.
+\newblock
+
+
+\bibitem[Brodersen et~al\mbox{.}(2010)]%
+        {10.1109/ICPR.2010.764}
+\bibfield{author}{\bibinfo{person}{Kay~Henning Brodersen},
+  \bibinfo{person}{Cheng~Soon Ong}, \bibinfo{person}{Klaas~Enno Stephan}, {and}
+  \bibinfo{person}{Joachim~M. Buhmann}.} \bibinfo{year}{2010}\natexlab{}.
+\newblock \showarticletitle{The Balanced Accuracy and Its Posterior
+  Distribution}. In \bibinfo{booktitle}{\emph{Proceedings of the 2010 20th
+  International Conference on Pattern Recognition}}
+  \emph{(\bibinfo{series}{ICPR '10})}. \bibinfo{publisher}{IEEE Computer
+  Society}, \bibinfo{address}{USA}, \bibinfo{pages}{3121–3124}.
+\newblock
+\showISBNx{9780769541099}
+\urldef\tempurl%
+\url{https://doi.org/10.1109/ICPR.2010.764}
+\showDOI{\tempurl}
+
+
+\bibitem[Caliński and JA(1974)]%
+        {article}
+\bibfield{author}{\bibinfo{person}{Tadeusz Caliński} {and}
+  \bibinfo{person}{Harabasz JA}.} \bibinfo{year}{1974}\natexlab{}.
+\newblock \showarticletitle{A Dendrite Method for Cluster Analysis}.
+\newblock \bibinfo{journal}{\emph{Communications in Statistics - Theory and
+  Methods}}  \bibinfo{volume}{3} (\bibinfo{date}{01} \bibinfo{year}{1974}),
+  \bibinfo{pages}{1--27}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1080/03610927408827101}
+\showDOI{\tempurl}
+
+
+\bibitem[Chang and Lin(2011)]%
+        {CC01a}
+\bibfield{author}{\bibinfo{person}{Chih-Chung Chang} {and}
+  \bibinfo{person}{Chih-Jen Lin}.} \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{{LIBSVM}: A library for support vector machines}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Intelligent Systems and
+  Technology}}  \bibinfo{volume}{2} (\bibinfo{year}{2011}),
+  \bibinfo{pages}{27:1--27:27}.
+\newblock
+Issue 3.
+\newblock
+\shownote{Software available at
+  \url{http://www.csie.ntu.edu.tw/~cjlin/libsvm}}.
+
+
+\bibitem[Davies and Bouldin(1979)]%
+        {4766909}
+\bibfield{author}{\bibinfo{person}{David~L. Davies} {and}
+  \bibinfo{person}{Donald~W. Bouldin}.} \bibinfo{year}{1979}\natexlab{}.
+\newblock \showarticletitle{A Cluster Separation Measure}.
+\newblock \bibinfo{journal}{\emph{IEEE Transactions on Pattern Analysis and
+  Machine Intelligence}} \bibinfo{volume}{PAMI-1}, \bibinfo{number}{2}
+  (\bibinfo{date}{April} \bibinfo{year}{1979}), \bibinfo{pages}{224--227}.
+\newblock
+\showISSN{1939-3539}
+\urldef\tempurl%
+\url{https://doi.org/10.1109/TPAMI.1979.4766909}
+\showDOI{\tempurl}
+
+
+\bibitem[Ester et~al\mbox{.}(1996)]%
+        {10.5555/3001460.3001507}
+\bibfield{author}{\bibinfo{person}{Martin Ester}, \bibinfo{person}{Hans-Peter
+  Kriegel}, \bibinfo{person}{J\"{o}rg Sander}, {and} \bibinfo{person}{Xiaowei
+  Xu}.} \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{A Density-Based Algorithm for Discovering Clusters
+  in Large Spatial Databases with Noise}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the Second International Conference
+  on Knowledge Discovery and Data Mining}} (Portland, Oregon)
+  \emph{(\bibinfo{series}{KDD'96})}. \bibinfo{publisher}{AAAI Press},
+  \bibinfo{pages}{226–231}.
+\newblock
+
+
+\bibitem[Harris et~al\mbox{.}(2020)]%
+        {harris2020array}
+\bibfield{author}{\bibinfo{person}{Charles~R. Harris},
+  \bibinfo{person}{K.~Jarrod Millman}, \bibinfo{person}{St{\'{e}}fan~J. van~der
+  Walt}, \bibinfo{person}{Ralf Gommers}, \bibinfo{person}{Pauli Virtanen},
+  \bibinfo{person}{David Cournapeau}, \bibinfo{person}{Eric Wieser},
+  \bibinfo{person}{Julian Taylor}, \bibinfo{person}{Sebastian Berg},
+  \bibinfo{person}{Nathaniel~J. Smith}, \bibinfo{person}{Robert Kern},
+  \bibinfo{person}{Matti Picus}, \bibinfo{person}{Stephan Hoyer},
+  \bibinfo{person}{Marten~H. van Kerkwijk}, \bibinfo{person}{Matthew Brett},
+  \bibinfo{person}{Allan Haldane}, \bibinfo{person}{Jaime~Fern{\'{a}}ndez del
+  R{\'{i}}o}, \bibinfo{person}{Mark Wiebe}, \bibinfo{person}{Pearu Peterson},
+  \bibinfo{person}{Pierre G{\'{e}}rard-Marchant}, \bibinfo{person}{Kevin
+  Sheppard}, \bibinfo{person}{Tyler Reddy}, \bibinfo{person}{Warren Weckesser},
+  \bibinfo{person}{Hameer Abbasi}, \bibinfo{person}{Christoph Gohlke}, {and}
+  \bibinfo{person}{Travis~E. Oliphant}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Array programming with {NumPy}}.
+\newblock \bibinfo{journal}{\emph{Nature}} \bibinfo{volume}{585},
+  \bibinfo{number}{7825} (\bibinfo{date}{Sept.} \bibinfo{year}{2020}),
+  \bibinfo{pages}{357--362}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1038/s41586-020-2649-2}
+\showDOI{\tempurl}
+
+
+\bibitem[Hipp(2020)]%
+        {sqlite2020hipp}
+\bibfield{author}{\bibinfo{person}{Richard~D Hipp}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{SQLite}}.
+\newblock
+\newblock
+\urldef\tempurl%
+\url{https://www.sqlite.org/index.html}
+\showURL{%
+\tempurl}
+
+
+\bibitem[Hunter(2007)]%
+        {Hunter:2007}
+\bibfield{author}{\bibinfo{person}{J.~D. Hunter}.}
+  \bibinfo{year}{2007}\natexlab{}.
+\newblock \showarticletitle{Matplotlib: A 2D graphics environment}.
+\newblock \bibinfo{journal}{\emph{Computing in Science \& Engineering}}
+  \bibinfo{volume}{9}, \bibinfo{number}{3} (\bibinfo{year}{2007}),
+  \bibinfo{pages}{90--95}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1109/MCSE.2007.55}
+\showDOI{\tempurl}
+
+
+\bibitem[{Joblib Development Team}(2020)]%
+        {joblib_library}
+\bibfield{author}{\bibinfo{person}{{Joblib Development Team}}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{Joblib: running Python functions as
+  pipeline jobs}}.
+\newblock
+\urldef\tempurl%
+\url{https://joblib.readthedocs.io/}
+\showURL{%
+\tempurl}
+
+
+\bibitem[pandas~development team(2020)]%
+        {reback2020pandas}
+\bibfield{author}{\bibinfo{person}{The pandas~development team}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{pandas-dev/pandas: Pandas}}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.5281/zenodo.3509134}
+\showDOI{\tempurl}
+
+
+\bibitem[Paul et~al\mbox{.}(2017)]%
+        {PAUL2017177}
+\bibfield{author}{\bibinfo{person}{Anand Paul}, \bibinfo{person}{Naveen
+  Chilamkurti}, \bibinfo{person}{Alfred Daniel}, {and}
+  \bibinfo{person}{Seungmin Rho}.} \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Chapter 8 - Big Data collision analysis framework}.
+\newblock In \bibinfo{booktitle}{\emph{Intelligent Vehicular Networks and
+  Communications}}, \bibfield{editor}{\bibinfo{person}{Anand Paul},
+  \bibinfo{person}{Naveen Chilamkurti}, \bibinfo{person}{Alfred Daniel}, {and}
+  \bibinfo{person}{Seungmin Rho}} (Eds.). \bibinfo{publisher}{Elsevier},
+  \bibinfo{pages}{177--184}.
+\newblock
+\showISBNx{978-0-12-809266-8}
+\urldef\tempurl%
+\url{https://doi.org/10.1016/B978-0-12-809266-8.00008-9}
+\showDOI{\tempurl}
+
+
+\bibitem[Pedregosa et~al\mbox{.}(2011)]%
+        {scikit-learn}
+\bibfield{author}{\bibinfo{person}{F. Pedregosa}, \bibinfo{person}{G.
+  Varoquaux}, \bibinfo{person}{A. Gramfort}, \bibinfo{person}{V. Michel},
+  \bibinfo{person}{B. Thirion}, \bibinfo{person}{O. Grisel},
+  \bibinfo{person}{M. Blondel}, \bibinfo{person}{P. Prettenhofer},
+  \bibinfo{person}{R. Weiss}, \bibinfo{person}{V. Dubourg}, \bibinfo{person}{J.
+  Vanderplas}, \bibinfo{person}{A. Passos}, \bibinfo{person}{D. Cournapeau},
+  \bibinfo{person}{M. Brucher}, \bibinfo{person}{M. Perrot}, {and}
+  \bibinfo{person}{E. Duchesnay}.} \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{Scikit-learn: Machine Learning in {P}ython}.
+\newblock \bibinfo{journal}{\emph{Journal of Machine Learning Research}}
+  \bibinfo{volume}{12} (\bibinfo{year}{2011}), \bibinfo{pages}{2825--2830}.
+\newblock
+
+
+\bibitem[Rossi et~al\mbox{.}(2021)]%
+        {10.1371/journal.pone.0253868}
+\bibfield{author}{\bibinfo{person}{Luca Rossi}, \bibinfo{person}{Andrea Ajmar},
+  \bibinfo{person}{Marina Paolanti}, {and} \bibinfo{person}{Roberto
+  Pierdicca}.} \bibinfo{year}{2021}\natexlab{}.
+\newblock \showarticletitle{Vehicle trajectory prediction and generation using
+  LSTM models and GANs}.
+\newblock \bibinfo{journal}{\emph{PLOS ONE}} \bibinfo{volume}{16},
+  \bibinfo{number}{7} (\bibinfo{date}{07} \bibinfo{year}{2021}),
+  \bibinfo{pages}{1--28}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1371/journal.pone.0253868}
+\showDOI{\tempurl}
+
+
+\bibitem[Rousseeuw(1987)]%
+        {ROUSSEEUW198753}
+\bibfield{author}{\bibinfo{person}{Peter~J. Rousseeuw}.}
+  \bibinfo{year}{1987}\natexlab{}.
+\newblock \showarticletitle{Silhouettes: A graphical aid to the interpretation
+  and validation of cluster analysis}.
+\newblock \bibinfo{journal}{\emph{J. Comput. Appl. Math.}}
+  \bibinfo{volume}{20} (\bibinfo{year}{1987}), \bibinfo{pages}{53--65}.
+\newblock
+\showISSN{0377-0427}
+\urldef\tempurl%
+\url{https://doi.org/10.1016/0377-0427(87)90125-7}
+\showDOI{\tempurl}
+
+
+\bibitem[Schubert et~al\mbox{.}(2017)]%
+        {10.1145/3068335}
+\bibfield{author}{\bibinfo{person}{Erich Schubert}, \bibinfo{person}{J\"{o}rg
+  Sander}, \bibinfo{person}{Martin Ester}, \bibinfo{person}{Hans~Peter
+  Kriegel}, {and} \bibinfo{person}{Xiaowei Xu}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{DBSCAN Revisited, Revisited: Why and How You Should
+  (Still) Use DBSCAN}.
+\newblock \bibinfo{journal}{\emph{ACM Trans. Database Syst.}}
+  \bibinfo{volume}{42}, \bibinfo{number}{3}, Article \bibinfo{articleno}{19}
+  (\bibinfo{date}{jul} \bibinfo{year}{2017}), \bibinfo{numpages}{21}~pages.
+\newblock
+\showISSN{0362-5915}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/3068335}
+\showDOI{\tempurl}
+
+
+\bibitem[Wang et~al\mbox{.}(2022)]%
+        {wang2022yolov7}
+\bibfield{author}{\bibinfo{person}{Chien-Yao Wang}, \bibinfo{person}{Alexey
+  Bochkovskiy}, {and} \bibinfo{person}{Hong-Yuan~Mark Liao}.}
+  \bibinfo{year}{2022}\natexlab{}.
+\newblock \showarticletitle{{YOLOv7}: Trainable bag-of-freebies sets new
+  state-of-the-art for real-time object detectors}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2207.02696}}
+  (\bibinfo{year}{2022}).
+\newblock
+
+
+\bibitem[Wojke and Bewley(2018)]%
+        {Wojke2018deep}
+\bibfield{author}{\bibinfo{person}{Nicolai Wojke} {and} \bibinfo{person}{Alex
+  Bewley}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Deep Cosine Metric Learning for Person
+  Re-identification}. In \bibinfo{booktitle}{\emph{2018 IEEE Winter Conference
+  on Applications of Computer Vision (WACV)}}. IEEE, \bibinfo{pages}{748--756}.
+\newblock
+\urldef\tempurl%
+\url{https://doi.org/10.1109/WACV.2018.00087}
+\showDOI{\tempurl}
+
+
+\bibitem[Zhang et~al\mbox{.}(1996)]%
+        {10.1145/233269.233324}
+\bibfield{author}{\bibinfo{person}{Tian Zhang}, \bibinfo{person}{Raghu
+  Ramakrishnan}, {and} \bibinfo{person}{Miron Livny}.}
+  \bibinfo{year}{1996}\natexlab{}.
+\newblock \showarticletitle{BIRCH: An Efficient Data Clustering Method for Very
+  Large Databases}. In \bibinfo{booktitle}{\emph{Proceedings of the 1996 ACM
+  SIGMOD International Conference on Management of Data}} (Montreal, Quebec,
+  Canada) \emph{(\bibinfo{series}{SIGMOD '96})}.
+  \bibinfo{publisher}{Association for Computing Machinery},
+  \bibinfo{address}{New York, NY, USA}, \bibinfo{pages}{103–114}.
+\newblock
+\showISBNx{0897917944}
+\urldef\tempurl%
+\url{https://doi.org/10.1145/233269.233324}
+\showDOI{\tempurl}
+
+
+\end{thebibliography}
