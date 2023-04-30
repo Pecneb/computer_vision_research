@@ -15,9 +15,15 @@
 \hypersetup{colorlinks=true, linkcolor=blue, filecolor=magenta, urlcolor=cyan}
 \urlstyle{same}
 
-\title{Járművek trajektóriáinak előrejelzése machine learning modellekkel}
-\author{Péter Bence Mérnökinformatika BSc 6. félév}%\\Mérnökinformatika BSc 6. félév\\Konzulensek:\\Dr. Horváth András egyetemi docens\\Agg Áron PhD hallgató}
-\institute{Széchenyi István University}
+\title[Jármű trajektóriák előrejelzése]{Járművek trajektóriáinak előrejelzése machine learning modellekkel}
+\author{Péter Bence Mérnökinformatika BSc 6. félév\\
+        \vspace{5mm}
+        Témavezetők:\\
+        Dr. Horváth András egyetemi docens\\
+        Agg Áron PhD hallgató}
+\institute{Széchenyi István Egyetem}
+
+\date{TMDK 2023. április 26.}
 
 \begin{document}
 
@@ -32,81 +38,42 @@
 
 \section{Bevezetés}
 \begin{frame}{Bevezetés}
-\centering
-%\includegraphics[scale=0.3]{deepsort_yolo_figs/gépilátás_modified.jpg}
-\movie[showcontrols=true]{\includegraphics[scale=0.3]{../deepsort_yolo_figs/gépilátás_modified.jpg}}{demo_bevezetes.mp4}
+    \begin{itemize}
+        \item Adathalmaz: 
+        \begin{itemize}
+            \item 5 különböző helyszín amerikai városokból
+            \item 20 órányi felvétel
+        \end{itemize}
+    \end{itemize}
+    \centering
+    %\includegraphics[scale=0.3]{deepsort_yolo_figs/gépilátás_modified.jpg}
+    \movie[showcontrols=true]{\includegraphics[scale=0.3]{../deepsort_yolo_figs/gépilátás_modified.jpg}}{demo_bevezetes.mp4}
 \end{frame}
 
 
 \section{Objektumdetektálás}
 \begin{frame}{Objektumdetektálás}
-    \begin{figure}
-        \includegraphics[scale=0.07]{yolo_logo.png}
-    \end{figure}
     \begin{columns}
-        \column{0.5\textwidth} 
+        %TODO yolo jellemzes, sok felhasznalo, valos ideju futas ...
+        \column{0.3\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.05]{yolo_logo.png}
+        \end{figure}
+        \begin{itemize}
+            \item A világon százezrek használják
+            \item Nagy pontosság, valós időben egy erős videókártyán
+        \end{itemize}
+
+        \column{0.7\textwidth} 
         \centering
         \begin{figure}
-            \includegraphics[scale=0.1]{yolo_img.jpg} 
+            \includegraphics[scale=0.15]{yolo_img.jpg} 
         \end{figure}
 
-        \column{0.5\textwidth}
-        \centering
-        \begin{figure}
-            \includegraphics[scale=0.35]{../performance.png}
-        \end{figure}
     \end{columns}
 \end{frame}
 
-\section{Objektumkövetés}
-\begin{frame}{Objektumkövetés}
-    \centering
-    \begin{figure}
-        \includegraphics[scale=0.25]{deepsort_flowchart.jpg} 
-    \end{figure}
-\end{frame}
-
-\section{Machine Learning}
-\begin{frame}{Machine Learning}
-    \centering
-    \begin{figure}
-        \includegraphics[scale=0.2]{machine_learning.png}    
-    \end{figure}
-\end{frame}
-\subsection{Unsupervised learning}
-\begin{frame}{Unsupervised learning}
-    \begin{itemize}
-        \item Nincsenek előre meghatározott osztályok
-        \item Az algoritmus saját maga próbálja csoportokba rendezni a adatokat
-    \end{itemize}
-    \begin{figure}
-        \includegraphics[scale=0.3]{unsupervised_learning.png}
-    \end{figure}
-\end{frame}
-\subsection{Supervised learning}
-\begin{frame}{Supervised learning}
-    \begin{itemize}
-        \item Előre meghatározott osztályok alapján
-        \item Az algoritmust tanítani kell példa adatokkal 
-        \item Amiket vagy kézzel, vagy klaszterezéssel rendezünk osztályokba
-    \end{itemize}
-    \begin{figure}
-        \includegraphics[scale=0.25]{supervised_learning.jpeg}
-    \end{figure}
-\end{frame}
-
-\section{Klaszterezés}
-\begin{frame}{Klaszterezés}
-    \begin{itemize}
-        \item Bemeneti adatok: gyűjtött trajektóriák objektumdetektálás és követés segítségével
-        \item Feature vektorok: trajektóriák be és kimeneti pontjai
-    \end{itemize}
-    \begin{figure}
-        \includegraphics[scale=0.15]{../clustering/n_cluster_0_n_tracks_933.png}
-    \end{figure}
-\end{frame}
-
-\subsection{Trajektória}
+\section{Trajektória}
 \begin{frame}{Trajektória}
    \begin{figure}
         \includegraphics[scale=0.15]{trajektoriak/car1_1.png}
@@ -121,6 +88,68 @@
         \includegraphics[scale=0.2]{trajektoriak/car2_4.png}
    \end{figure} 
 \end{frame}
+
+\section{Objektumkövetés}
+\begin{frame}{Objektumkövetés}
+    \centering
+    \begin{figure}
+        \includegraphics[scale=0.2]{deepsort_flowchart.jpg} 
+    \end{figure}
+    \begin{itemize}
+        \item YOLO detektálások összefűzése trajektóriákká
+    \end{itemize}
+\end{frame}
+
+\section{Machine Learning}
+\begin{frame}{Machine Learning}
+    \centering
+    \begin{figure}
+        \includegraphics[scale=0.2]{machine_learning.png}    
+    \end{figure}
+\end{frame}
+\subsection{Unsupervised learning (Nem felügyelt tanulás)}
+\begin{frame}{Unsupervised learning (Nem felügyelt tanulás)}
+    \begin{itemize}
+        \item Nincsenek előre meghatározott osztályok
+        \item Az algoritmus saját maga próbálja csoportokba rendezni a adatokat
+    \end{itemize}
+    \begin{figure}
+        \includegraphics[scale=0.3]{unsupervised_learning.png}
+    \end{figure}
+\end{frame}
+\subsection{Supervised learning (Felügyelt tanulás)}
+\begin{frame}{Supervised learning (Felügyelt tanulás)}
+    \begin{itemize}
+        \item Előre meghatározott osztályok alapján
+        \item Az algoritmust tanítani kell példa adatokkal 
+    \end{itemize}
+    \begin{figure}
+        \includegraphics[scale=0.25]{supervised_learning.jpeg}
+    \end{figure}
+\end{frame}
+
+\section{Tipikus viselkedési formák meghatározása: Klaszterezés (Unsupervised)}
+\begin{frame}{Tipikus viselkedési formák meghatározása: Klaszterezés (Unsupervised)}
+    \begin{itemize}
+        \item Bemeneti adatok: gyűjtött trajektóriák objektumdetektálás és követés segítségével
+        \item Feature vektorok: [bemeneti x,y koordináta, kimeneti x,y koordináta]
+    \end{itemize}
+    \begin{columns}
+        \column{0.33\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.1]{../clustering/n_cluster_0_n_tracks_933_cropped.jpg}
+        \end{figure}
+        \column{0.33\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.1]{../clustering/n_cluster_3_n_tracks_892_cropped.jpg}
+        \end{figure}
+        \column{0.33\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.1]{../clustering/n_cluster_5_n_tracks_130_cropped.jpg}
+        \end{figure}
+    \end{columns}
+\end{frame}
+
 
 \subsection{Adatok tisztítása}
 \begin{frame}{Adatok tisztítása}
@@ -151,9 +180,10 @@
 \subsection{OPTICS vs KMeans, BIRCH}
 \begin{frame}{OPTICS vs KMeans, BIRCH}
     \begin{itemize}
-        \item Klaszterezést több algoritmussal teszteltük
+        \item Klaszterezés nem triviális feladat
+        \item Több algoritmus tesztelése
         \item KMeans, BIRCH, DBSCAN, OPTICS
-        \item OPTICS adta a legjobb eredményeket
+        \item OPTICS adta a legjobb eredményeket 
     \end{itemize}
     \begin{columns}
         \column{0.5\textwidth}
@@ -175,15 +205,22 @@
     \end{figure}
 \end{frame}
 
-\section{Klasszifikáció}
-\begin{frame}{Klasszifikáció}
+\section{Klasszifikáció (Supervised)}
+\begin{frame}{Klasszifikáció (Supervised)}
     \begin{itemize}
-        \item Feature vektorok: trajektóriák felosztása több kisebb részre, amik a valós idejű futásból származó trajektóriákhoz hasonlít
+        \item Megfigyelt autó besorolása a klaszterezés alapján meghatározott csoportba.
+        \item Feature vektorok: trajektóriák felosztása több kisebb részre, amik valós idejű futásból származó trajektóriákhoz hasonlítanak
         \begin{itemize}
-            \item v1: trajektória kezdőkoordinátája, sebessége, középső koordinátája, utolsó koordinátája, sebessége 
-            \item v7: trajektória kezdőkoordinátája $\cdot 1$, sebessége $\cdot 100$, utolsó koordinátája $\cdot 2$, sebessége $\cdot 200$
+            \item v1: [kezdőkoordinátája, sebessége, középső koordinátája, utolsó koordinátája, sebessége]
+            \item v7: [kezdőkoordinátája $\cdot 1$, sebessége $\cdot 100$, utolsó koordinátája $\cdot 2$, sebessége $\cdot 200$]
         \end{itemize}
-        \item Adathalmaz dúsítása: mivel egy trajektóriából több feature vektort csináltunk, így a tanító adathalmazt is megnöveltük
+        \item Adathalmaz dúsítása:
+        \begin{itemize}
+            \item Cél: kiegyenlítettebb darabszámok
+            \item egy trajektóriából több feature vektor generálása, tanító adathalmaz megnövelése
+        \end{itemize}
+        \item Trajektóriák hossza: 15 és 30 hosszúságú trajektóriák tesztelése
+        \item Eredmény: hossz növeléssel nem történik pontosságban javulás
     \end{itemize}
 \end{frame}
 
@@ -191,14 +228,17 @@
 \begin{frame}{Klasszifikációs algoritmusok}
     \begin{itemize}   
         \item K-NearestNeighbors, SupportVectorMachine, DecisionTree 
+        \item 5 különböző helyszín adatain mért pontosságok átlaga
+        \item Top1: legvalószínűbb előrejelzés tényleg az elvárt osztály
+        \item Top2: 2 legvalószínűbb előrejelzésben benne van az elvárt osztály
     \end{itemize}
     \begin{table}[]
     \begin{tabular}{|lccc|}
     \hline
     \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v1\end{tabular}}    \\ \hline
     \hline
-    \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
-    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{94.16\%}  & \multicolumn{1}{c|}{96.71\%} & 99.46\% \\ \hline
+    \multicolumn{1}{|l|}{} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{94.16\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{96.71\%}} & \textcolor[rgb]{1,0,0}{99.46\%} \\ \hline
     \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{81.65\%}  & \multicolumn{1}{c|}{90.82\%} & 98.05\% \\ \hline
     \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{93.11\%}  & \multicolumn{1}{c|}{94.88\%} & 96.03\% \\ \hline
     \end{tabular}
@@ -211,9 +251,9 @@
     \hline
     \multicolumn{4}{|c|}{\begin{tabular}[c]{@{}c@{}}Average Accuracy Feature Vector v7\end{tabular}}    \\ \hline
     \hline
-    \multicolumn{1}{|l|}{Metrics} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
-    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{92.08\%}  & \multicolumn{1}{c|}{95.61\%} & 98.66\% \\ \hline
-    \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & 98.92\% \\ \hline
+    \multicolumn{1}{|l|}{} & \multicolumn{1}{c|}{Balanced} & \multicolumn{1}{c|}{Top 1}   & Top 2   \\ \hline
+    \multicolumn{1}{|l|}{KNN}     & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{92.08\%}}  & \multicolumn{1}{c|}{\textcolor[rgb]{1,0,0}{95.61\%}} & 98.66\% \\ \hline
+    \multicolumn{1}{|l|}{SVM}     & \multicolumn{1}{c|}{88.72\%}  & \multicolumn{1}{c|}{93.86\%} & \textcolor[rgb]{1,0,0}{98.92\%} \\ \hline
     \multicolumn{1}{|l|}{DT}      & \multicolumn{1}{c|}{89.46\%}  & \multicolumn{1}{c|}{93.30\%} & 94.55\% \\ \hline
     \end{tabular}
     %\caption{Testset Feature Vektor V7 Stride 15}
@@ -221,14 +261,38 @@
     \end{table}
 \end{frame}
 
-\subsection{}
-
-\section{Alkalmazás}
-\begin{frame}{Alkalmazás}
+\section{Megjelenítő alkalmazás}
+\begin{frame}{Megjelenítő alkalmazás}
+    \begin{itemize}
+        \item Saját fejlesztésű megjelenítő alkalmazás
+        \item Zöld: legvalószínűbb előrejelzés
+        \item Piros: második legvalószínűbb előrejelzés
+    \end{itemize}
     \centering
     \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_newport.png}}{Newport_binary_KNN_n_neighbors_15_stride-15_v7.mp4}
 \end{frame}
 
+\section{Összefoglalás}
+\begin{frame}{Összefoglalás}
+    \begin{itemize}
+        \item YOLOv7 és DeepSORT detektáló alkalmazásba integrálása
+        \item SQL Adatbázis architektúra tervezése, implementálása
+        \item Klaszterezés: Scikit-Learn
+        \item Klasszifikáció: Scikit-Learn
+        \item Klasszifikációs Modellek tárolása: Pickle, Joblib
+        \item Megjelenítő alkalmazás
+        \item Fejlesztői környezet: Linux, Python, Codium
+        \item Saját forráskód mérete: 7460 sor
+        \item Implementáció megtalálható itt: \url{https://github.com/Pecneb/computer_vision_research}
+    \end{itemize}
+\end{frame}
+
+\section{Vége}
+\begin{frame}{Vége}
+    \begin{center}\huge{Köszönöm a figyelmet}\end{center}
+    \centering
+    \movie[showcontrols=true]{\includegraphics[scale=0.2]{../visualization/bellevue_se.png}}{Bellevue_150th_SE38th__2017-09-11_11-08-34_binary_KNN_n_neighbors_15_stride-15_v7.mp4}   
+\end{frame}
 
 
 \end{document}
