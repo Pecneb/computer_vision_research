@@ -1475,6 +1475,30 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
 
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
+
+def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: float, n_jobs: int, **estkwargs):
+    from sklearn.cluster import OPTICS
+    from sklearn.svm import SVC
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    from clustering import clustering_on_feature_vectors
+    from processing_utils import load_dataset, filter_out_edge_detections, make_4D_feature_vectors
+
+    tracks = load_joblib_tracks(train_path)
+
+    # cluster tracks
+    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    # Generate version one feature vectors for clustering
+    from processing_utils import make_feature_vectors_version_one
+    X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_labeled, k=6, labels=cluster_labels)
+    #X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=test_set_processed, k=6, labels=test_set_labels)
+
+    print(X_train[:5])
  
     
 # submodule functions
@@ -1539,6 +1563,9 @@ def investigate_renitent_features(args):
 
 def plot_module(args):
     plot_decision_tree(args.decision_tree)
+
+def exitpoint_metric_module(args):
+    calculate_metrics_exitpoints(args.train, args.test, args.threshold, args.n_jobs, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi)
 
 def main():
     import argparse
@@ -1643,6 +1670,21 @@ def main():
     plot_parser.add_argument("--decision_tree", help="Path to decision tree joblib modell.")
     plot_parser.set_defaults(func=plot_module)
 
+    exitpoint_metrics_parser = submodule_parser.add_parser(
+        "exitpoints",
+        help="Calculate metrics on only exitpoints."
+    )
+    exitpoint_metrics_parser.add_argument("--train",
+                                          help="Training dataset database path.")
+    exitpoint_metrics_parser.add_argument("--test",
+                                          help="Test dataset database path.")
+    exitpoint_metrics_parser.add_argument("--threshold", type=float,
+                                          help="Threshold value for clustering.")
+    exitpoint_metrics_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
 
