@@ -318,7 +318,7 @@ def main():
             cv.imshow("Video", frame)
             cv.setTrackbarPos("Frame", "Video", int(frameNum))
 
-            if args.record is not None:
+            if args.record:
                 out.write(frame)
 
             # pause video
@@ -335,7 +335,8 @@ def main():
         except KeyboardInterrupt:
             break
     cap.release()
-    out.release()
+    if args.record:
+        out.release()
     cv.destroyAllWindows()
 
 if __name__ == "__main__":
