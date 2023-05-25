@@ -37,6 +37,7 @@ matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import numpy as np
 import os 
+import tqdm
 
 # the function below is deprectated, do not use
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
@@ -1168,6 +1169,52 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
+def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, **estkwargs):
+    from sklearn.cluster import Birch, OPTICS
+    from processing_utils import load_joblib_tracks
+    from visualizer import aoiextraction
+    from scipy.stats import expon
+    tracks = load_joblib_tracks(tracks_path)
+    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    cluster_aoi = aoiextraction(tracks_labeled, cluster_labels)
+
+    thresholds = [0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
+
+    for th in tqdm.tqdm(thresholds):
+        clr, aoi_labels = clustering_on_feature_vectors(cluster_aoi, Birch, n_jobs=n_jobs, threshold=th)
+        # Generate dirname for plots
+        dirpath = os.path.join(outdir, f"{clr}_n_clusters-{len(set(aoi_labels))}_threshold_{th}")
+        # Create dir if it does not exists
+        if not os.path.isdir(dirpath):
+            os.mkdir(dirpath)
+        reduced_labels = []
+        for l in cluster_labels:
+            reduced_labels.append(aoi_labels[l])
+        for aoi_l in list(set(aoi_labels)):
+            X = []
+            Y = []
+            fig, ax = plt.subplots(1,1, figsize=(15,8))
+            for i, t in enumerate(tracks_labeled):
+                if aoi_l == reduced_labels[i]:
+                    ax.scatter([t.history_X[0]], [1-t.history_Y[0]], c='g')
+                    ax.scatter([t.history_X[-1]], [1-t.history_Y[-1]], c='r')
+                    for x,y in zip(t.history_X, t.history_Y):
+                        X.append(x)
+                        Y.append(y)
+            ax.scatter(np.array(X), 1-np.array(Y), s=0.5)
+            ax.grid(visible=True)
+            ax.set_xlim(left=0.0, right=2.0)
+            ax.set_ylim(bottom=0.0, top=2.0)
+            ax.set_title(label=f"Threshold {th} cluster {aoi_l}")
+            filename = os.path.join(dirpath, f"cluster_{aoi_l}")
+            fig.savefig(filename)
+            #plt.show()
+
 def submodule_optics(args):
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
@@ -1261,6 +1308,16 @@ def submodule_dbscan(args):
             p=args.p_norm
         )
 
+def submodule_aoi_birch(args):
+    aoi_clutsering_search_birch(args.database, 
+        args.outdir,
+        args.threshold, 
+        n_jobs=args.n_jobs, 
+        min_samples=args.min_samples, 
+        max_eps=args.max_eps, 
+        xi=args.xi
+    )
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1302,6 +1359,13 @@ def main():
     dbscan_parser.add_argument("--eps", type=float, default=np.inf, help="Set epsilon distance that can be between samples of a cluster.")
     dbscan_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     dbscan_parser.set_defaults(func=submodule_dbscan)
+
+    aoi_optics = subparser.add_parser("aoi_optics_search", help="Cluster reduction estimator parameter search.")
+    aoi_optics.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    aoi_optics.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    aoi_optics.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    aoi_optics.add_argument("--threshold", type=float, default=0.7)
+    aoi_optics.set_defaults(func=submodule_aoi_birch)
 
     args = argparser.parse_args() 
     args.func(args)

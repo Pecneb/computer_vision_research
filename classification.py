@@ -1477,12 +1477,15 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
 def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: float, n_jobs: int, **estkwargs):
-    from sklearn.cluster import OPTICS
+    from scipy.stats import expon
+    from sklearn.cluster import OPTICS, Birch
     from sklearn.svm import SVC
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import RandomizedSearchCV
     from clustering import clustering_on_feature_vectors
-    from processing_utils import load_dataset, filter_out_edge_detections, make_4D_feature_vectors
+    from processing_utils import load_dataset, filter_out_edge_detections, make_4D_feature_vectors, random_split_tracks
+    from visualizer import aoiextraction
 
     tracks = load_joblib_tracks(train_path)
 
@@ -1493,13 +1496,40 @@ def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: flo
     tracks_labeled = tracks_filtered[labels > -1]
     cluster_labels = labels[labels > -1]
 
+    train_dict = []
+    for i in range(len(tracks_labeled)):
+        train_dict.append({
+            "track" : tracks_labeled[i],
+            "class" : cluster_labels[i]
+        })
+
+    # shuffle tracks, and separate into a train and test dataset
+    train, test = random_split_tracks(train_dict, 0.8, 1)
+
+    tracks_train = [t["track"] for t in train]
+    labels_train = np.array([t["class"] for t in train])
+    tracks_test = [t["track"] for t in test]
+    labels_test = np.array([t["class"] for t in test])
+
+    cluster_aoi = aoiextraction(tracks_labeled, cluster_labels)
+
+    optics_params = {"min_samples": 1,
+                      "max_eps": 0.01,
+                      "xi": 0.15}
+
+    #clfsearch = RandomizedSearchCV(OPTICS(), cluster_params, scoring="accuracy")
+    #clfsearch.fit(cluster_aoi)
+    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=Birch, n_jobs=n_jobs, threshold=0.05)
+    print(aoi_labels)
+    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=OPTICS, n_jobs=n_jobs, **optics_params)
+    print(aoi_labels)
+
     # Generate version one feature vectors for clustering
     from processing_utils import make_feature_vectors_version_one
-    X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_labeled, k=6, labels=cluster_labels)
-    #X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=test_set_processed, k=6, labels=test_set_labels)
+    X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
+    X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
 
-    print(X_train[:5])
- 
+
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
