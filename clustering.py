@@ -23,6 +23,7 @@ from processing_utils import (
     filter_out_false_positive_detections_by_enter_exit_distance, 
     filter_out_edge_detections, 
     filter_tracks, 
+    make_2D_feature_vectors,
     make_4D_feature_vectors, 
     make_6D_feature_vectors,
     makeFeatureVectors_Nx2, 
@@ -723,6 +724,125 @@ def clustering_on_feature_vectors(X: np.ndarray, estimator, n_jobs: int = -1, **
         cls = estimator(**estkwargs).fit(X)
     return cls, cls.labels_
 
+def clustering_on_2D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
+    """Run clustering on 4 dimensional feature vectors.
+    Create plots of every cluster with their tracks,
+    and create histograms from the lenght of the tracks.
+
+    Args:
+        estimator (estimator): sklearn estimator class
+        trackedObjects (list[TrackedObject]): TrackedObject python object dataset. 
+        outdir (str): Output directory path. 
+        n_jobs (int, optional): Number of processes to run. 
+            Defaults to -1, that means all cpu threads will be utilized.
+    """
+    # Create feature vectors from list of trackedObjects
+    X = make_2D_feature_vectors(trackedObjects)
+    # Run the clustering estimator on X features with estkwargs
+    fitted_estimator, Y = clustering_on_feature_vectors(X, estimator, n_jobs=n_jobs, **estkwargs)
+    not_clustered_objects = np.array(trackedObjects) [ Y == -1 ] 
+    X_nocluster = X [ Y == -1 ]
+    Y_nocluster = Y [ Y == -1 ]
+    clustered_objects = np.array(trackedObjects) [ Y > -1 ]
+    X = X [ Y > -1 ]
+    Y = Y [ Y > -1 ]
+    labels = np.array(list(set(Y)))
+    n_clusters = labels.shape[0]
+    print(f"Number of trackedObjects: {len(trackedObjects)}")
+    print(f"Number of feature vectors: {X.shape[0]}")
+    print(f"Number of clusters identified: {n_clusters}")
+    print(f"Labels: {labels}")
+
+    # Generate dirname for plots
+    dirpath = os.path.join(outdir, f"{fitted_estimator}_n_clusters-{n_clusters}_2D-feature-vectors-{X.shape[0]}_threshold-{filter_threshold}")
+    # Create dir if it does not exists
+    if not os.path.isdir(dirpath):
+        os.mkdir(dirpath)
+
+    histogram_X = np.array([])
+    historgram_fig, histogram_axis = plt.subplots(nrows=1, ncols=1, figsize=(30, 15))
+
+    for i in range(n_clusters):
+        # Create figure for cluster trajectory and cluster histogram plot
+        n_cluster_fig, n_cluster_axes = plt.subplots(nrows=1, ncols=2, figsize=(30, 15))
+        # Declare the X for the i-th clusters historgram 
+        n_cluster_histogram_X = [] 
+        # Declare track counter for cluster
+        n_tracks = 0
+        # Declare arrays for x, y coordinates
+        tracks_X = []
+        tracks_Y = []
+        for j in range(X.shape[0]):
+            if Y[j] == i:
+                n_cluster_histogram_x = len(clustered_objects[j].history)
+                n_cluster_histogram_X.append( n_cluster_histogram_x ) 
+                n_tracks += 1
+                for k in range(1, n_cluster_histogram_x):
+                    tracks_X.append(clustered_objects[j].history[k].X)
+                    tracks_Y.append(clustered_objects[j].history[k].Y)
+
+        n_cluster_axes[0].scatter(np.array(tracks_X), 1-np.array(tracks_Y), s=2)
+        n_cluster_axes[0].set_xlim(0,2)
+        n_cluster_axes[0].set_ylim(0,2)   
+        n_cluster_axes[0].set_title(f"Axis of cluster number {i}, with {n_tracks} detections")
+        #enter_x = np.array([X[idx, 0] for idx in range(X.shape[0]) if Y[idx]==i])
+        #enter_y = np.array([1-X[idx, 1] for idx in range(X.shape[0]) if Y[idx]==i])
+        #n_cluster_axes[0].scatter(enter_x, enter_y, c='g', s=10, label=f"Enter points")
+        exit_x = np.array([X[idx, 0] for idx in range(X.shape[0]) if Y[idx]==i])
+        exit_y = np.array([1-X[idx, 1] for idx in range(X.shape[0]) if Y[idx]==i])
+        n_cluster_axes[0].scatter(exit_x, exit_y, c='r', s=10, label=f"Exit points")
+        n_cluster_axes[0].legend()
+        n_cluster_axes[0].grid(True)
+        histogram_X= np.append(histogram_X, np.array(n_cluster_histogram_X))
+        n_cluster_axes[1].hist(n_cluster_histogram_X, bins="auto", edgecolor="white")
+        n_cluster_axes[1].set_xlabel("Length of history")
+        n_cluster_axes[1].set_ylabel("Number of objects")
+        # create filename
+        filename = f"n_cluster_{i}_n_tracks_{n_tracks}.png"
+        # save plot with filename into dir
+        n_cluster_fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+        plt.close()
+
+    # OPTICS given label -1 to those features that cant be ordered to any cluster
+    nocluster_fig, nocluster_axis = plt.subplots(nrows=1, ncols=2, figsize=(30, 15))
+    no_cluster_tracks_X = []
+    no_cluster_tracks_Y = []
+    no_cluster_histogram_X = []
+    for j in range(len(not_clustered_objects)):
+        no_cluster_histogram_x = len(not_clustered_objects[j].history)
+        no_cluster_histogram_X.append( no_cluster_histogram_x ) 
+        for k in range(1, no_cluster_histogram_x):
+            no_cluster_tracks_X.append(not_clustered_objects[j].history[k].X)
+            no_cluster_tracks_Y.append(not_clustered_objects[j].history[k].Y)
+    nocluster_axis[0].scatter(np.array(no_cluster_tracks_X), 1-np.array(no_cluster_tracks_Y), s=2)
+    nocluster_axis[0].set_xlim(0,2)
+    nocluster_axis[0].set_ylim(0,2)   
+    nocluster_axis[0].set_title(f"Axis of cluster number -1, with {X_nocluster.shape[0]} detections")
+    #no_cluster_enter_x = np.array([X_nocluster[idx, 0] for idx in range(X_nocluster.shape[0])])
+    #no_cluster_enter_y = np.array([1-X_nocluster[idx, 1] for idx in range(X_nocluster.shape[0])])
+    #nocluster_axis[0].scatter(no_cluster_enter_x, no_cluster_enter_y, c='g', s=10, label=f"Enter points")
+    no_cluster_exit_x = np.array([X_nocluster[idx, 0] for idx in range(X_nocluster.shape[0])])
+    no_cluster_exit_y = np.array([1-X_nocluster[idx, 1] for idx in range(X_nocluster.shape[0])])
+    nocluster_axis[0].scatter(no_cluster_exit_x, no_cluster_exit_y, c='r', s=10, label=f"Exit points")
+    nocluster_axis[0].legend()
+    nocluster_axis[0].grid(True)
+    nocluster_axis[1].hist(no_cluster_histogram_X, bins="auto", edgecolor="white")
+    nocluster_axis[1].set_xlabel("Length of history")
+    nocluster_axis[1].set_ylabel("Number of objects")
+    # create filename
+    filename = f"not_clustered_tracks_{X_nocluster.shape[0]}.png"
+    # save plot with filename into dir
+    nocluster_fig.savefig(fname=os.path.join(dirpath, filename), dpi='figure', format='png')
+    plt.close()
+
+    # Plot overall historgram
+    hist_filename = "histogram.png"
+    histogram_axis.hist(histogram_X, bins="auto", edgecolor="white")
+    histogram_axis.set_xlabel("Length of history")
+    histogram_axis.set_ylabel("Number of objects")
+    historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
+    plt.close()
+
 def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
@@ -966,6 +1086,32 @@ def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     histogram_axis.set_ylabel("Number of objects")
     historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     plt.close()
+
+def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+    # Load tack dataset
+    trackedObjects = load_dataset(database)
+    # Filter by yolov7 labels, ie. car, person, cycle
+    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    # Create 
+    progress = 1
+    thres_interval = 0.1
+    max_progress = int(filter_threshold[1] / thres_interval)
+    thres = filter_threshold[0]
+    while thres <= filter_threshold[1]:
+        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        if len(filteredTrackedObjects) > 0:
+            clustering_on_2D_feature_vectors(
+                estimator=estimator,
+                trackedObjects=filteredTrackedObjects,
+                outdir=outdir,
+                n_jobs=n_jobs,
+                filter_threshold=thres,
+                **estkwargs
+            )
+        print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
+        progress += 1
+        print(f"Threshold value: {thres}")
+        thres += thres_interval 
 
 def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
     # Load tack dataset
@@ -1218,7 +1364,19 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, **est
 def submodule_optics(args):
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
-    if args.dimensions == "4D":
+    if args.dimensions == "2D":
+        clustering_search_on_2D_feature_vectors(
+            estimator=OPTICS, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            min_samples=args.min_samples,
+            max_eps=args.max_eps,
+            xi=args.xi, 
+            min_cluster_size=args.min_cluster_size,
+            p=args.p_norm
+        )
+    elif args.dimensions == "4D":
         clustering_search_on_4D_feature_vectors(
             estimator=OPTICS, 
             database=args.database, 
@@ -1230,7 +1388,7 @@ def submodule_optics(args):
             min_cluster_size=args.min_cluster_size,
             p=args.p_norm
         )
-    if args.dimensions == "6D":
+    elif args.dimensions == "6D":
         clustering_search_on_6D_feature_vectors(
             estimator=OPTICS, 
             database=args.database, 
@@ -1245,7 +1403,17 @@ def submodule_optics(args):
 
 def submodule_birch(args):
     from sklearn.cluster import Birch 
-    if args.dimensions == "4D":
+    if args.dimensions == "2D":
+        clustering_search_on_2D_feature_vectors(
+            estimator=Birch, 
+            database=args.database, 
+            outdir=args.outdir,
+            n_jobs=args.n_jobs,
+            threshold=args.threshold,
+            branching_factor=args.branching,
+            n_clusters=args.n_clusters
+        )
+    elif args.dimensions == "4D":
         clustering_search_on_4D_feature_vectors(
             estimator=Birch, 
             database=args.database, 
@@ -1255,7 +1423,7 @@ def submodule_birch(args):
             branching_factor=args.branching,
             n_clusters=args.n_clusters
         )
-    if args.dimensions == "6D":
+    elif args.dimensions == "6D":
         clustering_search_on_6D_feature_vectors(
             estimator=Birch, 
             database=args.database, 
@@ -1323,7 +1491,7 @@ def main():
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
     argparser.add_argument("-db", "--database", help="Path to joblib dataset.", required=True)
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
-    argparser.add_argument("--dimensions", type=str, choices=["4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
+    argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
