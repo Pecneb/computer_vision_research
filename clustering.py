@@ -1334,26 +1334,31 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
-def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, **estkwargs):
-    from sklearn.cluster import Birch, OPTICS
+def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimensions="4D", **estkwargs):
+    from sklearn.cluster import Birch, OPTICS, KMeans
     from processing_utils import load_joblib_tracks
     from visualizer import aoiextraction
-    from scipy.stats import expon
     tracks = load_joblib_tracks(tracks_path)
     tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
-    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    if dimensions=="2D":
+        cls_samples = make_2D_feature_vectors(tracks_filtered)
+    elif dimensions=="4D":
+        cls_samples = make_4D_feature_vectors(tracks_filtered)
+    else:
+        exit(1)
+
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
     cluster_labels = labels[labels > -1]
 
     cluster_aoi = aoiextraction(tracks_labeled, cluster_labels)
 
-    thresholds = [0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
+    thresholds = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
 
     for th in tqdm.tqdm(thresholds):
         clr, aoi_labels = clustering_on_feature_vectors(cluster_aoi, Birch, n_jobs=n_jobs, threshold=th)
         # Generate dirname for plots
-        dirpath = os.path.join(outdir, f"{clr}_n_clusters-{len(set(aoi_labels))}_threshold_{th}")
+        dirpath = os.path.join(outdir, f"{clr}_{dimensions}_n_clusters-{len(set(aoi_labels))}_threshold_{th}")
         # Create dir if it does not exists
         if not os.path.isdir(dirpath):
             os.mkdir(dirpath)
