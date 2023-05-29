@@ -1285,6 +1285,25 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
+def kmeans_mse_search(database: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
+    from sklearn.cluster import KMeans
+    from sklearn.cluster import OPTICS
+    from visualizer import aoiextraction
+    trackedObjects = load_dataset(database)
+    trackedObjects = filter_out_edge_detections(trackedObjects, threshold)
+    X = make_2D_feature_vectors(trackedObjects)
+    _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
+    cluster_exitpoints = aoiextraction(trackedObjects, labels)
+    mse = 9999
+    n_clusters = 1
+    n_clusters_best = n_clusters
+    while(mse > mse_threshold):
+        clr = KMeans(n_clusters, n_jobs=n_jobs).fit()
+        aoi_labels = clr.labels_
+        cluster_centers = clr.cluster_centers_
+        print(aoi_labels)
+        print(cluster_centers)
+
 def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_jobs=None):
     """Simply plots an elbow diagram with the given parameters.
 
@@ -1486,6 +1505,17 @@ def submodule_aoi_birch(args):
         xi=args.xi
     )
 
+def submodule_aoi_kmeans(args):
+    kmeans_mse_search(args.database,
+                      args.threshold,
+                      args.n_jobs,
+                      args.mse,
+                      args.min_samples,
+                      args.max_eps,
+                      args.xi,
+                      args.pnorm
+    )
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1534,6 +1564,11 @@ def main():
     aoi_optics.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
     aoi_optics.add_argument("--threshold", type=float, default=0.7)
     aoi_optics.set_defaults(func=submodule_aoi_birch)
+
+    kmeans_mse_search_parser = subparser.add_parser("kmeans_mse_search", help="KMeans clustering with max squared error search.")
+    kmeans_mse_search_parser.add_argument("--mse", type=float, default=0.5,
+                                          help="Mean squared error threshold.")
+    kmeans_mse_search_parser.add_argument("--")
 
     args = argparser.parse_args() 
     args.func(args)
