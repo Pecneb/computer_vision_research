@@ -1285,24 +1285,63 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def kmeans_mse_search(database: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
+def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
     from visualizer import aoiextraction
+    from processing_utils import euclidean_distance
     trackedObjects = load_dataset(database)
     trackedObjects = filter_out_edge_detections(trackedObjects, threshold)
-    X = make_2D_feature_vectors(trackedObjects)
+    X = make_4D_feature_vectors(trackedObjects)
     _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
-    cluster_exitpoints = aoiextraction(trackedObjects, labels)
+    filtered_labels = labels[labels > -1]
+    tracks_labeled = trackedObjects[labels > -1]
+    cluster_exitpoints = aoiextraction(tracks_labeled, labels)
     mse = 9999
     n_clusters = 1
+    aoi_labels_best = [] 
     n_clusters_best = n_clusters
+    clr_best = None
     while(mse > mse_threshold):
-        clr = KMeans(n_clusters, n_jobs=n_jobs).fit()
+        clr = KMeans(n_clusters).fit(cluster_exitpoints)
         aoi_labels = clr.labels_
         cluster_centers = clr.cluster_centers_
-        print(aoi_labels)
-        print(cluster_centers)
+        distance_vector = [euclidean_distance(cluster_centers[l,0], cluster_exitpoints[i,0], cluster_centers[l,1], cluster_exitpoints[i,1])
+                            for i, l in enumerate(aoi_labels)]
+        if np.max(distance_vector) < mse:
+            mse = np.max(distance_vector)
+            n_clusters_best = n_clusters
+            clr_best = clr
+            aoi_labels_best = aoi_labels
+        n_clusters+=1
+    print(aoi_labels_best)
+    outdir = os.path.join(dirpath, f"{clr_best}_n_clusters_{n_clusters_best}_mse_{mse:.6f}") # create outdir path
+    if not os.path.exists(outdir): # check if outdir already exists
+        os.mkdir(outdir) # make dir if not
+    reduced_labels = np.zeros(shape=filtered_labels.shape) # init reduced labels vector
+    for i, l in tqdm.tqdm(enumerate(filtered_labels), desc="Reduce labels"): # reduce labels to aoi labels
+        reduced_labels[i] = aoi_labels_best[l]
+    # create plot for every reduced cluster
+    for aoi_l in tqdm.tqdm(list(set(aoi_labels_best)), desc="Cluster plots"):
+        print(f"Cluster {aoi_l}")
+        X = []
+        Y = []
+        fig, ax = plt.subplots(1,1, figsize=(15,8))
+        for i, t in enumerate(tracks_labeled):
+            if aoi_l == reduced_labels[i]:
+                ax.scatter([t.history_X[0]], [1-t.history_Y[0]], c='g')
+                ax.scatter([t.history_X[-1]], [1-t.history_Y[-1]], c='r')
+                for x,y in zip(t.history_X, t.history_Y):
+                    X.append(x)
+                    Y.append(y)
+        ax.scatter(np.array(X), 1-np.array(Y), s=0.5)
+        ax.grid(visible=True)
+        ax.set_xlim(left=0.0, right=2.0)
+        ax.set_ylim(bottom=0.0, top=2.0)
+        ax.set_title(label=f"cluster {aoi_l}")
+        filename = os.path.join(outdir, f"cluster_{aoi_l}")
+        print(filename)
+        fig.savefig(filename) 
 
 def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_jobs=None):
     """Simply plots an elbow diagram with the given parameters.
@@ -1512,13 +1551,14 @@ def submodule_aoi_birch(args):
 
 def submodule_aoi_kmeans(args):
     kmeans_mse_search(args.database,
+                      args.outdir,
                       args.threshold,
                       args.n_jobs,
                       args.mse,
-                      args.min_samples,
-                      args.max_eps,
-                      args.xi,
-                      args.pnorm
+                      min_samples=args.min_samples,
+                      max_eps=args.max_eps,
+                      xi=args.xi,
+                      p=args.pnorm
     )
 
 def main():
@@ -1573,7 +1613,12 @@ def main():
     kmeans_mse_search_parser = subparser.add_parser("kmeans_mse_search", help="KMeans clustering with max squared error search.")
     kmeans_mse_search_parser.add_argument("--mse", type=float, default=0.5,
                                           help="Mean squared error threshold.")
-    kmeans_mse_search_parser.add_argument("--")
+    kmeans_mse_search_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    kmeans_mse_search_parser.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    kmeans_mse_search_parser.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    kmeans_mse_search_parser.add_argument("-p", "--pnorm", default=2, type=int, help="P norm for optics clustering.")
+    kmeans_mse_search_parser.add_argument("--threshold", type=float, default=0.7, help="Threshold for data filtering.")
+    kmeans_mse_search_parser.set_defaults(func=submodule_aoi_kmeans)
 
     args = argparser.parse_args() 
     args.func(args)
