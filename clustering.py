@@ -1285,6 +1285,29 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
+def calc_cluster_centers(tracks, labels):
+    """Calculate center of mass for every class's exit points.
+    These will be the exit points of the clusters.
+
+    Args:
+        tracks (List[TrackedObject]): List of tracked objects 
+        labels (_type_): Labels of tracked objects 
+
+    Returns:
+        cluster_centers: The center of mass for every class's exits points
+    """
+    classes = set(labels)
+    cluster_centers = np.zeros(shape=(len(classes),2))
+    for i, c in enumerate(classes):
+        tracks_xy = []
+        for j, l in enumerate(labels):
+            if l==c:
+                tracks_xy.append([tracks[j].history_X[-1], tracks[j].history_Y[-1]])
+        tracks_xy = np.array(tracks_xy)
+        cluster_centers[i,0] = np.average(tracks_xy[:,0])
+        cluster_centers[i,1] = np.average(tracks_xy[:,1])
+    return cluster_centers
+
 def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
@@ -1296,18 +1319,21 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
     tracks_labeled = trackedObjects[labels > -1]
-    cluster_exitpoints = aoiextraction(tracks_labeled, labels)
+    cluster_exitpoints = calc_cluster_centers(tracks_labeled, filtered_labels)
     mse = 9999
     n_clusters = 1
     aoi_labels_best = [] 
     n_clusters_best = n_clusters
     clr_best = None
+    print(cluster_exitpoints)
     while(mse > mse_threshold):
         clr = KMeans(n_clusters).fit(cluster_exitpoints)
         aoi_labels = clr.labels_
         cluster_centers = clr.cluster_centers_
+        print(cluster_centers)
         distance_vector = [euclidean_distance(cluster_centers[l,0], cluster_exitpoints[i,0], cluster_centers[l,1], cluster_exitpoints[i,1])
                             for i, l in enumerate(aoi_labels)]
+        print(distance_vector)
         if np.max(distance_vector) < mse:
             mse = np.max(distance_vector)
             n_clusters_best = n_clusters
@@ -1326,7 +1352,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
         print(f"Cluster {aoi_l}")
         X = []
         Y = []
-        fig, ax = plt.subplots(1,1, figsize=(15,8))
+        fig, ax = plt.subplots(1, 1, figsize=(15,8))
         for i, t in enumerate(tracks_labeled):
             if aoi_l == reduced_labels[i]:
                 ax.scatter([t.history_X[0]], [1-t.history_Y[0]], c='g')
@@ -1334,11 +1360,13 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
                 for x,y in zip(t.history_X, t.history_Y):
                     X.append(x)
                     Y.append(y)
+        ax.scatter(clr_best.cluster_centers_[aoi_l, 0], 1-clr_best.cluster_centers_[aoi_l, 1], c='m', label="Center of mass of exit points")
         ax.scatter(np.array(X), 1-np.array(Y), s=0.5)
         ax.grid(visible=True)
         ax.set_xlim(left=0.0, right=2.0)
         ax.set_ylim(bottom=0.0, top=2.0)
         ax.set_title(label=f"cluster {aoi_l}")
+        ax.legend(["Enter points", "Exit points", "Center of mass of exit points"])
         filename = os.path.join(outdir, f"cluster_{aoi_l}")
         print(filename)
         fig.savefig(filename) 

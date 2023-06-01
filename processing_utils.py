@@ -399,6 +399,20 @@ def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
         featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
     return np.array(featureVectors)
 
+def make_2D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+
 def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
     """Create 4D feature vectors from tracks.
     The enter and exit coordinates are put in one vector. Creating 4D vectors.
@@ -1205,12 +1219,12 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
 
     # fill test dataset with the rest of the tracks
     i = 0
-    while(len(test) <= test_size and i <= len(dataset)):
+    while(len(test) <= test_size and i < len(dataset)):
         try:
             if dataset[i]['track'] not in [t['track'] for t in train] and dataset[i]['track'] not in [t['track'] for t in test]:
                 test.append(dataset[i])
         except:
-            print(i)
+            print(f"Exception at index: {i}, track: {dataset[i]}")
         i += 1
 
     return np.array(train), np.array(test)
