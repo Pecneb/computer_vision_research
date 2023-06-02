@@ -872,7 +872,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks,
-                                    filter_out_edge_detections,
+                                    filter_trajectories,
                                     make_4D_feature_vectors
                                 )
     from clustering import clustering_on_feature_vectors
@@ -892,7 +892,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     tracks = load_joblib_tracks(path2dataset)
 
     # cluster tracks
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     cls_samples = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
@@ -1185,7 +1185,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks,
-                                    filter_out_edge_detections,
+                                    filter_trajectories,
                                     make_4D_feature_vectors
                                 )
     from clustering import clustering_on_feature_vectors
@@ -1205,7 +1205,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     tracks = load_joblib_tracks(path2dataset)
 
     # cluster tracks
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     cls_samples = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
@@ -1484,13 +1484,13 @@ def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: flo
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.model_selection import RandomizedSearchCV
     from clustering import clustering_on_feature_vectors
-    from processing_utils import load_dataset, filter_out_edge_detections, make_4D_feature_vectors, random_split_tracks
+    from processing_utils import load_dataset, filter_trajectories, make_4D_feature_vectors, random_split_tracks
     from visualizer import aoiextraction
 
     tracks = load_joblib_tracks(train_path)
 
     # cluster tracks
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     cls_samples = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
