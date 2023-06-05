@@ -100,7 +100,7 @@ def drawbbox(bbox: tuple, image: np.ndarray):
     cv.rectangle(image, (left, top), (right, bottom), (0,255,0), 1)
 
 def aoiextraction(tracks, classes):
-    """Calculate the centroids of the are of interests, the gravity center of clusters.
+    """Calculate the centroids of the area of interests, the gravity center of clusters.
     This function does not scales up the coordinates to the video's resolution.
 
     Args:
@@ -108,7 +108,7 @@ def aoiextraction(tracks, classes):
         classes (list[int]): List of class labels ordered to the TrackedObjects.
 
     Returns:
-        dict: The centroids of the classes, returned in a dictionary format. 
+        centroids: The centroids of the classes, returned in an np.ndarray. 
     """
     class_labels = np.array(list(set(classes)))
     centroids = np.zeros(shape=(class_labels.shape[0], 2))
@@ -318,7 +318,7 @@ def main():
             cv.imshow("Video", frame)
             cv.setTrackbarPos("Frame", "Video", int(frameNum))
 
-            if args.record is not None:
+            if args.record:
                 out.write(frame)
 
             # pause video
@@ -335,7 +335,8 @@ def main():
         except KeyboardInterrupt:
             break
     cap.release()
-    out.release()
+    if args.record:
+        out.release()
     cv.destroyAllWindows()
 
 if __name__ == "__main__":

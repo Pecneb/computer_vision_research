@@ -24,10 +24,9 @@ import databaseLoader
 import tqdm
 import os
 import joblib 
-from joblib import Memory 
-import itertools
 from copy import deepcopy
 import dataManagementClasses
+import logging
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -367,8 +366,39 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
             (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))): 
             filteredTracks.append(obj)
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
-    return filter_out_noise_trajectories(filter_out_false_positive_detections_by_enter_exit_distance(filteredTracks, 0.4))
+    return filteredTracks
 
+def filter_trajectories(trackedObjects: list, threshold: float):
+    """Run filtering process on trajectory datase.
+
+    Args:
+        trackedObjects (list): Trajectory dataset 
+        threshold (float): threshold for min max search
+
+    Returns:
+        denoised_trajectories: filtered trajectories without noice 
+    """
+    full_trajectories = filter_out_edge_detections(trackedObjects, threshold)
+    full_trajectories = filter_out_false_positive_detections_by_enter_exit_distance(full_trajectories, 0.4)
+    denoised_trajectories = filter_out_noise_trajectories(full_trajectories)
+    return denoised_trajectories
+
+def save_filtered_dataset(dataset: str, threshold: float):
+    """Filter dataset and save to joblib binary.
+
+    Args:
+        dataset (str): Dataset path 
+        threshold (float): Filter threshold 
+    """
+    from pathlib import Path
+    trajectories = load_dataset(dataset)
+    logging.info(f"Trajectories \"{dataset}\" loaded")
+    trajs2save = filter_trajectories(trajectories, threshold)
+    logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(tracks2joblib)}")
+    datasetPath = Path(dataset)
+    filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
+    joblib.dump(trajs2save, filteredDatasetPath)
+    logging.info(f"Filtered dataset saved to {filteredDatasetPath.absolute()}")
 
 def filter_tracks(trackedObjects: list, label="car"):
     """Only return objects with given label.
@@ -398,6 +428,20 @@ def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
         featureVectors.append(obj.history[0].X, obj.history[0].Y)
         featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
     return np.array(featureVectors)
+
+def make_2D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
 
 def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
     """Create 4D feature vectors from tracks.
@@ -869,7 +913,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
+    filteredTracks = filter_trajectories(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
 
@@ -925,7 +969,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     from clustering import optics_clustering_on_nx4 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold=thres)
+    filteredTracks = filter_trajectories(tracks, threshold=thres)
     filteredTracks = filter_tracks(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
     X, y = make_features_for_classification(filteredTracks, 6, labels)
@@ -1038,7 +1082,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
 
     tracks = load_dataset(path2dataset)
     tracks = filter_tracks(tracks)
-    tracks = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks = filter_trajectories(trackedObjects=tracks, threshold=threshold)
 
     if cluster_features_version == "4D":
         featureVectors = make_4D_feature_vectors(tracks)
@@ -1152,7 +1196,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
         print("Error: Wrong file type.")
         return False
     
-    tracks_filtered = filter_out_edge_detections(tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(tracks, threshold=threshold)
     tracks_car_only = filter_tracks(tracks_filtered)
 
     if cluster_dimensions == "6D":
@@ -1205,12 +1249,12 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
 
     # fill test dataset with the rest of the tracks
     i = 0
-    while(len(test) <= test_size and i <= len(dataset)):
+    while(len(test) <= test_size and i < len(dataset)):
         try:
             if dataset[i]['track'] not in [t['track'] for t in train] and dataset[i]['track'] not in [t['track'] for t in test]:
                 test.append(dataset[i])
         except:
-            print(i)
+            print(f"Exception at index: {i}, track: {dataset[i]}")
         i += 1
 
     return np.array(train), np.array(test)

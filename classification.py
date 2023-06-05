@@ -872,7 +872,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks,
-                                    filter_out_edge_detections,
+                                    filter_trajectories,
                                     make_4D_feature_vectors
                                 )
     from clustering import clustering_on_feature_vectors
@@ -892,7 +892,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     tracks = load_joblib_tracks(path2dataset)
 
     # cluster tracks
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     cls_samples = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
@@ -1185,7 +1185,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     from processing_utils import (
                                     load_joblib_tracks, 
                                     random_split_tracks,
-                                    filter_out_edge_detections,
+                                    filter_trajectories,
                                     make_4D_feature_vectors
                                 )
     from clustering import clustering_on_feature_vectors
@@ -1205,7 +1205,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     tracks = load_joblib_tracks(path2dataset)
 
     # cluster tracks
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     cls_samples = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
     tracks_labeled = tracks_filtered[labels > -1]
@@ -1475,7 +1475,61 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
 
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
- 
+
+def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: float, n_jobs: int, **estkwargs):
+    from scipy.stats import expon
+    from sklearn.cluster import OPTICS, Birch
+    from sklearn.svm import SVC
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import RandomizedSearchCV
+    from clustering import clustering_on_feature_vectors
+    from processing_utils import load_dataset, filter_trajectories, make_4D_feature_vectors, random_split_tracks
+    from visualizer import aoiextraction
+
+    tracks = load_joblib_tracks(train_path)
+
+    # cluster tracks
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
+    cls_samples = make_4D_feature_vectors(tracks_filtered)
+    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
+    tracks_labeled = tracks_filtered[labels > -1]
+    cluster_labels = labels[labels > -1]
+
+    train_dict = []
+    for i in range(len(tracks_labeled)):
+        train_dict.append({
+            "track" : tracks_labeled[i],
+            "class" : cluster_labels[i]
+        })
+
+    # shuffle tracks, and separate into a train and test dataset
+    train, test = random_split_tracks(train_dict, 0.8, 1)
+
+    tracks_train = [t["track"] for t in train]
+    labels_train = np.array([t["class"] for t in train])
+    tracks_test = [t["track"] for t in test]
+    labels_test = np.array([t["class"] for t in test])
+
+    cluster_aoi = aoiextraction(tracks_labeled, cluster_labels)
+
+    optics_params = {"min_samples": 1,
+                      "max_eps": 0.01,
+                      "xi": 0.15}
+
+    #clfsearch = RandomizedSearchCV(OPTICS(), cluster_params, scoring="accuracy")
+    #clfsearch.fit(cluster_aoi)
+    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=Birch, n_jobs=n_jobs, threshold=0.05)
+    print(aoi_labels)
+    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=OPTICS, n_jobs=n_jobs, **optics_params)
+    print(aoi_labels)
+
+    # Generate version one feature vectors for clustering
+    from processing_utils import make_feature_vectors_version_one
+    X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
+    X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
+
+
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
@@ -1539,6 +1593,9 @@ def investigate_renitent_features(args):
 
 def plot_module(args):
     plot_decision_tree(args.decision_tree)
+
+def exitpoint_metric_module(args):
+    calculate_metrics_exitpoints(args.train, args.test, args.threshold, args.n_jobs, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi)
 
 def main():
     import argparse
@@ -1643,6 +1700,21 @@ def main():
     plot_parser.add_argument("--decision_tree", help="Path to decision tree joblib modell.")
     plot_parser.set_defaults(func=plot_module)
 
+    exitpoint_metrics_parser = submodule_parser.add_parser(
+        "exitpoints",
+        help="Calculate metrics on only exitpoints."
+    )
+    exitpoint_metrics_parser.add_argument("--train",
+                                          help="Training dataset database path.")
+    exitpoint_metrics_parser.add_argument("--test",
+                                          help="Test dataset database path.")
+    exitpoint_metrics_parser.add_argument("--threshold", type=float,
+                                          help="Threshold value for clustering.")
+    exitpoint_metrics_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
 
