@@ -21,7 +21,7 @@ from processing_utils import (
     detectionParser, 
     trackedObjectFactory, 
     filter_out_false_positive_detections_by_enter_exit_distance, 
-    filter_out_edge_detections, 
+    filter_trajectories, 
     filter_tracks, 
     make_2D_feature_vectors,
     make_4D_feature_vectors, 
@@ -34,7 +34,6 @@ from processing_utils import (
 from dataManagementClasses import Detection, TrackedObject
 import databaseLoader
 import matplotlib
-matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import numpy as np
 import os 
@@ -243,7 +242,7 @@ def simple_kmeans_plotter(path2db:str, outdir: str, threshold:float, n_clusters:
         n_clusters (int): number of clusters 
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, outdir)
 
 def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
@@ -267,7 +266,7 @@ def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_j
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             kmeans_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir=outdir, show=False)
             thres += 0.1
 
@@ -334,7 +333,7 @@ def simple_spectral_plotter(path2db: str, outdir: str, threshold:float, n_cluste
         n_clusters (int): number of cluster 
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, outdir)
 
 def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
@@ -358,7 +357,7 @@ def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir, show=False)
             thres += 0.1
 
@@ -437,7 +436,7 @@ def simple_dbscan_plotter(path2db: str, threshold:float, eps: float, min_samples
         n_jobs (int): The number of parallel jobs to run.
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     dbscan_clustering_on_nx4(tracksFiltered, eps, min_samples, n_jobs, min_samples)
 
@@ -466,7 +465,7 @@ def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_job
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             if shuffle:
                 dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, eps=eps, min_samples=min_samples, show=False, shuffle=True)
             else:
@@ -549,7 +548,7 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
 
 def simple_optics_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, max_eps, outdir)
 
@@ -582,7 +581,7 @@ def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cl
     #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
     thres = threshold[0]
     while thres <= threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
         thres += thres_interval 
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -668,7 +667,7 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
 
 def cluster_optics_dbscan_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, eps, outdir)
 
@@ -700,7 +699,7 @@ def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min
     #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
     thres = threshold[0]
     while thres <= threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         cluster_optics_dbscan_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, eps=eps, show=False)
         thres += thres_interval 
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -1098,7 +1097,7 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_2D_feature_vectors(
                 estimator=estimator,
@@ -1124,7 +1123,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_4D_feature_vectors(
                 estimator=estimator,
@@ -1150,7 +1149,7 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_6D_feature_vectors(
                 estimator=estimator,
@@ -1314,7 +1313,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     from visualizer import aoiextraction
     from processing_utils import euclidean_distance
     trackedObjects = load_dataset(database)
-    trackedObjects = filter_out_edge_detections(trackedObjects, threshold)
+    trackedObjects = filter_trajectories(trackedObjects, threshold)
     X = make_4D_feature_vectors(trackedObjects)
     _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
@@ -1405,8 +1404,9 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimen
     from sklearn.cluster import Birch, OPTICS, KMeans
     from processing_utils import load_joblib_tracks
     from visualizer import aoiextraction
+    matplotlib.use('Agg')
     tracks = load_joblib_tracks(tracks_path)
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     if dimensions=="2D":
         cls_samples = make_2D_feature_vectors(tracks_filtered)
     elif dimensions=="4D":
@@ -1589,6 +1589,11 @@ def submodule_aoi_kmeans(args):
                       p=args.pnorm
     )
 
+def filteringSubmodule(args):
+    from pathlib import Path
+    from processing_utils import save_filtered_dataset
+    save_filtered_dataset(args.database, args.threshold)
+
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1647,6 +1652,10 @@ def main():
     kmeans_mse_search_parser.add_argument("-p", "--pnorm", default=2, type=int, help="P norm for optics clustering.")
     kmeans_mse_search_parser.add_argument("--threshold", type=float, default=0.7, help="Threshold for data filtering.")
     kmeans_mse_search_parser.set_defaults(func=submodule_aoi_kmeans)
+
+    save_filtered_dataset = subparser.add_parser("filter", help="Save prepared dataset for clustering in joblib binary.")
+    save_filtered_dataset.add_argument("--threshold", type=float, default=0.7, help="Threshold value for filtering.")
+    save_filtered_dataset.set_defaults(func=filteringSubmodule)
 
     args = argparser.parse_args() 
     args.func(args)

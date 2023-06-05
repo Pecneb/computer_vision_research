@@ -28,6 +28,7 @@ from detector import getTargets
 from detector import draw_boxes
 from classifier import OneVSRestClassifierExtended
 from masker import masker
+from clustering import calc_cluster_centers
 
 def parseArgs():
     """Handle command line arguments.
@@ -259,7 +260,7 @@ def main():
     classes = [d["class"] for d in dataset]
 
     # extract cluster centroids from dataset of classes and tracks
-    cluster_centroids = aoiextraction(tracks, classes)
+    cluster_centroids = cluster_centroids_upscaled(tracks, classes)
     # upscale the coordinates of the centroids to the video's scale
     cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
 
