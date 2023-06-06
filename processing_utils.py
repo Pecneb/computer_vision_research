@@ -394,7 +394,7 @@ def save_filtered_dataset(dataset: str, threshold: float):
     trajectories = load_dataset(dataset)
     logging.info(f"Trajectories \"{dataset}\" loaded")
     trajs2save = filter_trajectories(trajectories, threshold)
-    logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(tracks2joblib)}")
+    logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
     filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
     joblib.dump(trajs2save, filteredDatasetPath)
@@ -1496,3 +1496,47 @@ def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     print(labels)
     print(new_label_counts)
     return X_leveled, y_leveled
+
+def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
+    """Scale centroids of clusters up to the video's resolution.
+
+    Args:
+        centroids (dict): Output of aoiextraction() function. 
+        framewidth (int): Width resolution of the video. 
+        frameheight (int): Height resolution of the video. 
+
+    Returns:
+        dict: Upscaled centroid coordinates. 
+    """
+    ratio = framewidth / frameheight
+    retarr = centroids.copy()
+    for i in range(centroids.shape[0]):
+        retarr[i, 0] = centroids[i, 0] * framewidth / ratio
+        retarr[i, 1] = centroids[i, 1] * frameheight
+    return retarr
+
+def calc_cluster_centers(tracks, labels, exit = True):
+    """Calculate center of mass for every class's exit points.
+    These will be the exit points of the clusters.
+
+    Args:
+        tracks (List[TrackedObject]): List of tracked objects 
+        labels (_type_): Labels of tracked objects 
+
+    Returns:
+        cluster_centers: The center of mass for every class's exits points
+    """
+    classes = set(labels)
+    cluster_centers = np.zeros(shape=(len(classes),2))
+    for i, c in enumerate(classes):
+        tracks_xy = []
+        for j, l in enumerate(labels):
+            if l==c:
+                if exit:
+                    tracks_xy.append([tracks[j].history_X[-1], tracks[j].history_Y[-1]])
+                else:
+                    tracks_xy.append([tracks[j].history_X[0], tracks[j].history_Y[0]])
+        tracks_xy = np.array(tracks_xy)
+        cluster_centers[i,0] = np.average(tracks_xy[:,0])
+        cluster_centers[i,1] = np.average(tracks_xy[:,1])
+    return cluster_centers

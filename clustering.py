@@ -1284,34 +1284,11 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def calc_cluster_centers(tracks, labels):
-    """Calculate center of mass for every class's exit points.
-    These will be the exit points of the clusters.
-
-    Args:
-        tracks (List[TrackedObject]): List of tracked objects 
-        labels (_type_): Labels of tracked objects 
-
-    Returns:
-        cluster_centers: The center of mass for every class's exits points
-    """
-    classes = set(labels)
-    cluster_centers = np.zeros(shape=(len(classes),2))
-    for i, c in enumerate(classes):
-        tracks_xy = []
-        for j, l in enumerate(labels):
-            if l==c:
-                tracks_xy.append([tracks[j].history_X[-1], tracks[j].history_Y[-1]])
-        tracks_xy = np.array(tracks_xy)
-        cluster_centers[i,0] = np.average(tracks_xy[:,0])
-        cluster_centers[i,1] = np.average(tracks_xy[:,1])
-    return cluster_centers
-
 def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
     from visualizer import aoiextraction
-    from processing_utils import euclidean_distance
+    from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
     trackedObjects = filter_trajectories(trackedObjects, threshold)
     X = make_4D_feature_vectors(trackedObjects)
