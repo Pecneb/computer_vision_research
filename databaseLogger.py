@@ -22,6 +22,8 @@ from sqlite3 import Error
 import os
 from string import ascii_uppercase
 import numpy
+from pathlib import Path
+from pathlib import Path
 
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold, k_velocity, k_acceleration)
                     VALUES(?,?,?,?,?,?,?,?,?,?)"""
@@ -158,7 +160,7 @@ def prediction2float(img0: numpy.ndarray, x: float, y: float):
     aspect_ratio = img0.shape[1] / img0.shape[0]
     return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0] 
 
-def init_db(outpath: str):
+def init_db(outpath: str | Path):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
     DB_name will be the name of the database. If directory does not exists,
     then create one. Creates database from given schema.
@@ -167,13 +169,10 @@ def init_db(outpath: str):
         video_name (str): The video source's name is the dir name.
         db_name (str): Database name.
     """
-    dirpath = outpath[:outpath.rfind('/')]
-    if not os.path.isdir(os.path.join(dirpath)):
-        # chekc if directory already exists, if not create one
-        os.makedirs(dirpath)
-    db_name = outpath.split('/')[-1].split('.')[0] + ".db"
+    if not outpath.parent.exists():
+        outpath.parent.mkdir()
     try:
-        conn = getConnection(os.path.join(dirpath, db_name))
+        conn = getConnection(outpath)
         print("SQLite version %s", sqlite3.version)
     except Error as e:
         print(e)
@@ -183,7 +182,7 @@ def init_db(outpath: str):
             conn.commit()
             conn.close()
             print("Detections table created!")
-    return os.path.join(dirpath, db_name)
+    return outpath
 
 def getConnection(db_path: str) -> sqlite3.Connection:
     """Creates connection to the database.

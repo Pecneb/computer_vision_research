@@ -26,6 +26,7 @@ warnings.warn = warn
 import cv2 as cv
 import argparse
 import time
+from pathlib import Path
 from dataManagementClasses import Detection
 from deepsortTracking import (
     initTrackerMetric, 
@@ -48,7 +49,7 @@ def parseArgs():
     parser.add_argument("input", nargs='+', help="Path to video.")
     parser.add_argument("--k_velocity", type=int, default=10, help="K value for differentiation of velocity.")
     parser.add_argument("--k_acceleration", type=int, default=2, help="K value for differentiation of acceleration.")
-    parser.add_argument("--output", help="Path of database without extension.", required=True)
+    parser.add_argument("--output", help="Path of output directory.", required=True)
     parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
     parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
     parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
@@ -149,25 +150,32 @@ def log_to_stdout(*args):
             print(arg)
     print('\n'*5)
 
+def generateOutputName(input, outdir):
+    """Generate output path from input path and output directory.
+
+    Args:
+        input (str): Input path. 
+        outdir (str): Output directory path. 
+
+    Returns:
+        Path: Output file path. 
+    """
+    inputPath = Path(input)
+    outdirPath = Path(outdir)
+    outputPath = outdirPath.joinpath(inputPath.stem)
+    return outputPath
+
 def main():
     args = parseArgs()
-
-    outputdir = args.output[:args.output.rfind('/')] # get dirpath
-    outname = args.output.split('/')[-1].split('.')[0] # get filename w/o extension
-    path2joblib = os.path.join(outputdir, outname) + ".joblib"
-
-    path2db = databaseLogger.init_db(args.output) # initialize database
-    print(f"SQL DB path: {path2db}")
-    print(f"Joblib DB path: {path2joblib}")
+    outdir = Path(args.output)
+    if not outdir.exists():
+        outdir.mkdir()
 
     if args.yolov7:
         import yolov7api as yolov7api 
     else:
         import hldnapi as hldnapi
         from darknet import class_colors
-
-    # forward declaration of history(list[TrackedObject])
-    trackedObjects = []
 
     # buffer to log at the end
     buffer2log = []
@@ -178,24 +186,11 @@ def main():
     else:
         colors = hldnapi.colors
 
-    # create database connection
-    db_connection = databaseLogger.getConnection(path2db)
-    
-    # If joblib database is already exists and video is requested to be resumed, 
-    # load existing data and continue detection where it was left off
-    if os.path.exists(path2joblib) and args.resume:
-        from processing_utils import load_joblib_tracks
-        buffer2joblibTracks = load_joblib_tracks(path2joblib) 
-    buffer2joblibTracks = []
-
     # log metadata to database
     if args.yolov7:
         yoloVersion = '7'
     else:
         yoloVersion = '4'
-    # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
-    databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
-    databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
 
     cap = cv.VideoCapture(args.input[0]) # retrieve an initial image from video to create mask
 
@@ -204,6 +199,30 @@ def main():
     mask = masker(img)
 
     for input in tqdm.tqdm(args.input, desc="Videos"):
+        outputName = generateOutputName(input, args.output) # generate output name
+
+        path2db = outputName.parent / (outputName.name + ".db") # add .db suffix to output name fo SQL db
+        path2db = databaseLogger.init_db(path2db) # initialize database
+        print(f"SQL DB path: {path2db}")
+
+        # create database connection
+        db_connection = databaseLogger.getConnection(path2db)
+
+        # generate joblib file output path
+        path2joblib = outputName.parent / (outputName.name + ".joblib")
+        print(f"Joblib DB path: {path2joblib}")
+
+        # If joblib database is already exists and video is requested to be resumed, 
+        # load existing data and continue detection where it was left off
+        if os.path.exists(path2joblib) and args.resume:
+            from processing_utils import load_joblib_tracks
+            buffer2joblibTracks = load_joblib_tracks(path2joblib) 
+        buffer2joblibTracks = []
+
+        # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
+        databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
+        databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
+
         # get video capture object
         cap = cv.VideoCapture(input)
 
@@ -216,6 +235,9 @@ def main():
         if not cap.isOpened():
             print("Source cannot be opened.")
             exit(0)
+
+        # forward declaration of history(list[TrackedObject])
+        trackedObjects = []
 
         # resume video where it was left off, if resume flag is set
         if args.resume:
@@ -307,6 +329,10 @@ def main():
                 break
 
         cap.release()
+        # save trackedObjects into joblib database
+        downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img) 
+        dump(downscaled_tracks, path2joblib)
+        print("Joblib database succesfully saved!")
 
         if args.show:
             cv.destroyAllWindows()
@@ -315,10 +341,7 @@ def main():
     databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
     databaseLogger.closeConnection(db_connection)
     
-    # save trackedObjects into joblib database
-    downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img) 
-    dump(downscaled_tracks, path2joblib)
-    print("Joblib database succesfully saved!")
+    
 
 if __name__ == "__main__":
     main()
