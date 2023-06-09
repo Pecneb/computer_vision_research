@@ -2,6 +2,7 @@ import argparse
 import logging
 import time
 import os
+import tqdm
 import numpy as np
 from pathlib import Path
 from matplotlib import pyplot as plt
@@ -49,6 +50,8 @@ def trafficHistogram(dataset: List[TrackedObject], output: str, bg_img: str, **e
     N, bins, patches = ax1.hist(Y, classes-0.5, align="mid", range=(classes.min(), classes.max()), edgecolor="black")
     fracs = N / N.max()
     norm = colors.Normalize(fracs.min(), fracs.max())
+    cmap = plt.cm.jet
+    scalarMap = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     for thisfrac, thispatch in zip(fracs, patches):
         #TODO more vivid colors
         color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
@@ -67,9 +70,11 @@ def trafficHistogram(dataset: List[TrackedObject], output: str, bg_img: str, **e
         upscaled_exits = upscale_cluster_centers(exit_cluster_center, bgImg.shape[1], bgImg.shape[0])
         for p, q, thisfrac in zip(upscaled_enters, upscaled_exits, fracs):
             color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
+            colorVal = scalarMap.to_rgba(thisfrac)
             xx = np.vstack((p[0], q[0]))
             yy = np.vstack((p[1], q[1]))
-            ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
+            #ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
+            ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1], color=colorVal, width=1, head_width=10)
         fig2.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax2, location='bottom')
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
@@ -82,15 +87,32 @@ def trafficHistogram(dataset: List[TrackedObject], output: str, bg_img: str, **e
 def extractHourlyData(dataset: List[TrackedObject]):
     fps = 30
     fph = fps*60*60
-    maxFrameNum = dataset[-1].history[0].frameID
+    maxFrameNum = np.array([t.history[0].frameID for t in dataset]).max()
     hourNum = int(np.ceil([maxFrameNum/fph])[0])
+    print(maxFrameNum, hourNum)
     hourlyData = np.zeros(shape=(hourNum, len(dataset)), dtype=TrackedObject)
     counter = np.zeros(shape=(hourNum), dtype=int)
     for i in range(len(dataset)):
-        print(dataset[i].history[0].frameID)
         actHour = int(dataset[i].history[0].frameID//fph)
         hourlyData[actHour, counter[actHour]] = dataset[i]
     return hourlyData
+
+def hourlyTable(paths, hourlyTracks, hourlyLabels):
+    import pandas as pd
+    df = pd.DataFrame()
+    videos = [p.split('/')[-1] for p in paths]
+    df["Video"] = videos 
+    #print([f"Hour {i:2}" for i in range(1, len(hourlyTracks), 2)])
+    classes = []
+    [classes.append(h) for h in hourlyLabels]
+    classes = set(np.array(classes).flatten())
+    hourlyCount = np.zeros(shape=(len(hourlyTracks), len(classes)))
+    for i, tracks, labels in zip(range(len(hourlyTracks)), hourlyTracks, hourlyLabels):
+        for t, l in zip(tracks, labels):
+            hourlyCount[i, l]+=1
+    for cls in classes:
+        df[f"Cluster {cls}"] = hourlyCount[:, cls]
+    print(df)
 
 def trafficHistogramModule(args):
     logging.info("Traffic histogram module started")
@@ -113,17 +135,37 @@ def hourlyStatisticsModule(args):
     logging.info("Traffic hourly statistics module started")
     start = time.time()
     tracksHourly = [] 
+    labelsHourly = []
     for ds in args.database:
         tmpTracks = load_dataset(ds)
         if not args.filtered:
             tracksHourly.append(filter_trajectories(tmpTracks, 0.7))
         else:
             tracksHourly.append(tmpTracks)
-        extractHourlyData(tracksHourly[-1])
+        labelsHourly.append([])
+        """labelsHourly.append(trafficHistogram(tmpTracks, 
+                            args.output, 
+                            args.bg_img, 
+                            min_samples=args.min_samples, 
+                            max_eps=args.max_eps,
+                            xi=args.xi,
+                            p=args.p_norm))"""
+    dataset = np.array([item for sublist in tracksHourly for item in sublist], dtype=TrackedObject)
+    labels = trafficHistogram(dataset, args.output,
+                    args.bg_img, 
+                    min_samples=args.min_samples, 
+                    max_eps=args.max_eps,
+                    xi=args.xi,
+                    p=args.p_norm)
+    #for i in tqdm.tqdm(range(len(tracksHourly)), desc="Separate hourly data."):
+    #   for j in range(len(tracksHourly[i])):
+    #        for k in range(len(dataset)):
+    #            if tracksHourly[i][j]==dataset[k]:
+    #                labelsHourly[i].append(labels[k])
+    hourlyTable(args.database, [dataset], [labels])
     logging.info(f"Traffic hourly statistics module ran for {time.time()-start} seconds")
 
 def trafficStatisticTable(args):
-    import pandas as pd
     logging.info("Traffic histogram module started")
     start = time.time()
     tracks = load_dataset(args.database[0])
