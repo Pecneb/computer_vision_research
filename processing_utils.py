@@ -24,9 +24,10 @@ import databaseLoader
 import tqdm
 import os
 import joblib 
-from copy import deepcopy
 import dataManagementClasses
 import logging
+from pathlib import Path
+from copy import deepcopy
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -312,10 +313,10 @@ def is_noise(trackedObject, threshold: float = 0.1):
             return True
     return False
     
-def filter_out_noise_trajectories(trackedObjects: list):
+def filter_out_noise_trajectories(trackedObjects: list, distance: float = 0.05):
     filtered = []
     for i in range(len(trackedObjects)):
-        if not is_noise(trackedObjects[i], 0.05):
+        if not is_noise(trackedObjects[i], distance):
             filtered.append(trackedObjects[i])
     return np.array(filtered)
 
@@ -383,20 +384,31 @@ def filter_trajectories(trackedObjects: list, threshold: float):
     denoised_trajectories = filter_out_noise_trajectories(full_trajectories)
     return denoised_trajectories
 
-def save_filtered_dataset(dataset: str, threshold: float):
+def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
 
     Args:
         dataset (str): Dataset path 
         threshold (float): Filter threshold 
     """
-    from pathlib import Path
-    trajectories = load_dataset(dataset)
+    if "filtered" in str(dataset):
+        print(f"{dataset} is already filtered.")
+        return False
+    trajectories = load_joblib_tracks(dataset)
     logging.info(f"Trajectories \"{dataset}\" loaded")
-    trajs2save = filter_trajectories(trajectories, threshold)
+    trajs2save = filter_out_edge_detections(trajectories, threshold)
+    trajs2save = filter_out_false_positive_detections_by_enter_exit_distance(trajs2save, 0.4)
+    if euclidean_filtering:
+        trajs2save = filter_out_noise_trajectories(trajs2save, max_dist)
     logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
-    filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
+    if outdir is not None:
+        outPath = Path(outdir)
+        if not outPath.exists():
+            outPath.mkdir()
+        filteredDatasetPath = outPath.joinpath(datasetPath.stem+"_filtered.joblib")
+    else:
+        filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
     joblib.dump(trajs2save, filteredDatasetPath)
     logging.info(f"Filtered dataset saved to {filteredDatasetPath.absolute()}")
 
@@ -1165,10 +1177,11 @@ def load_joblib_tracks(path2tracks: str) -> list:
     Returns:
         list[TrackedObjects]: Loaded list of tracked objects. 
     """
-    if path2tracks.split('.')[-1] != "joblib":
+    path = Path(path2tracks)
+    if path.suffix != ".joblib":
         print("Error: Not joblib file.")
-        exit(1)
-    return joblib.load(path2tracks)
+        return False
+    return joblib.load(path)
 
 def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold = 0.5, p = 2, cluster_dimensions: str = "4D"):
     """Save training tracks with class numbers ordered to them.
@@ -1259,7 +1272,7 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
 
     return np.array(train), np.array(test)
 
-def load_dataset(path2dataset: str):
+def load_dataset(path2dataset: str | Path):
     """This function loads the track data from sqlite db or joblib file.
     The extract_tracks_from_db.py script can create two type of joblib
     files. One with all the tracks unfiltered, and one with filtered tracks
@@ -1274,8 +1287,9 @@ def load_dataset(path2dataset: str):
     Returns:
         list[TrackedObject]: list of TrackedObject objects. 
     """
-    ext = path2dataset.split('.')[-1] # extension of dataset file
-    if ext == "joblib":
+    datasetPath = Path(path2dataset)
+    ext = datasetPath.suffix
+    if ext == ".joblib":
         dataset = load_joblib_tracks(path2dataset)
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset] 

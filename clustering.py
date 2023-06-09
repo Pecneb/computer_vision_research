@@ -1566,11 +1566,6 @@ def submodule_aoi_kmeans(args):
                       p=args.pnorm
     )
 
-def filteringSubmodule(args):
-    from pathlib import Path
-    from processing_utils import save_filtered_dataset
-    save_filtered_dataset(args.database, args.threshold)
-
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Analyze results of main program. Make and save plots. Create heatmap or use clustering on data stored in the database.")
@@ -1629,10 +1624,6 @@ def main():
     kmeans_mse_search_parser.add_argument("-p", "--pnorm", default=2, type=int, help="P norm for optics clustering.")
     kmeans_mse_search_parser.add_argument("--threshold", type=float, default=0.7, help="Threshold for data filtering.")
     kmeans_mse_search_parser.set_defaults(func=submodule_aoi_kmeans)
-
-    save_filtered_dataset = subparser.add_parser("filter", help="Save prepared dataset for clustering in joblib binary.")
-    save_filtered_dataset.add_argument("--threshold", type=float, default=0.7, help="Threshold value for filtering.")
-    save_filtered_dataset.set_defaults(func=filteringSubmodule)
 
     args = argparser.parse_args() 
     args.func(args)

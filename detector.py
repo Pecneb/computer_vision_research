@@ -333,13 +333,14 @@ def main():
         downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img) 
         dump(downscaled_tracks, path2joblib)
         print("Joblib database succesfully saved!")
+        # log buffered detections in sqlite db
+        databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
+        databaseLogger.closeConnection(db_connection)
 
         if args.show:
             cv.destroyAllWindows()
 
-    # log buffered detections in sqlite db
-    databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
-    databaseLogger.closeConnection(db_connection)
+
     
     
 

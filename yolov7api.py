@@ -1,3 +1,22 @@
+"""
+    High level API for YOLOv7 inference on images.
+    Copyright (C) 2022  Bence Peter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    Contact email: ecneb2000@gmail.com
+"""
 import argparse
 import cv2 as cv
 import torch
@@ -16,8 +35,8 @@ STRIDE = 32
 DEVICE = "0" 
 CLASSIFY = False 
 AUGMENT = True
-CONF_THRES = 0.35
-IOU_THRES = 0.50
+CONF_THRES = 0.40
+IOU_THRES = 0.60
 CLASSES = None
 
 from GPUtil import showUtilization as gpu_usage
