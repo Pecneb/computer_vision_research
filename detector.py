@@ -165,8 +165,23 @@ def generateOutputName(input, outdir):
     outputPath = outdirPath.joinpath(inputPath.stem)
     return outputPath
 
+def getDirectoryEntries(dirpath):
+    path = Path(dirpath)
+    inputs = []
+    for p in path.glob("*.mp4"):
+        inputs.append(str(p))
+        print(p)
+    return inputs
+
 def main():
     args = parseArgs()
+
+    if Path(args.input[0]).is_dir():
+        inputs = getDirectoryEntries(args.input[0])
+    else:
+        inputs = args.input
+        print(args.input)
+    
     outdir = Path(args.output)
     if not outdir.exists():
         outdir.mkdir()
@@ -192,19 +207,20 @@ def main():
     else:
         yoloVersion = '4'
 
-    cap = cv.VideoCapture(args.input[0]) # retrieve an initial image from video to create mask
+    cap = cv.VideoCapture(inputs[0]) # retrieve an initial image from video to create mask
 
     # create mask, so only in the area of interest will be used in detection 
     _, img = cap.read()
     mask = masker(img)
 
-    for input in tqdm.tqdm(args.input, desc="Videos"):
+    for input in tqdm.tqdm(inputs, desc="Videos"):
         outputName = generateOutputName(input, args.output) # generate output name
 
         path2db = outputName.parent / (outputName.name + ".db") # add .db suffix to output name fo SQL db
         path2db = databaseLogger.init_db(path2db) # initialize database
         print(f"SQL DB path: {path2db}")
 
+        print(path2db)
         # create database connection
         db_connection = databaseLogger.getConnection(path2db)
 
@@ -277,7 +293,7 @@ def main():
                     detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
 
                 # filter detections, only return the ones given in the targetNames tuple
-                targets = getTargets(detections, frameNumber, targetNames=("car"))
+                targets = getTargets(detections, frameNumber, targetNames=("car", "motorcycle", "bus", "truck"))
 
                 # update track history
                 updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks, k_velocity=args.k_velocity, k_acceleration=args.k_acceleration)
