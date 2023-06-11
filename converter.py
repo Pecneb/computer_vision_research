@@ -14,6 +14,7 @@ from tqdm import tqdm
 from dataManagementClasses import TrackedObject
 from copy import deepcopy
 from itertools import starmap
+from pathlib import Path
 
 def mainmodule_function(args): 
     for db in tqdm(args.database, desc="Database converted."):
@@ -23,7 +24,14 @@ def submodule_function(args):
     trackslabels2joblib(args.database[0], args.output, args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.p_norm, args.cluster_dimensions)
 
 def submodule_function_2(args):
-    mergeDatasets(args.database, args.output)
+    databases = []
+    path = Path(args.database[0])
+    if path.is_dir():
+        for p in path.glob("*.joblib"):
+            databases.append(str(p))
+    else:
+        databases = args.databse
+    mergeDatasets(databases, args.output)
 
 def submodule_function_3(args):
     trackedObjects = load_joblib_tracks(args.database[0])

@@ -109,7 +109,7 @@ def detectionParser(rawDetectionData) -> tuple:
     """
     detections = []
     history_X = np.array([])
-    history_X = np.array([])
+    history_Y = np.array([])
     history_VX_calculated = np.array([])
     history_VY_calculated = np.array([])
     history_AX_calculated = np.array([])
@@ -1162,11 +1162,11 @@ def tracks2joblib(path2db: str, n_jobs=18):
         path2db (str): Path to database. 
         n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
     """
+    path = Path(path2db)
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    filename =  path2db.split('/')[-1].split('.')[0] + '.joblib'
-    savepath = os.path.join('research_data', path2db.split('/')[-1].split('.')[0])
-    print('Saving: ', os.path.join(savepath, filename))
-    joblib.dump(tracks, os.path.join(savepath, filename), compress="lz4")
+    savepath = path.with_suffix(".joblib")
+    print('Saving: ', savepath)
+    joblib.dump(tracks, savepath, compress="lz4")
 
 def load_joblib_tracks(path2tracks: str) -> list:
     """Load tracks from joblib file.
