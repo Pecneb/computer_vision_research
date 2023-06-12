@@ -41,7 +41,7 @@ sns.set_theme()
 
 logging.basicConfig(level=logging.INFO)
 
-def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: str, bg_img: str, uidv = None):
+def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: str, bg_img: str):
     """Plot histogram about traffic flow.
 
     Args:
@@ -101,6 +101,12 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     plt.show()
     plt.close()
 
+def hourlyHistorgram(hourlyLabels, classes, output):
+    sns.displot(data=hourlyLabels)
+    plt.show()
+    plt.savefig(Path(output).joinpath("hourlyHistogram.png"))
+    plt.close()
+
 def extractHourlyData(dataset: List[TrackedObject]):
     fps = 30
     fph = fps*60*60
@@ -114,21 +120,26 @@ def extractHourlyData(dataset: List[TrackedObject]):
         hourlyData[actHour, counter[actHour]] = dataset[i]
     return hourlyData
 
-def hourlyTable(paths, hourlyTracks, hourlyLabels, classes):
+def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     import pandas as pd
-    df = pd.DataFrame()
-    videos = [p.split('/')[-1] for p in paths]
-    df["Video"] = videos 
+    hours = np.arange(len(paths))
+    titles = [Path(p).stem for p in paths]
+    df = pd.DataFrame({"Datetime":titles}, dtype=object)
+    df = df.set_index("Datetime")
     hourlyCount = np.zeros(shape=(len(hourlyTracks), len(classes)))
     for i, tracks, labels in zip(range(len(hourlyTracks)), hourlyTracks, hourlyLabels):
         for t, l in zip(tracks, labels):
             if l >= 0:
                 hourlyCount[i, l]+=1
     for cls in classes:
-        df[f"Cluster {cls}"] = np.array(hourlyCount[:, cls],dtype=int)
-    fig, ax = plt.subplots(figsize=(9,6))
-    sns.heatmap(df, annot=True)
+        df[cls] = np.array(hourlyCount[:, cls],dtype=int)
+    print(df)
+    fig, ax = plt.subplots(figsize=(45,15))
+    ax = sns.heatmap(df, annot=True, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
+    ax.set(xlabel="Clusters", ylabel="Hours")
+    plt.yticks(rotation=0)
     plt.show()
+    plt.savefig(Path(output).joinpath("heatmap.png"))
     plt.close()
 
 def trafficHistogramModule(args):
@@ -168,12 +179,14 @@ def hourlyStatisticsModule(args):
     datasets = []
     datasetPath = Path(args.database[0])
     if datasetPath.is_dir():
-        for ds in datasetPath.glob("*.joblib"):
+        datasets = [ds for ds in datasetPath.glob("*.joblib")]
+        datasets = sorted(datasets)
+        for ds in datasets:
             if args.filtered:
                 if "filtered" in ds.name:
+                    print(ds)
                     tmpTracks = load_joblib_tracks(ds)
                     tracksHourly.append(tmpTracks)
-                    datasets.append(str(ds))
                     print(len(tmpTracks))
             else:
                 if "filtered" not in ds.name:
@@ -218,7 +231,8 @@ def hourlyStatisticsModule(args):
     Y = labels[labels > -1]
     X = dataset[labels > -1]
     uidSamplesClustered = uidSamples[labels > -1]
-    print(set(Y))
+    classes = list(set(Y))
+    print(f"Classes: {classes}") # print classes resulting from clustering
 
     trafficHistogram(X, Y,
                     args.output,
@@ -237,7 +251,8 @@ def hourlyStatisticsModule(args):
                     break
     print(tracksHourlyClustered.shape)
     print(labelsHourlyClustered.shape)
-    hourlyTable(datasets, tracksHourlyClustered, labelsHourlyClustered, list(set(Y)))
+    hourlyTable(datasets, tracksHourlyClustered, labelsHourlyClustered, classes, args.output)
+    # hourlyHistorgram(labelsHourlyClustered, classes, args.output)
     logging.info(f"Traffic hourly statistics module ran for {time.time()-start} seconds")
 
 def trafficStatisticTable(args):
@@ -248,16 +263,7 @@ def trafficStatisticTable(args):
         tracks_filtered = filter_trajectories(tracks, 0.7)
     else:
         tracks_filtered = tracks
-    trafficHistogram(tracks_filtered, 
-                     args.output,
-                     args.bg_img,
-                     min_samples=args.min_samples,
-                     max_eps=args.max_eps,
-                     xi=args.xi,
-                     p=args.p_norm)
-    logging.info(f"Traffic histogram module ran for {time.time()-start} seconds")
-    #TODO statistical table about clusters
-    df = pd.DataFrame()
+   #TODO statistical table about clusters
 
 def main():
     argparser = argparse.ArgumentParser("Traffic statistics plotter")
