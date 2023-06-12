@@ -22,7 +22,8 @@ import databaseLoader
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from processing_utils import detectionParser, cvCoord2npCoord, makeColormap, checkDir
+from processing_utils import detectionParser, cvCoord2npCoord, makeColormap, checkDir, load_dataset
+from pathlib import Path
 
 # disable sklearn warning
 def warn(*arg, **args):
@@ -37,20 +38,27 @@ def coordinates2heatmap(path2db):
     Args:
         path2db (str): Path to database file. 
     """
-    databaseDetections = databaseLoader.loadDetections(path2db)
-    detections = detectionParser(databaseDetections) 
-    X = np.array([det.X for det in detections])
-    Y = np.array([det.Y for det in detections])
+    path = Path(path2db)
+    if path.is_dir():
+        tracks = np.array([])
+        for p in path.glob("*.joblib"):
+            tracks = np.append(tracks, load_dataset(p))
+            print(len(tracks))
+    else:
+        tracks = load_dataset(path)
+    print(len(tracks))
+    X = np.array([det.X for t in tracks for det in t.history])
+    Y = np.array([det.Y for t in tracks for det in t.history])
     # converting Y coordinates, because in opencv, coordinates start from top to bottom, ex.: coordinate (0,0) is in top left corner, not bottom left
     Y = cvCoord2npCoord(Y) 
     fig, ax1 = plt.subplots(1,1)
-    colormap = makeColormap(path2db)
-    ax1.scatter(X, Y, np.ones_like(X), colormap)
+    #colormap = makeColormap(path2db)
+    ax1.scatter(X, Y, s=0.1)
     ax1.set_xlim(0,2)
     ax1.set_ylim(0,2)
     plt.show()
     filename = f"{path2db.split('/')[-1].split('.')[0]}_heatmap"
-    fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
+    #fig.savefig(os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi=150)
 
 def printConfig(path2db):
     metadata = databaseLoader.loadMetadata(path2db)

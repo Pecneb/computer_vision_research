@@ -38,6 +38,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os 
 import tqdm
+matplotlib.use('Agg')
 
 # the function below is deprectated, do not use
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray):

@@ -17,8 +17,13 @@ from itertools import starmap
 from pathlib import Path
 
 def mainmodule_function(args): 
-    for db in tqdm(args.database, desc="Database converted."):
-        tracks2joblib(db, args.n_jobs)
+    path = Path(args.database[0])
+    if path.is_dir():
+        for db in tqdm(path.glob("*.db"), desc="Database converted."):
+            tracks2joblib(db, args.n_jobs)
+    else:
+        for db in tqdm(args.database, desc="Database converted."):
+            tracks2joblib(db, args.n_jobs)
 
 def submodule_function(args):
     trackslabels2joblib(args.database[0], args.output, args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.p_norm, args.cluster_dimensions)

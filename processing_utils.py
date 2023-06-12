@@ -29,6 +29,8 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
+logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
+
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
 
@@ -136,7 +138,9 @@ def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
     """
     rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObjID)
     if len(rawDets) > 0:
+        logging.debug(f"Detections loaded: {len(rawDets)} {rawDets[0]}")
         retTO = trackedObjectFactory(detectionParser(rawDets))
+        return retTO
     else:
         return False
 
@@ -179,6 +183,7 @@ def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
         for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
             if result:
                 tracks.append(result)
+                logging.debug(f"{len(tracks)}")
         print(f"Detections assigned to Objects in {time.time()-start}s")
     return tracks
  
@@ -1166,7 +1171,7 @@ def tracks2joblib(path2db: str, n_jobs=18):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     savepath = path.with_suffix(".joblib")
     print('Saving: ', savepath)
-    joblib.dump(tracks, savepath, compress="lz4")
+    joblib.dump(tracks, savepath)
 
 def load_joblib_tracks(path2tracks: str) -> list:
     """Load tracks from joblib file.
@@ -1525,7 +1530,7 @@ def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
     ratio = framewidth / frameheight
     retarr = centroids.copy()
     for i in range(centroids.shape[0]):
-        retarr[i, 0] = centroids[i, 0] * framewidth / ratio
+        retarr[i, 0] = (centroids[i, 0] * framewidth) / ratio
         retarr[i, 1] = centroids[i, 1] * frameheight
     return retarr
 
@@ -1547,9 +1552,9 @@ def calc_cluster_centers(tracks, labels, exit = True):
         for j, l in enumerate(labels):
             if l==c:
                 if exit:
-                    tracks_xy.append([tracks[j].history_X[-1], tracks[j].history_Y[-1]])
+                    tracks_xy.append([tracks[j].history[-1].X, tracks[j].history[-1].Y])
                 else:
-                    tracks_xy.append([tracks[j].history_X[0], tracks[j].history_Y[0]])
+                    tracks_xy.append([tracks[j].history[0].X, tracks[j].history[0].Y])
         tracks_xy = np.array(tracks_xy)
         cluster_centers[i,0] = np.average(tracks_xy[:,0])
         cluster_centers[i,1] = np.average(tracks_xy[:,1])

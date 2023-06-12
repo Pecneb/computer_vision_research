@@ -50,7 +50,7 @@ def parseArgs():
     parser.add_argument("--k_velocity", type=int, default=10, help="K value for differentiation of velocity.")
     parser.add_argument("--k_acceleration", type=int, default=2, help="K value for differentiation of acceleration.")
     parser.add_argument("--output", help="Path of output directory.", required=True)
-    parser.add_argument("--history", default=0, type=int, help="Length of history for regression input.")
+    parser.add_argument("--history", default=0, type=int, help="Length of history for regression input. WARNING: TO SAVE JOBLIB DATABASES PROPERLY THIS HAS TO BE SET REALLY HIGH (EG. 1000<HISTORY)")
     parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
     parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
     parser.add_argument("--degree", default=0, type=int, help="Degree of polynomial features used for Polynom fitting.")

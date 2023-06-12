@@ -28,14 +28,14 @@ from yolov7.utils.general import check_img_size, non_max_suppression, apply_clas
     scale_coords, xyxy2xywh
 from yolov7.utils.torch_utils import select_device, load_classifier
 
-CONFIG = "yolov7/cfg/deploy/yolov7.yaml"
-WEIGHTS = "yolov7/yolov7.pt"
+CONFIG = "yolov7/cfg/deploy/yolov7.yaml" #"yolov7/cfg/deploy/yolov7.yaml"
+WEIGHTS = "yolov7/yolov7.pt" #"yolov7/yolov7.pt"
 IMGSZ = 640 
 STRIDE = 32
 DEVICE = "0" 
 CLASSIFY = False 
 AUGMENT = True
-CONF_THRES = 0.40
+CONF_THRES = 0.60
 IOU_THRES = 0.60
 CLASSES = None
 

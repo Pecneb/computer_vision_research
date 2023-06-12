@@ -169,8 +169,6 @@ def init_db(outpath: str | Path):
         video_name (str): The video source's name is the dir name.
         db_name (str): Database name.
     """
-    if not outpath.parent.exists():
-        outpath.parent.mkdir()
     try:
         conn = getConnection(outpath)
         print("SQLite version %s", sqlite3.version)
