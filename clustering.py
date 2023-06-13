@@ -21,7 +21,7 @@ from processing_utils import (
     detectionParser, 
     trackedObjectFactory, 
     filter_out_false_positive_detections_by_enter_exit_distance, 
-    filter_out_edge_detections, 
+    filter_trajectories, 
     filter_tracks, 
     make_2D_feature_vectors,
     make_4D_feature_vectors, 
@@ -29,16 +29,18 @@ from processing_utils import (
     makeFeatureVectors_Nx2, 
     preprocess_database_data_multiprocessed, 
     shuffle_data,  
-    load_dataset
+    load_dataset,
+    loadDatasetsFromDirectory
 )
 from dataManagementClasses import Detection, TrackedObject
 import databaseLoader
 import matplotlib
-matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import numpy as np
 import os 
 import tqdm
+from pathlib import Path
+matplotlib.use('Agg')
 
 # the function below is deprectated, do not use
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
@@ -243,7 +245,7 @@ def simple_kmeans_plotter(path2db:str, outdir: str, threshold:float, n_clusters:
         n_clusters (int): number of clusters 
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     kmeans_clustering_on_nx4(filteredTracks, n_clusters, threshold, outdir)
 
 def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
@@ -267,7 +269,7 @@ def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_j
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             kmeans_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir=outdir, show=False)
             thres += 0.1
 
@@ -334,7 +336,7 @@ def simple_spectral_plotter(path2db: str, outdir: str, threshold:float, n_cluste
         n_clusters (int): number of cluster 
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_edge_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     spectral_clustering_on_nx4(filteredTracks, n_clusters, threshold, outdir)
 
 def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_jobs=None):
@@ -358,7 +360,7 @@ def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir, show=False)
             thres += 0.1
 
@@ -437,7 +439,7 @@ def simple_dbscan_plotter(path2db: str, threshold:float, eps: float, min_samples
         n_jobs (int): The number of parallel jobs to run.
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     dbscan_clustering_on_nx4(tracksFiltered, eps, min_samples, n_jobs, min_samples)
 
@@ -466,7 +468,7 @@ def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_job
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
-            filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+            filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
             if shuffle:
                 dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, eps=eps, min_samples=min_samples, show=False, shuffle=True)
             else:
@@ -549,7 +551,7 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
 
 def simple_optics_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, max_eps, outdir)
 
@@ -582,7 +584,7 @@ def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cl
     #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
     thres = threshold[0]
     while thres <= threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         optics_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, show=False)
         thres += thres_interval 
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -668,7 +670,7 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
 
 def cluster_optics_dbscan_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    tracksFiltered = filter_out_edge_detections(tracks, threshold)
+    tracksFiltered = filter_trajectories(tracks, threshold)
     tracksFiltered = filter_tracks(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, eps, outdir)
 
@@ -700,7 +702,7 @@ def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min
     #for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
     thres = threshold[0]
     while thres <= threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         cluster_optics_dbscan_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, eps=eps, show=False)
         thres += thres_interval 
         print(200 * '\n', '[', (progress-2) * '=', '>', int(max_progress-progress) * ' ', ']', flush=True)
@@ -1098,7 +1100,7 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_2D_feature_vectors(
                 estimator=estimator,
@@ -1124,7 +1126,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_4D_feature_vectors(
                 estimator=estimator,
@@ -1150,7 +1152,7 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
     while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_out_edge_detections(trackedObjects, thres)
+        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
             clustering_on_6D_feature_vectors(
                 estimator=estimator,
@@ -1285,36 +1287,13 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def calc_cluster_centers(tracks, labels):
-    """Calculate center of mass for every class's exit points.
-    These will be the exit points of the clusters.
-
-    Args:
-        tracks (List[TrackedObject]): List of tracked objects 
-        labels (_type_): Labels of tracked objects 
-
-    Returns:
-        cluster_centers: The center of mass for every class's exits points
-    """
-    classes = set(labels)
-    cluster_centers = np.zeros(shape=(len(classes),2))
-    for i, c in enumerate(classes):
-        tracks_xy = []
-        for j, l in enumerate(labels):
-            if l==c:
-                tracks_xy.append([tracks[j].history_X[-1], tracks[j].history_Y[-1]])
-        tracks_xy = np.array(tracks_xy)
-        cluster_centers[i,0] = np.average(tracks_xy[:,0])
-        cluster_centers[i,1] = np.average(tracks_xy[:,1])
-    return cluster_centers
-
 def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
     from visualizer import aoiextraction
-    from processing_utils import euclidean_distance
+    from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
-    trackedObjects = filter_out_edge_detections(trackedObjects, threshold)
+    trackedObjects = filter_trajectories(trackedObjects, threshold)
     X = make_4D_feature_vectors(trackedObjects)
     _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
@@ -1405,8 +1384,9 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimen
     from sklearn.cluster import Birch, OPTICS, KMeans
     from processing_utils import load_joblib_tracks
     from visualizer import aoiextraction
+    matplotlib.use('Agg')
     tracks = load_joblib_tracks(tracks_path)
-    tracks_filtered = filter_out_edge_detections(trackedObjects=tracks, threshold=threshold)
+    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     if dimensions=="2D":
         cls_samples = make_2D_feature_vectors(tracks_filtered)
     elif dimensions=="4D":
@@ -1455,42 +1435,59 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimen
 def submodule_optics(args):
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
-    if args.dimensions == "2D":
-        clustering_search_on_2D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
-    elif args.dimensions == "4D":
-        clustering_search_on_4D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
-    elif args.dimensions == "6D":
-        clustering_search_on_6D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
+    if args.filtered:
+        path = Path(args.database)
+        if path.is_dir():
+            dataset = loadDatasetsFromDirectory(args.database) # load dataset from directory
+        else:
+            dataset = load_dataset(args.database)
+        clustering_on_4D_feature_vectors(estimator=OPTICS,
+                                         trackedObjects=dataset,
+                                         outdir=args.outdir,
+                                         n_jobs=args.n_jobs,
+                                         filter_threshold=0.7,
+                                         min_samples=args.min_samples,
+                                         max_eps=args.max_eps,
+                                         xi=args.xi,
+                                         min_cluster_size=args.min_cluster_size,
+                                         p=args.p_norm)
+    else:
+        if args.dimensions == "2D":
+            clustering_search_on_2D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
+        elif args.dimensions == "4D":
+            clustering_search_on_4D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
+        elif args.dimensions == "6D":
+            clustering_search_on_6D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
 
 def submodule_birch(args):
     from sklearn.cluster import Birch 
@@ -1596,6 +1593,7 @@ def main():
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
     argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+    argparser.add_argument("--filtered", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
 

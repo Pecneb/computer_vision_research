@@ -24,9 +24,12 @@ import databaseLoader
 import tqdm
 import os
 import joblib 
-from copy import deepcopy
 import dataManagementClasses
 import logging
+from pathlib import Path
+from copy import deepcopy
+
+logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -108,7 +111,7 @@ def detectionParser(rawDetectionData) -> tuple:
     """
     detections = []
     history_X = np.array([])
-    history_X = np.array([])
+    history_Y = np.array([])
     history_VX_calculated = np.array([])
     history_VY_calculated = np.array([])
     history_AX_calculated = np.array([])
@@ -135,7 +138,9 @@ def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
     """
     rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObjID)
     if len(rawDets) > 0:
+        logging.debug(f"Detections loaded: {len(rawDets)} {rawDets[0]}")
         retTO = trackedObjectFactory(detectionParser(rawDets))
+        return retTO
     else:
         return False
 
@@ -178,6 +183,7 @@ def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
         for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
             if result:
                 tracks.append(result)
+                logging.debug(f"{len(tracks)}")
         print(f"Detections assigned to Objects in {time.time()-start}s")
     return tracks
  
@@ -312,10 +318,10 @@ def is_noise(trackedObject, threshold: float = 0.1):
             return True
     return False
     
-def filter_out_noise_trajectories(trackedObjects: list):
+def filter_out_noise_trajectories(trackedObjects: list, distance: float = 0.05):
     filtered = []
     for i in range(len(trackedObjects)):
-        if not is_noise(trackedObjects[i], 0.05):
+        if not is_noise(trackedObjects[i], distance):
             filtered.append(trackedObjects[i])
     return np.array(filtered)
 
@@ -383,20 +389,31 @@ def filter_trajectories(trackedObjects: list, threshold: float):
     denoised_trajectories = filter_out_noise_trajectories(full_trajectories)
     return denoised_trajectories
 
-def save_filtered_dataset(dataset: str, threshold: float):
+def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
 
     Args:
         dataset (str): Dataset path 
         threshold (float): Filter threshold 
     """
-    from pathlib import Path
-    trajectories = load_dataset(dataset)
+    if "filtered" in str(dataset):
+        print(f"{dataset} is already filtered.")
+        return False
+    trajectories = load_joblib_tracks(dataset)
     logging.info(f"Trajectories \"{dataset}\" loaded")
-    trajs2save = filter_trajectories(trajectories, threshold)
-    logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(tracks2joblib)}")
+    trajs2save = filter_out_edge_detections(trajectories, threshold)
+    trajs2save = filter_out_false_positive_detections_by_enter_exit_distance(trajs2save, 0.4)
+    if euclidean_filtering:
+        trajs2save = filter_out_noise_trajectories(trajs2save, max_dist)
+    logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
-    filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
+    if outdir is not None:
+        outPath = Path(outdir)
+        if not outPath.exists():
+            outPath.mkdir()
+        filteredDatasetPath = outPath.joinpath(datasetPath.stem+"_filtered.joblib")
+    else:
+        filteredDatasetPath = datasetPath.parent.joinpath(datasetPath.stem+"_filtered.joblib")
     joblib.dump(trajs2save, filteredDatasetPath)
     logging.info(f"Filtered dataset saved to {filteredDatasetPath.absolute()}")
 
@@ -1150,11 +1167,11 @@ def tracks2joblib(path2db: str, n_jobs=18):
         path2db (str): Path to database. 
         n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
     """
+    path = Path(path2db)
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
-    filename =  path2db.split('/')[-1].split('.')[0] + '.joblib'
-    savepath = os.path.join('research_data', path2db.split('/')[-1].split('.')[0])
-    print('Saving: ', os.path.join(savepath, filename))
-    joblib.dump(tracks, os.path.join(savepath, filename), compress="lz4")
+    savepath = path.with_suffix(".joblib")
+    print('Saving: ', savepath)
+    joblib.dump(tracks, savepath)
 
 def load_joblib_tracks(path2tracks: str) -> list:
     """Load tracks from joblib file.
@@ -1165,10 +1182,11 @@ def load_joblib_tracks(path2tracks: str) -> list:
     Returns:
         list[TrackedObjects]: Loaded list of tracked objects. 
     """
-    if path2tracks.split('.')[-1] != "joblib":
+    path = Path(path2tracks)
+    if path.suffix != ".joblib":
         print("Error: Not joblib file.")
-        exit(1)
-    return joblib.load(path2tracks)
+        return False
+    return joblib.load(path)
 
 def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold = 0.5, p = 2, cluster_dimensions: str = "4D"):
     """Save training tracks with class numbers ordered to them.
@@ -1259,7 +1277,7 @@ def random_split_tracks(dataset: list, train_percentage: float, seed: int):
 
     return np.array(train), np.array(test)
 
-def load_dataset(path2dataset: str):
+def load_dataset(path2dataset: str | Path):
     """This function loads the track data from sqlite db or joblib file.
     The extract_tracks_from_db.py script can create two type of joblib
     files. One with all the tracks unfiltered, and one with filtered tracks
@@ -1274,8 +1292,9 @@ def load_dataset(path2dataset: str):
     Returns:
         list[TrackedObject]: list of TrackedObject objects. 
     """
-    ext = path2dataset.split('.')[-1] # extension of dataset file
-    if ext == "joblib":
+    datasetPath = Path(path2dataset)
+    ext = datasetPath.suffix
+    if ext == ".joblib":
         dataset = load_joblib_tracks(path2dataset)
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset] 
@@ -1496,3 +1515,47 @@ def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     print(labels)
     print(new_label_counts)
     return X_leveled, y_leveled
+
+def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
+    """Scale centroids of clusters up to the video's resolution.
+
+    Args:
+        centroids (dict): Output of aoiextraction() function. 
+        framewidth (int): Width resolution of the video. 
+        frameheight (int): Height resolution of the video. 
+
+    Returns:
+        dict: Upscaled centroid coordinates. 
+    """
+    ratio = framewidth / frameheight
+    retarr = centroids.copy()
+    for i in range(centroids.shape[0]):
+        retarr[i, 0] = (centroids[i, 0] * framewidth) / ratio
+        retarr[i, 1] = centroids[i, 1] * frameheight
+    return retarr
+
+def calc_cluster_centers(tracks, labels, exit = True):
+    """Calculate center of mass for every class's exit points.
+    These will be the exit points of the clusters.
+
+    Args:
+        tracks (List[TrackedObject]): List of tracked objects 
+        labels (_type_): Labels of tracked objects 
+
+    Returns:
+        cluster_centers: The center of mass for every class's exits points
+    """
+    classes = set(labels)
+    cluster_centers = np.zeros(shape=(len(classes),2))
+    for i, c in enumerate(classes):
+        tracks_xy = []
+        for j, l in enumerate(labels):
+            if l==c:
+                if exit:
+                    tracks_xy.append([tracks[j].history[-1].X, tracks[j].history[-1].Y])
+                else:
+                    tracks_xy.append([tracks[j].history[0].X, tracks[j].history[0].Y])
+        tracks_xy = np.array(tracks_xy)
+        cluster_centers[i,0] = np.average(tracks_xy[:,0])
+        cluster_centers[i,1] = np.average(tracks_xy[:,1])
+    return cluster_centers

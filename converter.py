@@ -14,16 +14,29 @@ from tqdm import tqdm
 from dataManagementClasses import TrackedObject
 from copy import deepcopy
 from itertools import starmap
+from pathlib import Path
 
 def mainmodule_function(args): 
-    for db in tqdm(args.database, desc="Database converted."):
-        tracks2joblib(db, args.n_jobs)
+    path = Path(args.database[0])
+    if path.is_dir():
+        for db in tqdm(path.glob("*.db"), desc="Database converted."):
+            tracks2joblib(db, args.n_jobs)
+    else:
+        for db in tqdm(args.database, desc="Database converted."):
+            tracks2joblib(db, args.n_jobs)
 
 def submodule_function(args):
     trackslabels2joblib(args.database[0], args.output, args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.p_norm, args.cluster_dimensions)
 
 def submodule_function_2(args):
-    mergeDatasets(args.database, args.output)
+    databases = []
+    path = Path(args.database[0])
+    if path.is_dir():
+        for p in path.glob("*.joblib"):
+            databases.append(str(p))
+    else:
+        databases = args.databse
+    mergeDatasets(databases, args.output)
 
 def submodule_function_3(args):
     trackedObjects = load_joblib_tracks(args.database[0])
@@ -38,10 +51,30 @@ def submodule_function_3(args):
         raise IOError()
 
 def submodule_function_4(args):
-    for db in tqdm(args.database, desc="Database converted."):
+    for db in tqdm(args.database, desc="Database converter."):
         trackedObjects = load_joblib_tracks(db)
         new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
         dump(new_trackedOjects, db, compress="lz4")
+    
+def submodule_preprocess(args):
+    from pathlib import Path
+    from processing_utils import save_filtered_dataset
+    datasetPath = Path(args.database[0])
+    if datasetPath.is_dir():
+        for ds in datasetPath.glob("*.joblib"):
+            save_filtered_dataset(dataset=ds, 
+                threshold=args.threshold, 
+                max_dist=args.distance,
+                euclidean_filtering=args.euclid,
+                outdir=args.outdir)
+    elif datasetPath.suffix==".joblib":
+            save_filtered_dataset(dataset=datasetPath, 
+                threshold=args.threshold, 
+                max_dist=args.distance,
+                euclidean_filtering=args.euclid,
+                outdir=args.outdir)
+    else:
+        print("Non supported dataset format.")
 
 def main():
     argparser = argparse.ArgumentParser()
@@ -73,6 +106,15 @@ def main():
 
     old_to_new_parser = subparser.add_parser("old2new", help="Update old TrackedObject dataset with history_X and history_Y fields.")
     old_to_new_parser.set_defaults(func=submodule_function_4)
+
+    preprocess_dataset_parser = subparser.add_parser("preprocess", help="Run preprocessing on dataset.")
+    preprocess_dataset_parser.add_argument("--outdir", help="Output directory path.", required=True)
+    preprocess_dataset_parser.add_argument("--threshold", type=float, default=0.7, help="Min-max filtering threshold value.")
+    preprocess_dataset_parser.add_argument("--euclid", action="store_true", default=False, help="Set this flag to run euclidean"
+        "distance based filtering on consecutive detections in trajectories.")
+    preprocess_dataset_parser.add_argument("--distance", type=float, default=0.05, help="Maximum euclidean distance between"
+        "consecutive detections in a trajectory.")
+    preprocess_dataset_parser.set_defaults(func=submodule_preprocess)
 
     args = argparser.parse_args()
     args.func(args)
