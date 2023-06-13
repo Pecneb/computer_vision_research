@@ -124,8 +124,8 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     import pandas as pd
     hours = np.arange(len(paths))
     titles = [Path(p).stem for p in paths]
-    df = pd.DataFrame({"Datetime":titles}, dtype=object)
-    df = df.set_index("Datetime")
+    df = pd.DataFrame()
+    df = df.set_axis(labels=hours)
     hourlyCount = np.zeros(shape=(len(hourlyTracks), len(classes)))
     for i, tracks, labels in zip(range(len(hourlyTracks)), hourlyTracks, hourlyLabels):
         for t, l in zip(tracks, labels):
@@ -134,6 +134,8 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     for cls in classes:
         df[cls] = np.array(hourlyCount[:, cls],dtype=int)
     print(df)
+    with pd.ExcelWriter(Path(output).joinpath("hourly_statistics_table.xlsx")) as writer:
+        df.to_excel(writer, sheet_name="Hourly_Cluster_Stats")
     fig, ax = plt.subplots(figsize=(45,15))
     ax = sns.heatmap(df, annot=True, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
     ax.set(xlabel="Clusters", ylabel="Hours")
@@ -242,7 +244,7 @@ def hourlyStatisticsModule(args):
     tracksHourlyClustered = np.zeros_like(uidHourly,dtype=int).astype(object)
     labelsHourlyClustered = np.ones_like(uidHourly,dtype=int)*-1
     for i in range(len(uidHourly)):
-        for j in tqdm.tqdm(range(len(uidHourly[i]))):
+        for j in tqdm.tqdm(range(len(np.trim_zeros(uidHourly[i], 'b')))):
             for k in range(len(uidSamplesClustered)):
                 if uidHourly[i,j]==uidSamplesClustered[k]:
                     uidHourlyClustered[i,j] = uidSamplesClustered[k]

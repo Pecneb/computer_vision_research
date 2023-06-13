@@ -29,7 +29,8 @@ from processing_utils import (
     makeFeatureVectors_Nx2, 
     preprocess_database_data_multiprocessed, 
     shuffle_data,  
-    load_dataset
+    load_dataset,
+    loadDatasetsFromDirectory
 )
 from dataManagementClasses import Detection, TrackedObject
 import databaseLoader
@@ -38,6 +39,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os 
 import tqdm
+from pathlib import Path
 matplotlib.use('Agg')
 
 # the function below is deprectated, do not use
@@ -1433,42 +1435,59 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimen
 def submodule_optics(args):
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
-    if args.dimensions == "2D":
-        clustering_search_on_2D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
-    elif args.dimensions == "4D":
-        clustering_search_on_4D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
-    elif args.dimensions == "6D":
-        clustering_search_on_6D_feature_vectors(
-            estimator=OPTICS, 
-            database=args.database, 
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            min_samples=args.min_samples,
-            max_eps=args.max_eps,
-            xi=args.xi, 
-            min_cluster_size=args.min_cluster_size,
-            p=args.p_norm
-        )
+    if args.filtered:
+        path = Path(args.database)
+        if path.is_dir():
+            dataset = loadDatasetsFromDirectory(args.database) # load dataset from directory
+        else:
+            dataset = load_dataset(args.database)
+        clustering_on_4D_feature_vectors(estimator=OPTICS,
+                                         trackedObjects=dataset,
+                                         outdir=args.outdir,
+                                         n_jobs=args.n_jobs,
+                                         filter_threshold=0.7,
+                                         min_samples=args.min_samples,
+                                         max_eps=args.max_eps,
+                                         xi=args.xi,
+                                         min_cluster_size=args.min_cluster_size,
+                                         p=args.p_norm)
+    else:
+        if args.dimensions == "2D":
+            clustering_search_on_2D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
+        elif args.dimensions == "4D":
+            clustering_search_on_4D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
+        elif args.dimensions == "6D":
+            clustering_search_on_6D_feature_vectors(
+                estimator=OPTICS, 
+                database=args.database, 
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                min_samples=args.min_samples,
+                max_eps=args.max_eps,
+                xi=args.xi, 
+                min_cluster_size=args.min_cluster_size,
+                p=args.p_norm
+            )
 
 def submodule_birch(args):
     from sklearn.cluster import Birch 
@@ -1574,6 +1593,7 @@ def main():
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
     argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
     argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+    argparser.add_argument("--filtered", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
 
