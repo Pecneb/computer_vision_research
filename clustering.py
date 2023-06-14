@@ -1433,6 +1433,15 @@ def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimen
             #plt.show()
 
 def submodule_optics(args):
+    """Optics clustering has 3 important parameters, min samples, max eps and xi.
+    The goal is to close the gap between the number of input feature vectors and
+    the clustered feature vectors. The ratio of this - clustered / all - equation
+    should be closing on in 1.0. An other important factor is the cluster number,
+    it should represent our data.
+
+    Args:
+        args (arguments object): Console line arguments. 
+    """
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
     if args.filtered:
