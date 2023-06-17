@@ -33,7 +33,8 @@ from processing_utils import (
     filter_trajectories, 
     make_4D_feature_vectors,
     calc_cluster_centers,
-    upscale_cluster_centers
+    upscale_cluster_centers,
+    loadDatasetMultiprocessed
 )
 from clustering import clustering_on_feature_vectors
 from dataManagementClasses import TrackedObject
@@ -75,6 +76,8 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
         thispatch.set_facecolor(color)
     fig1.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax1, location='right')
+    ax1.set_xlabel("Irány")
+    ax1.set_ylabel("Autók száma")
     if output is not None:
         fig1Name = os.path.join(output, "histogram.png")
         fig1.savefig(fig1Name)
@@ -86,13 +89,15 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         mp = ax2.imshow(bgImg)
         upscaled_enters = upscale_cluster_centers(enter_cluster_center, bgImg.shape[1], bgImg.shape[0])
         upscaled_exits = upscale_cluster_centers(exit_cluster_center, bgImg.shape[1], bgImg.shape[0])
-        for p, q, thisfrac in zip(upscaled_enters, upscaled_exits, fracs):
+        for p, q, thisfrac, cls in zip(upscaled_enters, upscaled_exits, fracs, classes):
             color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
             colorVal = scalarMap.to_rgba(thisfrac)
             xx = np.vstack((p[0], q[0]))
             yy = np.vstack((p[1], q[1]))
             #ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
+            # TODO: write cluster number on middle of the arrows
             ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1], color=colorVal, width=1, head_width=10)
+            ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10)
         fig2.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax2, location='bottom')
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
@@ -121,27 +126,69 @@ def extractHourlyData(dataset: List[TrackedObject]):
     return hourlyData
 
 def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
+    """Plot table about hourly traffic flow.
+
+    Args:
+        paths (list): List of paths to the input files. 
+        hourlyTracks (list): List of tracked objects for each hour. 
+        hourlyLabels (list): List of labels for each hour.
+        classes (list): List of classes. 
+        output (str): Output directory path, where plots will be saved.
+    """
     import pandas as pd
     hours = np.arange(len(paths))
-    titles = [Path(p).stem for p in paths]
+    rows = ["{}-{}".format(i, i+1) for i in hours]
+    #titles = [Path(p).stem for p in paths]
     df = pd.DataFrame()
-    df = df.set_axis(labels=hours)
+    # set row names
+    df = df.set_axis(labels=rows, axis=0)
+    # count vehicles in each hour for each class
     hourlyCount = np.zeros(shape=(len(hourlyTracks), len(classes)))
     for i, tracks, labels in zip(range(len(hourlyTracks)), hourlyTracks, hourlyLabels):
         for t, l in zip(tracks, labels):
             if l >= 0:
                 hourlyCount[i, l]+=1
+    # set column names
     for cls in classes:
         df[cls] = np.array(hourlyCount[:, cls],dtype=int)
+    cols = ["Irány {}".format(i) for i in classes]
+    df = df.set_axis(labels=cols, axis=1)
+    # normalize by max of each row
+    df_hourly_heatmap = (df.T - df.T.min()) / (df.T.max() - df.T.min())
+    df_hourly_heatmap = df_hourly_heatmap.T
+    # normalize by max of each column
+    df_clusterly_heatmap = (df - df.min()) / (df.max() - df.min())
     print(df)
+    print(df_hourly_heatmap)
+    print(df_clusterly_heatmap)
+    # Save to excel
     with pd.ExcelWriter(Path(output).joinpath("hourly_statistics_table.xlsx")) as writer:
         df.to_excel(writer, sheet_name="Hourly_Cluster_Stats")
+    # Absolute values
     fig, ax = plt.subplots(figsize=(45,15))
     ax = sns.heatmap(df, annot=True, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
-    ax.set(xlabel="Clusters", ylabel="Hours")
-    plt.yticks(rotation=0)
-    plt.show()
-    plt.savefig(Path(output).joinpath("heatmap.png"))
+    ax.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va="center")
+    ax.set_title("Abszolút értékek")
+    # Normalized by row
+    fig2, ax2 = plt.subplots(figsize=(45,15))
+    ax2 = sns.heatmap(df_hourly_heatmap, annot=True, fmt="f", linecolor="black", linewidths=1, cmap="Reds")
+    ax2.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    ax2.set_xticklabels(ax2.get_xticklabels(), rotation=0)
+    ax2.set_yticklabels(ax2.get_yticklabels(), rotation=0, va="center")
+    ax2.set_title("Normalizált oránkénti értékek")
+    # Normalized by column
+    fig3, ax3 = plt.subplots(figsize=(45,15))
+    ax3 = sns.heatmap(df_clusterly_heatmap, annot=True, fmt="f", linecolor="black", linewidths=1, cmap="Reds")
+    ax3.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    ax3.set_xticklabels(ax3.get_xticklabels(), rotation=0)
+    ax3.set_yticklabels(ax3.get_yticklabels(), rotation=0, va="center")
+    ax3.set_title("Normalizált irányonkénti értékek")
+    # Save figures
+    fig.savefig(Path(output).joinpath("heatmap_abs.png"))
+    fig2.savefig(Path(output).joinpath("heatmap_hourly_norm.png"))
+    fig3.savefig(Path(output).joinpath("heatmap_cluster_norm.png"))
     plt.close()
 
 def trafficHistogramModule(args):
