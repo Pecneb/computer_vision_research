@@ -1559,3 +1559,14 @@ def calc_cluster_centers(tracks, labels, exit = True):
         cluster_centers[i,0] = np.average(tracks_xy[:,0])
         cluster_centers[i,1] = np.average(tracks_xy[:,1])
     return cluster_centers
+
+def loadDatasetsFromDirectory(path):
+    dirPath = Path(path)
+    if not dirPath.is_dir():
+        return False
+    dataset = np.array([], dtype=dataManagementClasses.TrackedObject)
+    for p in dirPath.glob("*.joblib"):
+        tmpDataset = load_dataset(p)
+        dataset = np.append(dataset, tmpDataset, axis=0)
+        print(len(tmpDataset))
+    return dataset
