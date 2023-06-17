@@ -1570,3 +1570,24 @@ def loadDatasetsFromDirectory(path):
         dataset = np.append(dataset, tmpDataset, axis=0)
         print(len(tmpDataset))
     return dataset
+
+def load_dataset_with_labels(path):
+    dataset = load_dataset(path)
+    dataset_labeled = (dataset, str(path))
+    return dataset_labeled
+
+def loadDatasetMultiprocessedCallback(result):
+    print(len(result[0]), result[1])
+
+def loadDatasetMultiprocessed(path, n_jobs=-1):
+    from multiprocessing import Pool
+    dirPath = Path(path)
+    if not dirPath.is_dir():
+        return False
+    datasetPaths = [p for p in dirPath.glob("*.joblib")]
+    dataset = []
+    with Pool(processes=n_jobs) as pool:
+        for i, p in enumerate(datasetPaths):
+            tmpDatasetLabeled = pool.apply_async(load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
+            dataset.append(tmpDatasetLabeled.get())
+    return np.array(dataset)
