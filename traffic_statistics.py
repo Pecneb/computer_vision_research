@@ -97,7 +97,9 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
             #ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
             # TODO: write cluster number on middle of the arrows
             ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1], color=colorVal, width=1, head_width=10)
-            ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10)
+            #ax2.annotate(f"{cls}", (p[0], p[1]), color="black", fontsize=10, fontweigth=3)
+            #ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10, fontweigth=1)
+            ax2.text(p[0], p[1], f"{cls}", color="white", backgroundcolor="black", fontsize=12)
         fig2.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax2, location='bottom')
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
@@ -191,6 +193,29 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     fig3.savefig(Path(output).joinpath("heatmap_cluster_norm.png"))
     plt.close()
 
+def printSamplesToExcel(tracks, output, n_samples=10):
+    """Print sample trajectories to excel file.
+
+    Args:
+        tracks (list): List of tracked objects.
+        output (str): Output directory path, where plots will be saved.
+    """
+    import pandas as pd
+    data = {"Normalizált belépő X": [], "Normalizált belépő Y": [], "Normalizált kilépő X": [], "Normalizált kilépő Y": []}
+    indexes = []
+    df = pd.DataFrame(data=data)
+    for i, t in enumerate(tracks):
+        if i >= n_samples:
+            break
+        df.loc[-1] = [t.history_X[0], t.history_Y[0], t.history_X[-1], t.history_Y[-1]]
+        df.index = df.index + 1
+        indexes.append("Trajektória {}".format(t.objID))
+    df.index = indexes
+    df.sort_index(inplace=True)
+    print(df)
+    with pd.ExcelWriter(Path(output).joinpath("sample_trajectories.xlsx")) as writer:
+        df.to_excel(writer, sheet_name="Sample_Trajectories")
+
 def trafficHistogramModule(args):
     logging.info("Traffic histogram module started")
     start = time.time()
@@ -257,7 +282,7 @@ def hourlyStatisticsModule(args):
     dataset = np.array([], dtype=TrackedObject)
     for tracks in tracksHourly:
         dataset = np.append(dataset, tracks, axis=0)
-    print(dataset.shape)
+    printSamplesToExcel(dataset, args.output)
     uidSamples = np.arange(start=1, stop=len(dataset)+1) # generate unique ids for all the tracks
     uidHourly = np.zeros(shape=(len(tracksHourly),len(dataset)), dtype=int) # create the hourly uid matrix
     uidHourly[0,:len(tracksHourly[0])] = uidSamples[0:len(tracksHourly[0])] # init first row of uid matrix
