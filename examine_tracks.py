@@ -54,7 +54,7 @@ def drawbbox(detection: Detection, image: np.ndarray):
     bboxUpscaled = upscalebbox(bbox, image.shape[1], image.shape[0])
     left, top, right, bottom = bbox2points(bboxUpscaled)
     cv2.rectangle(ret_img, (left, top), (right, bottom), (0,255,0), 1)
-    cv2.putText(ret_img, "{} [{:.2f}] VX: {:.2f} VY: {:.2f} AX: {:.2f} AY: {:.2f}".format(detection.label, float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
+    cv2.putText(ret_img, "{}".format(detection.label,), #float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
                 (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 (0,255,0), 2)
     return ret_img
@@ -153,6 +153,10 @@ def examine_tracks(args):
                 ret, frame = video.read()
                 if not ret:
                     break
+
+                # Make frame transparent
+                frame = 255 - (255 - frame) * 0.5
+                frame = frame.astype(np.uint8)
 
                 act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
