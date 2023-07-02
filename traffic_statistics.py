@@ -22,6 +22,7 @@ import logging
 import time
 import os
 import tqdm
+import cv2
 import numpy as np
 from pathlib import Path
 from matplotlib import pyplot as plt
@@ -34,7 +35,6 @@ from processing_utils import (
     make_4D_feature_vectors,
     calc_cluster_centers,
     upscale_cluster_centers,
-    loadDatasetMultiprocessed
 )
 from clustering import clustering_on_feature_vectors
 from dataManagementClasses import TrackedObject
@@ -60,10 +60,11 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     Y = labels
     enter_cluster_center = calc_cluster_centers(X, Y, False)
     exit_cluster_center = calc_cluster_centers(X, Y, True)
-    fig1, ax1 = plt.subplots(1,1,figsize=(15,15))
+    fig1, ax1 = plt.subplots(1,1,figsize=(15,10))
     ax1.set_title(f"{output} clusters histogram")
     classes = np.array(list(set(Y)))
-    N, bins, patches = ax1.hist(Y, classes-0.5, align="mid", range=(classes.min(), classes.max()), edgecolor="black")
+    N, bins, patches = ax1.hist(Y, classes.shape[0], range=(classes.min()-0.5, classes.max()+0.5), edgecolor="black", align="mid", rwidth=0.7)
+    print(N, bins, patches)
     if len(classes)==1:
         fracs = np.array([1.0])
     else:
@@ -76,30 +77,38 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
         thispatch.set_facecolor(color)
     fig1.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax1, location='right')
-    ax1.set_xlabel("Irány")
-    ax1.set_ylabel("Autók száma")
+    ax1.set_xlabel("Csoportok", fontdict={"fontsize": 20})
+    ax1.set_ylabel("Autók száma", fontdict={"fontsize": 20})
     if output is not None:
         fig1Name = os.path.join(output, "histogram.png")
         fig1.savefig(fig1Name)
         logging.info(f"Fig1: \"{fig1Name}\"")
     if bg_img is not None:
-        fig2, ax2 = plt.subplots(1,1,figsize=(15,15))
+        fig2, ax2 = plt.subplots(1,1,figsize=(15,10))
         ax2.set_title(f"{output} cluster heatmap")
-        bgImg = plt.imread(bg_img)
+        # Load background image, and make it a bit transparent
+        bgImg = cv2.imread(bg_img)
+        bgImg = cv2.cvtColor(bgImg, cv2.COLOR_RGB2BGR)
+        bgImg = 255 - (255 - bgImg) * 0.5
+        bgImg = bgImg.astype(np.uint8)
         mp = ax2.imshow(bgImg)
+        # Upscale cluster centers to the size of the background image
         upscaled_enters = upscale_cluster_centers(enter_cluster_center, bgImg.shape[1], bgImg.shape[0])
         upscaled_exits = upscale_cluster_centers(exit_cluster_center, bgImg.shape[1], bgImg.shape[0])
+        # Plot cluster vectors
         for p, q, thisfrac, cls in zip(upscaled_enters, upscaled_exits, fracs, classes):
+            print(p, q, thisfrac, cls)
             color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
             colorVal = scalarMap.to_rgba(thisfrac)
             xx = np.vstack((p[0], q[0]))
             yy = np.vstack((p[1], q[1]))
             #ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
-            # TODO: write cluster number on middle of the arrows
             ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1], color=colorVal, width=1, head_width=10)
             #ax2.annotate(f"{cls}", (p[0], p[1]), color="black", fontsize=10, fontweigth=3)
             #ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10, fontweigth=1)
-            ax2.text(p[0], p[1], f"{cls}", color="white", backgroundcolor="black", fontsize=12)
+            # Slide the text a bit to the direction of the arrow
+            vec = 0.7 * (np.array([q[0],q[1]]) - np.array([p[0],p[1]])) + np.array([p[0],p[1]])
+            ax2.text(vec[0], vec[1], f"{cls}", color=colorVal, backgroundcolor="white", fontsize=14)
         fig2.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax2, location='bottom')
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
@@ -138,6 +147,7 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
         output (str): Output directory path, where plots will be saved.
     """
     import pandas as pd
+    sns.set(font_scale=1.5)
     hours = np.arange(len(paths))
     rows = ["{}-{}".format(i, i+1) for i in hours]
     #titles = [Path(p).stem for p in paths]
@@ -153,7 +163,7 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     # set column names
     for cls in classes:
         df[cls] = np.array(hourlyCount[:, cls],dtype=int)
-    cols = ["Irány {}".format(i) for i in classes]
+    cols = ["Csoport {}".format(i) for i in classes]
     df = df.set_axis(labels=cols, axis=1)
     # normalize by max of each row
     df_hourly_heatmap = (df.T - df.T.min()) / (df.T.max() - df.T.min())
@@ -167,23 +177,29 @@ def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     with pd.ExcelWriter(Path(output).joinpath("hourly_statistics_table.xlsx")) as writer:
         df.to_excel(writer, sheet_name="Hourly_Cluster_Stats")
     # Absolute values
-    fig, ax = plt.subplots(figsize=(45,15))
-    ax = sns.heatmap(df, annot=True, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
-    ax.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    fig, ax = plt.subplots(figsize=(25,15))
+    ax = sns.heatmap(df, annot=True, annot_kws={"size":20}, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
+    #ax.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
+    ax.set_xlabel("Csoport (db)", fontdict={"size":20})
+    ax.set_ylabel("Időszak (óra)", fontdict={"size":20})
     ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va="center")
     ax.set_title("Abszolút értékek")
     # Normalized by row
-    fig2, ax2 = plt.subplots(figsize=(45,15))
-    ax2 = sns.heatmap(df_hourly_heatmap, annot=True, fmt="f", linecolor="black", linewidths=1, cmap="Reds")
-    ax2.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    fig2, ax2 = plt.subplots(figsize=(25,15))
+    ax2 = sns.heatmap(df_hourly_heatmap, annot=True, annot_kws={"size":20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
+    #ax2.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
+    ax2.set_xlabel("Csoport (db)", fontdict={"size":20})
+    ax2.set_ylabel("Időszak (óra)", fontdict={"size":20})
     ax2.set_xticklabels(ax2.get_xticklabels(), rotation=0)
     ax2.set_yticklabels(ax2.get_yticklabels(), rotation=0, va="center")
     ax2.set_title("Normalizált oránkénti értékek")
     # Normalized by column
-    fig3, ax3 = plt.subplots(figsize=(45,15))
-    ax3 = sns.heatmap(df_clusterly_heatmap, annot=True, fmt="f", linecolor="black", linewidths=1, cmap="Reds")
-    ax3.set(xlabel="Irány (db)", ylabel="Időszak (óra)")
+    fig3, ax3 = plt.subplots(figsize=(25,15))
+    ax3 = sns.heatmap(df_clusterly_heatmap, annot=True, annot_kws={"size":20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
+    #ax3.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
+    ax3.set_xlabel("Csoport (db)", fontdict={"size":20})
+    ax3.set_ylabel("Időszak (óra)", fontdict={"size":20})
     ax3.set_xticklabels(ax3.get_xticklabels(), rotation=0)
     ax3.set_yticklabels(ax3.get_yticklabels(), rotation=0, va="center")
     ax3.set_title("Normalizált irányonkénti értékek")
