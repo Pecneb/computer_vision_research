@@ -374,7 +374,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
     return filteredTracks
 
-def filter_trajectories(trackedObjects: list, threshold: float):
+def filter_trajectories(trackedObjects: list, threshold: float, detectionDistanceFiltering: bool = True, detDist: float = 0.05):
     """Run filtering process on trajectory datase.
 
     Args:
@@ -384,10 +384,11 @@ def filter_trajectories(trackedObjects: list, threshold: float):
     Returns:
         denoised_trajectories: filtered trajectories without noice 
     """
-    full_trajectories = filter_out_edge_detections(trackedObjects, threshold)
-    full_trajectories = filter_out_false_positive_detections_by_enter_exit_distance(full_trajectories, 0.4)
-    denoised_trajectories = filter_out_noise_trajectories(full_trajectories)
-    return denoised_trajectories
+    trajectories = filter_out_edge_detections(trackedObjects, threshold)
+    trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, 0.4)
+    if detectionDistanceFiltering:
+        trajectories = filter_out_noise_trajectories(trajectories, detDist)
+    return trajectories 
 
 def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
@@ -399,12 +400,9 @@ def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float
     if "filtered" in str(dataset):
         print(f"{dataset} is already filtered.")
         return False
-    trajectories = load_joblib_tracks(dataset)
+    trajectories = load_dataset(dataset)
     logging.info(f"Trajectories \"{dataset}\" loaded")
-    trajs2save = filter_out_edge_detections(trajectories, threshold)
-    trajs2save = filter_out_false_positive_detections_by_enter_exit_distance(trajs2save, 0.4)
-    if euclidean_filtering:
-        trajs2save = filter_out_noise_trajectories(trajs2save, max_dist)
+    trajs2save = filter_trajectories(trajectories, threshold, euclidean_filtering, max_dist)
     logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
     if outdir is not None:
@@ -1173,21 +1171,6 @@ def tracks2joblib(path2db: str, n_jobs=18):
     print('Saving: ', savepath)
     joblib.dump(tracks, savepath)
 
-def load_joblib_tracks(path2tracks: str) -> list:
-    """Load tracks from joblib file.
-
-    Args:
-        path2tracks (str): Path to joblib file. 
-
-    Returns:
-        list[TrackedObjects]: Loaded list of tracked objects. 
-    """
-    path = Path(path2tracks)
-    if path.suffix != ".joblib":
-        print("Error: Not joblib file.")
-        return False
-    return joblib.load(path)
-
 def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps = 0.2, xi = 0.15, min_cluster_size = 10, n_jobs = 18, threshold = 0.5, p = 2, cluster_dimensions: str = "4D"):
     """Save training tracks with class numbers ordered to them.
 
@@ -1209,7 +1192,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
     if filext == 'db':
         tracks = preprocess_database_data_multiprocessed(path2tracks, n_jobs)
     elif filext == 'joblib':
-        tracks = load_joblib_tracks(path2tracks)
+        tracks = load_dataset(path2tracks)
     else:
         print("Error: Wrong file type.")
         return False
@@ -1244,46 +1227,9 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
 
     return joblib.dump(tracks_classes, output, compress="lz4")
 
-def random_split_tracks(dataset: list, train_percentage: float, seed: int):
-    """Shuffle track dataset, then split it into a train and test dataset.
-
-    Args:
-        dataset (list): Tracked object list. 
-        train_percentage (float): What percentage of the dataset should be train dataset. Value between 0.0 - 1.0 
-        seed (int): A seed to be able to repeat the shuffle algorithm. 
-
-    Returns:
-        tuple(list, list): train, test datasets 
-    """
-    from sklearn.utils import shuffle
-
-    # calculate train and test dataset size based on the given percentage
-    train_size = int(len(dataset) * train_percentage) 
-    test_size = len(dataset) - train_size
-
-
-    train = shuffle(dataset, random_state=seed, n_samples=train_size) 
-    test = []
-
-    # fill test dataset with the rest of the tracks
-    i = 0
-    while(len(test) <= test_size and i < len(dataset)):
-        try:
-            if dataset[i]['track'] not in [t['track'] for t in train] and dataset[i]['track'] not in [t['track'] for t in test]:
-                test.append(dataset[i])
-        except:
-            print(f"Exception at index: {i}, track: {dataset[i]}")
-        i += 1
-
-    return np.array(train), np.array(test)
-
-def load_dataset(path2dataset: str | Path):
-    """This function loads the track data from sqlite db or joblib file.
-    The extract_tracks_from_db.py script can create two type of joblib
-    files. One with all the tracks unfiltered, and one with filtered tracks
-    that only contain tracks used in clustering an classifier training.
-    The filtered dataset stores the tracks with their corresponding labels
-    that are assigned at clustering in dictionaries in the following format
+def load_dataset(path2dataset: str | Path | list[str]):
+    """Load dataset from either a joblib file or a database file.
+    If dataset path is a directory load all joblib files from the directory.
     dict['track': TrackedObject, 'class': label].
 
     Args:
@@ -1295,40 +1241,39 @@ def load_dataset(path2dataset: str | Path):
     datasetPath = Path(path2dataset)
     ext = datasetPath.suffix
     if ext == ".joblib":
-        dataset = load_joblib_tracks(path2dataset)
+        dataset = joblib.load(path2dataset)
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset] 
             return ret_dataset
         else:
-            return dataset
-            
-    elif ext == "db":
-        return preprocess_database_data_multiprocessed(path2dataset, n_jobs=None) # None for n_jobs to utilize all cpu threads
-    print("Error: Bad file type.")
-    return False 
+            return np.array(dataset)
+    elif ext == ".db":
+        return np.array(preprocess_database_data_multiprocessed(path2dataset, n_jobs=None))
+    elif Path.is_dir(datasetPath):
+        return mergeDatasets(loadDatasetsFromDirectory(datasetPath))
+    elif type(path2dataset) == list:
+        tmp_dataset = []
+        for d in path2dataset:
+            tmp_dataset.append(load_dataset(d))
+        tmp_dataset = np.array(tmp_dataset)
+        return mergeDatasets(tmp_dataset)
+    raise Exception("Wrong file type.")
 
-def mergeDatasets(datasets: list[str], output: str):
-    """Merge two or more joblib dataset files into one.
+def mergeDatasets(datasets: np.ndarray):
+    """Merge datasets into one.
 
     Args:
-        datasets (list[str]): List of paths to the joblib dataset files. 
-        output (str): The output path of the merged file.
-
+        datasets (ndarray): List of datasets to merge. 
+            shape(n, m) where n is the number of datasets 
+            and m is the number of tracks in the dataset.
+    
     Returns:
-        list[TrackedObject]: The merged dataset is returned, after it is saved with the output path.
+        ndarray: Merged dataset.
     """
-    if len(datasets) < 2:
-        return load_joblib_tracks(datasets[0])
-    #arglist = [itertools.repeat(dataset) for dataset in datasets]
-    #loaded_datasets = itertools.starmap(load_joblib_tracks, arglist) 
-    merged_dataset = np.array([])
-    for d in tqdm.tqdm(datasets, desc="Loaded dataset."):
-        to_merge = load_joblib_tracks(d)
-        print(len(to_merge))
-        merged_dataset = np.append(merged_dataset, to_merge)
-    print(len(merged_dataset))
-    joblib.dump(merged_dataset, output, compress="lz4")
-    return merged_dataset
+    merged = np.array([])
+    for d in datasets:
+        merged = np.append(merged, d)
+    return merged
 
 def strfy_dict_params(params: dict):
     """Stringify params stored in dictionaries.
@@ -1561,6 +1506,14 @@ def calc_cluster_centers(tracks, labels, exit = True):
     return cluster_centers
 
 def loadDatasetsFromDirectory(path):
+    """Load all datasets from a directory.
+
+    Args:
+        path (str | Path): Directory path. 
+
+    Returns:
+        ndarray: Numpy array of all datasets. 
+    """
     dirPath = Path(path)
     if not dirPath.is_dir():
         return False
