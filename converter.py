@@ -3,8 +3,8 @@ from processing_utils import (
     trackslabels2joblib, 
     mergeDatasets,
     downscale_TrackedObjects,
-    load_joblib_tracks,
-    trackedObjects_old_to_new
+    trackedObjects_old_to_new,
+    load_dataset
 )
 import argparse
 import cv2
@@ -31,15 +31,12 @@ def submodule_function(args):
 def submodule_function_2(args):
     databases = []
     path = Path(args.database[0])
-    if path.is_dir():
-        for p in path.glob("*.joblib"):
-            databases.append(str(p))
-    else:
-        databases = args.databse
-    mergeDatasets(databases, args.output)
+    database = load_dataset(path)
+    mergeDatasets(databases)
+    dump(database, args.output, compress="lz4")
 
 def submodule_function_3(args):
-    trackedObjects = load_joblib_tracks(args.database[0])
+    trackedObjects = load_dataset(args.database[0])
     cap = cv2.VideoCapture(args.video)
     if not cap.isOpened():
         raise FileNotFoundError()
@@ -52,7 +49,7 @@ def submodule_function_3(args):
 
 def submodule_function_4(args):
     for db in tqdm(args.database, desc="Database converter."):
-        trackedObjects = load_joblib_tracks(db)
+        trackedObjects = load_dataset(db)
         new_trackedOjects = trackedObjects_old_to_new(trackedObjects) 
         dump(new_trackedOjects, db, compress="lz4")
     

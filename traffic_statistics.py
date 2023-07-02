@@ -30,7 +30,7 @@ import seaborn as sns
 from sklearn.cluster import OPTICS
 from typing import List
 from processing_utils import (
-    load_joblib_tracks, 
+    load_dataset, 
     filter_trajectories, 
     make_4D_feature_vectors,
     calc_cluster_centers,
@@ -235,7 +235,7 @@ def printSamplesToExcel(tracks, output, n_samples=10):
 def trafficHistogramModule(args):
     logging.info("Traffic histogram module started")
     start = time.time()
-    tracks = load_joblib_tracks(args.database[0])
+    tracks = load_dataset(args.database[0])
     if not args.filtered:
         tracks_filtered = filter_trajectories(tracks, 0.7)
     else:
@@ -275,18 +275,18 @@ def hourlyStatisticsModule(args):
             if args.filtered:
                 if "filtered" in ds.name:
                     print(ds)
-                    tmpTracks = load_joblib_tracks(ds)
+                    tmpTracks = load_dataset(ds)
                     tracksHourly.append(tmpTracks)
                     print(len(tmpTracks))
             else:
                 if "filtered" not in ds.name:
-                    tmpTracks = load_joblib_tracks(ds)
+                    tmpTracks = load_dataset(ds)
                     tracksHourly.append(filter_trajectories(tmpTracks, 0.7))
                     datasets.append(str(ds))
             labelsHourly.append([])
     else:
         for ds in args.database:
-            tmpTracks = load_joblib_tracks(ds)
+            tmpTracks = load_dataset(ds)
             if not args.filtered:
                 tracksHourly.append(filter_trajectories(tmpTracks, 0.7))
                 datasets.append(ds)
@@ -348,7 +348,7 @@ def hourlyStatisticsModule(args):
 def trafficStatisticTable(args):
     logging.info("Traffic histogram module started")
     start = time.time()
-    tracks = load_joblib_tracks(args.database[0])
+    tracks = load_dataset(args.database[0])
     if not args.filtered:
         tracks_filtered = filter_trajectories(tracks, 0.7)
     else:
