@@ -31,10 +31,11 @@ from processing_utils import (
     data_preprocessing_for_classifier, 
     data_preprocessing_for_classifier_from_joblib_model, 
     preprocess_dataset_for_training,
-    load_joblib_tracks,
+    load_dataset,
     level_features,
     )
 from tqdm import tqdm
+from pathlib import Path
 np.seterr(divide='ignore', invalid='ignore')
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
@@ -870,8 +871,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
         tuple: cross validation results in pandas datastructure 
     """
     from processing_utils import (
-                                    load_joblib_tracks, 
-                                    random_split_tracks,
+                                    load_dataset, 
                                     filter_trajectories,
                                     make_4D_feature_vectors
                                 )
@@ -885,11 +885,11 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     from sklearn.linear_model import SGDClassifier
     from sklearn.tree import DecisionTreeClassifier
     from classifier import OneVSRestClassifierExtended
-    from sklearn.model_selection import cross_val_score, cross_validate
+    from sklearn.model_selection import cross_val_score, cross_validate, train_test_split
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
-    tracks = load_joblib_tracks(path2dataset)
+    tracks = load_dataset(path2dataset)
 
     # cluster tracks
     tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
@@ -906,7 +906,7 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
         })
 
     # shuffle tracks, and separate into a train and test dataset
-    train, test = random_split_tracks(train_dict, train_ratio, seed)
+    train, test = train_test_split(train_dict, train_size=train_ratio, random_state=seed)
 
     tracks_train = [t["track"] for t in train]
     labels_train = np.array([t["class"] for t in train])
@@ -1056,6 +1056,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
 
     print(f"Number of clusters: {len(set(labels_train))}")
 
+    trained_classifiers = []
+
     t1 = time.time()
     for m in tqdm(models, desc="Cross validate models"):
         clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[estimator_params_set-1][m]), tracks=tracks_train, n_jobs=n_jobs)
@@ -1092,6 +1094,8 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
 
         final_balanced = balanced_accuracy_score(y_test, y_pred)
         final_test_balanced[m] = np.array([final_balanced])
+
+        trained_classifiers.append((m, clf_ovr))
 
     t2 = time.time()
     td = t2 - t1
@@ -1148,8 +1152,12 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     print("\n#### Test set top k\n")
     print(final_test_top_k.to_latex())
 
+    print("Writing tables to files...")
     if outputPath is not None:
-        with pd.ExcelWriter(outputPath) as writer:
+        outputPath_Tables = Path(outputPath, "Tables")
+        if not outputPath_Tables.exists():
+            outputPath_Tables.mkdir(parents=True)
+        with pd.ExcelWriter() as writer:
             parameters_table.to_excel(writer, sheet_name="Classifier parameters")
             basic_table.to_excel(writer, sheet_name="Cross Validation Basic scores")
             balanced_table.to_excel(writer, sheet_name="Cross Validation Balanced scores")
@@ -1159,6 +1167,14 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             final_test_basic.to_excel(writer, sheet_name="Validation set Basic scores")
             final_test_balanced.to_excel(writer, sheet_name="Validation set Balanced scores")
             final_test_top_k.to_excel(writer, sheet_name="Validation set Top K scores")
+        
+    if outputPath is not None:
+        outputPath_classifiers = Path(outputPath, "Models")
+        if not outputPath_classifiers.exists():
+            outputPath_classifiers.mkdir(parents=True)
+        for i, clf in enumerate(trained_classifiers):
+            print("Saving model %s..." % clf[0])
+            save_model(str(Path(outputPath_classifiers)), clf[0], clf[1])
 
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
@@ -1183,8 +1199,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
         tuple: cross validation results in pandas datastructure 
     """
     from processing_utils import (
-                                    load_joblib_tracks, 
-                                    random_split_tracks,
+                                    load_dataset, 
                                     filter_trajectories,
                                     make_4D_feature_vectors
                                 )
@@ -1198,11 +1213,11 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     from sklearn.linear_model import SGDClassifier
     from sklearn.tree import DecisionTreeClassifier
     from classifier import OneVSRestClassifierExtended
-    from sklearn.model_selection import cross_val_score, cross_validate
+    from sklearn.model_selection import cross_val_score, cross_validate, train_test_split
     from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
-    tracks = load_joblib_tracks(path2dataset)
+    tracks = load_dataset(path2dataset)
 
     # cluster tracks
     tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
@@ -1219,7 +1234,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
         })
 
     # shuffle tracks, and separate into a train and test dataset
-    train, test = random_split_tracks(train_dict, train_ratio, seed)
+    train, test = train_test_split(train_dict, train_size=train_ratio, random_state=seed)
 
     tracks_train = [t["track"] for t in train]
     labels_train = np.array([t["class"] for t in train])
@@ -1476,60 +1491,150 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(train_path: str, test_path: str, threshold: float, n_jobs: int, **estkwargs):
-    from scipy.stats import expon
+def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, n_jobs: int, mse_threshold: float = 0.5, **estkwargs):
+    """Evaluate several one-vs-rest classifiers on the given dataset. 
+    Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
+
+    Parameters:
+        trainingSetPath (str | list[str]): Path to training dataset or list of paths to training datasets. 
+        testingSetPath (str | list[str]): Path to testing dataset or list of paths to testing datasets. 
+        output (str): Output directory path, where to save the results. Tables and Models. 
+        threshold (float): Threshold for filtering trajectories. 
+        n_jobs (int): Number of jobs to run in parallel. 
+        mse_threshold (float, optional): MSE threshold for KMeans search. Defaults to 0.5.
+    """
     from sklearn.cluster import OPTICS, Birch
     from sklearn.svm import SVC
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.tree import DecisionTreeClassifier
-    from sklearn.model_selection import RandomizedSearchCV
-    from clustering import clustering_on_feature_vectors
-    from processing_utils import load_dataset, filter_trajectories, make_4D_feature_vectors, random_split_tracks
-    from visualizer import aoiextraction
+    from sklearn.model_selection import RandomizedSearchCV, train_test_split
+    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
+    from clustering import (
+        clustering_on_feature_vectors,
+        kmeans_mse_clustering
+    )
+    from processing_utils import (
+        load_dataset, 
+        filter_trajectories, 
+        make_4D_feature_vectors, 
+    )
+    from classifier import OneVSRestClassifierExtended
 
-    tracks = load_joblib_tracks(train_path)
+    # create output directories if output is given
+    if output is not None:
+        outputModels = Path(output, "Models")
+        outputTables = Path(output, "Tables")
+        if not outputModels.exists():
+            outputModels.mkdir(parents=True)
+        if not outputTables.exists():
+            outputTables.mkdir(parents=True)
+
+    # load datasets
+    start = time.process_time()
+    tracks = load_dataset(dataset)
+    print("Dataset loaded in %d s" % (time.process_time() - start))
+    print("Number of tracks: %d" % len(tracks))
 
     # cluster tracks
-    tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
-    cls_samples = make_4D_feature_vectors(tracks_filtered)
-    _, labels = clustering_on_feature_vectors(X=cls_samples, estimator=OPTICS, n_jobs=n_jobs, **estkwargs)
-    tracks_labeled = tracks_filtered[labels > -1]
+    start = time.process_time()
+    tracks_filtered = filter_trajectories(tracks, threshold, False, detDist=0.1)
+    feature_vectors = make_4D_feature_vectors(tracks_filtered)
+    print("Shape of feature vectors: {}".format(feature_vectors.shape))
+    _, labels = clustering_on_feature_vectors(feature_vectors, 
+                                              estimator=OPTICS, 
+                                              n_jobs=n_jobs, 
+                                              **estkwargs)
+    print("Classes: {}".format(np.unique(labels)))
+    # filter out not clustered tracks
+    tracks_labeled = np.array(tracks_filtered)[labels > -1]
     cluster_labels = labels[labels > -1]
+    print("Clustering done in %d s" % (time.process_time() - start))
+    # run clustering on cluster exit points centroids
+    start = time.process_time()
+    reduced_labels, _,_,_, centroids_labels = kmeans_mse_clustering(tracks_labeled, 
+                                                           cluster_labels, 
+                                                           n_jobs=n_jobs, 
+                                                           mse_threshold=mse_threshold)
+    print("Clustered exit centroids: {}".format(centroids_labels))
+    print("Exit points clusters: {}".format(np.unique(reduced_labels)))
+    print("Exit point clustering done in %d s" % (time.process_time() - start))
 
+    # preprocess for train test split
+    start = time.process_time()
     train_dict = []
     for i in range(len(tracks_labeled)):
         train_dict.append({
             "track" : tracks_labeled[i],
-            "class" : cluster_labels[i]
+            "class" : cluster_labels[i],
+            "reduced_class" : reduced_labels[i]
         })
-
     # shuffle tracks, and separate into a train and test dataset
-    train, test = random_split_tracks(train_dict, 0.8, 1)
-
+    train, test = train_test_split(train_dict, test_size=test_ratio, random_state=42)
+    # retrieve train and test tracks, labels and cluster centroid labels
     tracks_train = [t["track"] for t in train]
     labels_train = np.array([t["class"] for t in train])
     tracks_test = [t["track"] for t in test]
     labels_test = np.array([t["class"] for t in test])
-
-    cluster_aoi = aoiextraction(tracks_labeled, cluster_labels)
-
-    optics_params = {"min_samples": 1,
-                      "max_eps": 0.01,
-                      "xi": 0.15}
-
-    #clfsearch = RandomizedSearchCV(OPTICS(), cluster_params, scoring="accuracy")
-    #clfsearch.fit(cluster_aoi)
-    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=Birch, n_jobs=n_jobs, threshold=0.05)
-    print(aoi_labels)
-    _, aoi_labels = clustering_on_feature_vectors(X=cluster_aoi, estimator=OPTICS, n_jobs=n_jobs, **optics_params)
-    print(aoi_labels)
+    reduced_labels_train = np.array([t["reduced_class"] for t in train])
+    reduced_labels_test = np.array([t["reduced_class"] for t in test])
+    print("Train test split done in %d s" % (time.process_time() - start))
+    print("Size of training set: %d" % len(tracks_train))
+    print("Size of testing set: %d" % len(tracks_test))
 
     # Generate version one feature vectors for clustering
+    start = time.process_time()
     from processing_utils import make_feature_vectors_version_one
-    X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
-    X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
+    X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
+    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
+    print("Feature vectors generated in %d s" % (time.process_time() - start))
 
+    models = {
+        "SVM" : SVC,
+        "KNN" : KNeighborsClassifier,
+        "DT" : DecisionTreeClassifier
+    }
 
+    parameters = [{
+                    'KNN' : {'n_neighbors' : 15},
+                    'SVM' : {'kernel' : 'rbf', 'probability' : True, 'max_iter' : 26000},
+                    'DT' : {} 
+                }]
+
+    # create top-k score functions
+    top_k_scorers = {
+        'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
+        'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
+        'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
+    }
+
+    # train classifiers
+    for m in models:
+        start = time.process_time()
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=tracks_train, n_jobs=n_jobs)
+        clf_ovr.fit(X_train, y_train)
+        # predict probabilities
+        y_pred = clf_ovr.predict(X_test)
+        y_pred_proba = clf_ovr.predict_proba(X_test)
+        # convert y_pred to cluster centroid labels
+        y_pred_reduced = np.array([centroids_labels[y] for y in y_pred])
+        y_pred_proba_reduced = clf_ovr.predict_proba(X_test, centroids_labels)
+        print("Classifier %s trained in %d s" % (m, time.process_time() - start))
+        # evaluate based on original clusters 
+        balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
+        final_top_k = []
+        for i in range(1,4):
+            final_top_k.append(top_k_accuracy_score(y_test, y_pred_proba, k=i, labels=list(set(y_train))))
+        print("Classifier %s evaluation based on original clusters: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy, final_top_k[0], final_top_k[1], final_top_k[2]))
+        # evaluate based on exit centroids 
+        balanced_accuracy_centroids = balanced_accuracy_score(y_reduced_test, y_pred_reduced)
+        final_top_k_centroids = []
+        for i in range(1,4):
+            final_top_k_centroids.append(top_k_accuracy_score(y_reduced_test, y_pred_proba_reduced, k=i, labels=list(set(y_train))))
+        print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
+        if output is not None:
+            save_model(outputModels, m, clf_ovr)
+
+        
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
@@ -1595,7 +1700,18 @@ def plot_module(args):
     plot_decision_tree(args.decision_tree)
 
 def exitpoint_metric_module(args):
-    calculate_metrics_exitpoints(args.train, args.test, args.threshold, args.n_jobs, min_samples=args.min_samples, max_eps=args.max_eps, xi=args.xi)
+    calculate_metrics_exitpoints(
+        dataset=args.dataset, 
+        test_ratio=args.test, 
+        output=args.output,
+        threshold=args.threshold,
+        n_jobs=args.n_jobs,
+        mse_threshold=args.mse,
+        min_samples=args.min_samples,
+        max_eps=args.max_eps,
+        xi=args.xi,
+        p=args.p_norm
+    )
 
 def main():
     import argparse
@@ -1704,16 +1820,19 @@ def main():
         "exitpoints",
         help="Calculate metrics on only exitpoints."
     )
-    exitpoint_metrics_parser.add_argument("--train",
-                                          help="Training dataset database path.")
-    exitpoint_metrics_parser.add_argument("--test",
-                                          help="Test dataset database path.")
+    exitpoint_metrics_parser.add_argument("--dataset", nargs="+",
+                                          help="Dataset database path.")
+    exitpoint_metrics_parser.add_argument("--test", type=float, default=0.2,
+                                          help="Testset size in float. Default: 0.2")
+    exitpoint_metrics_parser.add_argument("--output", "-o", type=str, 
+                                         help="Output files directory path.")
     exitpoint_metrics_parser.add_argument("--threshold", type=float,
                                           help="Threshold value for clustering.")
-    exitpoint_metrics_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
-    exitpoint_metrics_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
-    exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
-    exitpoint_metrics_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    exitpoint_metrics_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param. Default: 50")
+    exitpoint_metrics_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param. Default: 0.2")
+    exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param. Default: 0.15")
+    exitpoint_metrics_parser.add_argument("-p", "--p_norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
+    exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()

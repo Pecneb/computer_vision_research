@@ -559,7 +559,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -572,6 +572,7 @@ def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.nd
     """
     featureVectors = []
     newLabels = []
+    newReducedLabels = []
     track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
     #TODO remove time vector, use track_history_metadata instead
     for j in range(len(trackedObjects)):
@@ -585,9 +586,10 @@ def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.nd
                                             trackedObjects[j].history[i+step].X, trackedObjects[j].history[i+step].Y,
                                             trackedObjects[j].history[i+step].VX, trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
+                newReducedLabels.append(reduced_labels[j])
                 track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
-    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
+    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata), np.array(newReducedLabels)
 
 def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
@@ -1238,6 +1240,11 @@ def load_dataset(path2dataset: str | Path | list[str]):
     Returns:
         list[TrackedObject]: list of TrackedObject objects. 
     """
+    if type(path2dataset) == list:
+        datasets = []
+        for p in path2dataset:
+            datasets.append(load_dataset(p))
+        return mergeDatasets(datasets) 
     datasetPath = Path(path2dataset)
     ext = datasetPath.suffix
     if ext == ".joblib":
