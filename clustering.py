@@ -40,6 +40,7 @@ import numpy as np
 import os 
 import tqdm
 from pathlib import Path
+from sklearn.cluster import KMeans
 matplotlib.use('Agg')
 
 # the function below is deprectated, do not use
@@ -1288,14 +1289,26 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
         thres += 0.1
 
 def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
+    """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
+    Return the number of clusters where the mean squared error is below the threshold.
+
+    Args:
+        database (str): Database path. 
+        dirpath (str): Path to directory where to save the plot.
+        threshold (float, optional): Trajectory filtering threshold. Defaults to 0.7.
+        n_jobs (int, optional): Number of processes to run. Defaults to 10.
+        mse_threshold (float, optional): Mean squared error threshold. Defaults to 0.5.
+
+    Returns:
+        tuple(classifier, int, float): Returns the classifier with the best number of clusters, the number of clusters and the mean squared error.
+    """
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
-    from visualizer import aoiextraction
     from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
     trackedObjects = filter_trajectories(trackedObjects, threshold)
-    X = make_4D_feature_vectors(trackedObjects)
-    _, labels = clustering_on_feature_vectors(X, OPTICS, n_jobs, **estkwargs)
+    feature_vectors = make_4D_feature_vectors(trackedObjects)
+    _, labels = clustering_on_feature_vectors(feature_vectors, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
     tracks_labeled = trackedObjects[labels > -1]
     cluster_exitpoints = calc_cluster_centers(tracks_labeled, filtered_labels)
@@ -1320,6 +1333,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
             aoi_labels_best = aoi_labels
         n_clusters+=1
     print(aoi_labels_best)
+    print(n_clusters_best)
     outdir = os.path.join(dirpath, f"{clr_best}_n_clusters_{n_clusters_best}_mse_{mse:.6f}") # create outdir path
     if not os.path.exists(outdir): # check if outdir already exists
         os.mkdir(outdir) # make dir if not
@@ -1339,7 +1353,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
                 for x,y in zip(t.history_X, t.history_Y):
                     X.append(x)
                     Y.append(y)
-        ax.scatter(clr_best.cluster_centers_[aoi_l, 0], 1-clr_best.cluster_centers_[aoi_l, 1], c='m', label="Center of mass of exit points")
+        ax.scatter(clr_best.cluster_centers_[aoi_l, 0], 1-clr_best.cluster_centers_[aoi_l, 1], c='y')
         ax.scatter(np.array(X), 1-np.array(Y), s=0.5)
         ax.grid(visible=True)
         ax.set_xlim(left=0.0, right=2.0)
@@ -1349,7 +1363,45 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
         filename = os.path.join(outdir, f"cluster_{aoi_l}")
         print(filename)
         fig.savefig(filename) 
+    return clr_best, n_clusters_best, mse
 
+def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> tuple[np.ndarray, KMeans, int, float]:
+    """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
+    Return the clustering results based on cluster exit point centers.
+
+    Args:
+        X (np.ndarray): Already clustered trajectories. 
+        Y (np.ndarray): Labels of trajectories. 
+        n_jobs (int, optional): Number of processes to run. Defaults to 10.
+        mse_threshold (float, optional): The mean squared error threshold of min search. Defaults to 0.5.
+
+    Returns:
+        tuple(ndarray, classifier, int, float): Returns the labels of the trajectories, the classifier with the best mean squared error, the number of clusters and the mean squared error.
+    """
+    from processing_utils import euclidean_distance, calc_cluster_centers
+    Y_exitcluster_centers = calc_cluster_centers(X, Y)
+    mse = 9999
+    n_clusters = 1
+    aoi_labels_best = []
+    n_clusters_best = n_clusters
+    clr_best = None
+    while(mse > mse_threshold):
+        clr = KMeans(n_clusters).fit(Y_exitcluster_centers)
+        aoi_labels = clr.labels_
+        cluster_centers = clr.cluster_centers_
+        distance_vector = [euclidean_distance(cluster_centers[l,0], Y_exitcluster_centers[i,0], cluster_centers[l,1], Y_exitcluster_centers[i,1])
+                            for i, l in enumerate(aoi_labels)]
+        if np.max(distance_vector) < mse:
+            mse = np.max(distance_vector)
+            n_clusters_best = n_clusters
+            clr_best = clr
+            aoi_labels_best = aoi_labels
+        n_clusters+=1
+    Y_reduced_labels = np.zeros(shape=Y.shape, dtype=np.int32)
+    for i, l in tqdm.tqdm(enumerate(Y), desc="Reduce labels"):
+        Y_reduced_labels[i] = aoi_labels_best[l]
+    return Y_reduced_labels, clr_best, n_clusters_best, mse, aoi_labels_best 
+    
 def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_jobs=None):
     """Simply plots an elbow diagram with the given parameters.
 
@@ -1360,7 +1412,7 @@ def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_job
         metric (str): scoring metric 
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     X = make_4D_feature_vectors(filteredTracks)
     dirpath = os.path.join("research_data", path2db.split('/')[-1].split('.')[0])
     elbow_on_clustering(X, threshold=threshold, dirpath=dirpath, model=model, metric=metric)
@@ -1375,17 +1427,17 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     from yellowbrick.cluster.elbow import kelbow_visualizer 
     from sklearn.cluster import KMeans
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    filteredTracks = filter_out_false_positive_detections(tracks, threshold)
+    filteredTracks = filter_trajectories(tracks, threshold)
     X = make_4D_feature_vectors(filteredTracks)
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='silhouette')
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
 def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimensions="4D", **estkwargs):
     from sklearn.cluster import Birch, OPTICS, KMeans
-    from processing_utils import load_joblib_tracks
+    from processing_utils import load_dataset
     from visualizer import aoiextraction
     matplotlib.use('Agg')
-    tracks = load_joblib_tracks(tracks_path)
+    tracks = load_dataset(tracks_path)
     tracks_filtered = filter_trajectories(trackedObjects=tracks, threshold=threshold)
     if dimensions=="2D":
         cls_samples = make_2D_feature_vectors(tracks_filtered)

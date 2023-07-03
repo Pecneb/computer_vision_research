@@ -1,5 +1,5 @@
 from dataManagementClasses import TrackedObject, Detection
-from processing_utils import load_joblib_tracks
+from processing_utils import load_dataset
 from argparse import ArgumentParser
 import cv2
 import numpy as np
@@ -132,7 +132,7 @@ def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray):
 def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
-    tracks = load_joblib_tracks(args.database)
+    tracks = load_dataset(args.database)
     
     i_track = 0
     while i_track >= 0 and i_track < len(tracks):

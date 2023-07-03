@@ -29,11 +29,13 @@ def submodule_function(args):
     trackslabels2joblib(args.database[0], args.output, args.min_samples, args.max_eps, args.xi, args.min_cluster_size , args.n_jobs, args.threshold, args.p_norm, args.cluster_dimensions)
 
 def submodule_function_2(args):
+    if len(args.database) < 2:
+        return None
     databases = []
-    path = Path(args.database[0])
-    database = load_dataset(path)
-    mergeDatasets(databases)
-    dump(database, args.output, compress="lz4")
+    for path in args.database:
+        databases.append(load_dataset(path))
+    merged = mergeDatasets(databases)
+    dump(merged, args.output, compress="lz4")
 
 def submodule_function_3(args):
     trackedObjects = load_dataset(args.database[0])

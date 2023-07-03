@@ -462,7 +462,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         return self      
 
-    def predict_proba(self, X: np.ndarray, centroids: dict = None, scale: bool = False):
+    def predict_proba(self, X: np.ndarray, classes: np.ndarray = None, centroids: dict = None, scale: bool = False):
         """Return predicted probabilities of dataset X.
         If cluster centroids dictionary is given, then 
         version three feature vectors are used, that are
@@ -482,7 +482,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             X_ = self.scaler_.transform(X)
         else:
             X_ = X.copy()
-        Y = np.zeros((X.shape[0], self.classes_.shape[0]))
+        if classes is not None: 
+            Y = np.zeros((X.shape[0], classes.shape[0]))
+        else:
+            Y = np.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
             if centroids is not None:
                 Y[:, clr] = mdl.predict_proba(np.array([np.append(x, [
@@ -494,7 +497,13 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     centroids[clr][1] - x[5]
                 ]) for x in X_]))[:, 1]
             else:
-                Y[:, clr] = mdl.predict_proba(X_)[:, 1]
+                if classes is not None:
+                    predictions = mdl.predict_proba(X_)[:, 1]
+                    for i in range(Y.shape[0]):
+                        if predictions[i] > Y[i, classes[clr]]:
+                            Y[i, classes[clr]] = predictions[i] 
+                else:
+                    Y[:, clr] = mdl.predict_proba(X_)[:, 1]
         return Y 
 
     def predict(self, X: np.ndarray, top:int=1, centroids: dict = None):

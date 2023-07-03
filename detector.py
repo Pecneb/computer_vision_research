@@ -231,8 +231,8 @@ def main():
         # If joblib database is already exists and video is requested to be resumed, 
         # load existing data and continue detection where it was left off
         if os.path.exists(path2joblib) and args.resume:
-            from processing_utils import load_joblib_tracks
-            buffer2joblibTracks = load_joblib_tracks(path2joblib) 
+            from processing_utils import load_dataset
+            buffer2joblibTracks = load_dataset(path2joblib) 
         buffer2joblibTracks = []
 
         # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
