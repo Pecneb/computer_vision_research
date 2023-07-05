@@ -63,13 +63,13 @@ def submodule_preprocess(args):
         for ds in datasetPath.glob("*.joblib"):
             save_filtered_dataset(dataset=ds, 
                 threshold=args.threshold, 
-                max_dist=args.distance,
+                max_dist=args.enter_exit_distance,
                 euclidean_filtering=args.euclid,
                 outdir=args.outdir)
     elif datasetPath.suffix==".joblib":
             save_filtered_dataset(dataset=datasetPath, 
                 threshold=args.threshold, 
-                max_dist=args.distance,
+                max_dist=args.enter_exit_distance,
                 euclidean_filtering=args.euclid,
                 outdir=args.outdir)
     else:
@@ -78,20 +78,20 @@ def submodule_preprocess(args):
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-db", "--database", help="Path to database.", type=str, nargs='+')
-    argparser.add_argument("--n_jobs", help="Paralell jobs to run.", type=int, default=16, required=True)
+    argparser.add_argument("--n-jobs", help="Paralell jobs to run.", type=int, default=16, required=True)
     argparser.set_defaults(func=mainmodule_function)
 
     subparser = argparser.add_subparsers(help="Submodules.")
     
     parser_training_dataset = subparser.add_parser("optics-cluster", help="Extract the clustered track dataset with labels, for classifier training.")
     #argparser.add_argument("--training", help="Extract the filtered tracks with labels.", action="store_true", default=False)
-    parser_training_dataset.add_argument("--min_samples", help="Parameter for optics clustering", default=10, type=int)
-    parser_training_dataset.add_argument("--max_eps", help="Parameter for optics clustering", default=np.inf, type=float)
+    parser_training_dataset.add_argument("--min-samples", help="Parameter for optics clustering", default=10, type=int)
+    parser_training_dataset.add_argument("--max-eps", help="Parameter for optics clustering", default=np.inf, type=float)
     parser_training_dataset.add_argument("--xi", help="Parameter for optics clustering", default=0.05, type=float)
-    parser_training_dataset.add_argument("--min_cluster_size", help="Parameter for optics clustering", default=10, type=int)
+    parser_training_dataset.add_argument("--min-cluster_size", help="Parameter for optics clustering", default=10, type=int)
     parser_training_dataset.add_argument("--threshold", help="Threshold for track filtering. The distance to the edges of the camera footage.", default=0.5, type=float)
-    parser_training_dataset.add_argument("--cluster_dimensions", choices=["4D", "6D"], help="Choose feature vector type for clustering.", default="6D")
-    parser_training_dataset.add_argument("-p", "--p_norm", type=int, default=2, help="Set the p norm of the distance metrics.")
+    parser_training_dataset.add_argument("--cluster-dimensions", choices=["4D", "6D"], help="Choose feature vector type for clustering.", default="6D")
+    parser_training_dataset.add_argument("-p", "--p-norm", type=int, default=2, help="Set the p norm of the distance metrics.")
     parser_training_dataset.add_argument("--output", type=str, help="Output path.")
     parser_training_dataset.set_defaults(func=submodule_function)
 
@@ -108,11 +108,12 @@ def main():
 
     preprocess_dataset_parser = subparser.add_parser("preprocess", help="Run preprocessing on dataset.")
     preprocess_dataset_parser.add_argument("--outdir", help="Output directory path.", required=True)
-    preprocess_dataset_parser.add_argument("--threshold", type=float, default=0.7, help="Min-max filtering threshold value.")
+    preprocess_dataset_parser.add_argument("--threshold", type=float, default=0.7, help="Min-max filtering threshold value. Default: 0.7")
+    preprocess_dataset_parser.add_argument("--enter-exit-distance", type=float, default=0.4, help="Minimum euclidean distance between enter and exit points. Default: 0.4")
     preprocess_dataset_parser.add_argument("--euclid", action="store_true", default=False, help="Set this flag to run euclidean"
-        "distance based filtering on consecutive detections in trajectories.")
-    preprocess_dataset_parser.add_argument("--distance", type=float, default=0.05, help="Maximum euclidean distance between"
-        "consecutive detections in a trajectory.")
+        "distance based filtering on consecutive detections in trajectories. Default: False")
+    preprocess_dataset_parser.add_argument("--det-distance", type=float, default=0.05, help="Maximum euclidean distance between"
+        "consecutive detections in a trajectory. Default: 0.05")
     preprocess_dataset_parser.set_defaults(func=submodule_preprocess)
 
     args = argparser.parse_args()

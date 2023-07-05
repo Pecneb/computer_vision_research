@@ -1491,7 +1491,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, n_jobs: int, mse_threshold: float = 0.5, **estkwargs):
+def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, enter_exit_dist: float, n_jobs: int, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
 
@@ -1530,15 +1530,16 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
             outputTables.mkdir(parents=True)
 
     # load datasets
-    start = time.process_time()
+    start = time.time()
     tracks = load_dataset(dataset)
-    print("Dataset loaded in %d s" % (time.process_time() - start))
+    print("Dataset loaded in %d s" % (time.time() - start))
     print("Number of tracks: %d" % len(tracks))
 
     # cluster tracks
-    start = time.process_time()
-    tracks_filtered = filter_trajectories(tracks, threshold, False, detDist=0.1)
-    feature_vectors = make_4D_feature_vectors(tracks_filtered)
+    start = time.time()
+    if not preprocessed:
+        tracks = filter_trajectories(tracks, threshold, enter_exit_dist, False, detDist=0.1)
+    feature_vectors = make_4D_feature_vectors(tracks)
     print("Shape of feature vectors: {}".format(feature_vectors.shape))
     _, labels = clustering_on_feature_vectors(feature_vectors, 
                                               estimator=OPTICS, 
@@ -1546,21 +1547,22 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
                                               **estkwargs)
     print("Classes: {}".format(np.unique(labels)))
     # filter out not clustered tracks
-    tracks_labeled = np.array(tracks_filtered)[labels > -1]
+    tracks_labeled = np.array(tracks)[labels > -1]
     cluster_labels = labels[labels > -1]
-    print("Clustering done in %d s" % (time.process_time() - start))
+    print("Number of labeled trajectories after clustering: %d" % len(tracks_labeled))
+    print("Clustering done in %d s" % (time.time() - start))
     # run clustering on cluster exit points centroids
-    start = time.process_time()
+    start = time.time()
     reduced_labels, _,_,_, centroids_labels = kmeans_mse_clustering(tracks_labeled, 
                                                            cluster_labels, 
                                                            n_jobs=n_jobs, 
                                                            mse_threshold=mse_threshold)
     print("Clustered exit centroids: {}".format(centroids_labels))
     print("Exit points clusters: {}".format(np.unique(reduced_labels)))
-    print("Exit point clustering done in %d s" % (time.process_time() - start))
+    print("Exit point clustering done in %d s" % (time.time() - start))
 
     # preprocess for train test split
-    start = time.process_time()
+    start = time.time()
     train_dict = []
     for i in range(len(tracks_labeled)):
         train_dict.append({
@@ -1577,16 +1579,16 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
     labels_test = np.array([t["class"] for t in test])
     reduced_labels_train = np.array([t["reduced_class"] for t in train])
     reduced_labels_test = np.array([t["reduced_class"] for t in test])
-    print("Train test split done in %d s" % (time.process_time() - start))
+    print("Train test split done in %d s" % (time.time() - start))
     print("Size of training set: %d" % len(tracks_train))
     print("Size of testing set: %d" % len(tracks_test))
 
     # Generate version one feature vectors for clustering
-    start = time.process_time()
+    start = time.time()
     from processing_utils import make_feature_vectors_version_one
     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
     X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
-    print("Feature vectors generated in %d s" % (time.process_time() - start))
+    print("Feature vectors generated in %d s" % (time.time() - start))
 
     models = {
         "SVM" : SVC,
@@ -1607,9 +1609,12 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
         'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
     }
 
+    original_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy'])
+    reduced_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy']) 
+
     # train classifiers
     for m in models:
-        start = time.process_time()
+        start = time.time()
         clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=tracks_train, n_jobs=n_jobs)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
@@ -1618,23 +1623,28 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
         # convert y_pred to cluster centroid labels
         y_pred_reduced = np.array([centroids_labels[y] for y in y_pred])
         y_pred_proba_reduced = clf_ovr.predict_proba(X_test, centroids_labels)
-        print("Classifier %s trained in %d s" % (m, time.process_time() - start))
+        print("Classifier %s trained in %d s" % (m, time.time() - start))
         # evaluate based on original clusters 
         balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
         final_top_k = []
         for i in range(1,4):
             final_top_k.append(top_k_accuracy_score(y_test, y_pred_proba, k=i, labels=list(set(y_train))))
+        # add results to table
+        original_results.loc[m] = {'Top-1': final_top_k[0], 'Top-2': final_top_k[1], 'Top-3': final_top_k[2], 'Balanced Accuracy': balanced_accuracy}
         print("Classifier %s evaluation based on original clusters: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy, final_top_k[0], final_top_k[1], final_top_k[2]))
         # evaluate based on exit centroids 
         balanced_accuracy_centroids = balanced_accuracy_score(y_reduced_test, y_pred_reduced)
         final_top_k_centroids = []
         for i in range(1,4):
             final_top_k_centroids.append(top_k_accuracy_score(y_reduced_test, y_pred_proba_reduced, k=i, labels=list(set(y_train))))
+        # add results to table
+        reduced_results.loc[m] = {'Top-1': final_top_k_centroids[0], 'Top-2': final_top_k_centroids[1], 'Top-3': final_top_k_centroids[2], 'Balanced Accuracy': balanced_accuracy_centroids}
         print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
         if output is not None:
             save_model(outputModels, m, clf_ovr)
-
         
+    print(original_results.to_markdown())
+    print(reduced_results.to_markdown())
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
@@ -1705,6 +1715,8 @@ def exitpoint_metric_module(args):
         test_ratio=args.test, 
         output=args.output,
         threshold=args.threshold,
+        preprocessed=args.preprocessed,
+        enter_exit_dist=args.enter_exit_distance,
         n_jobs=args.n_jobs,
         mse_threshold=args.mse,
         min_samples=args.min_samples,
@@ -1817,7 +1829,7 @@ def main():
     plot_parser.set_defaults(func=plot_module)
 
     exitpoint_metrics_parser = submodule_parser.add_parser(
-        "exitpoints",
+        "exitpoint-metrics",
         help="Calculate metrics on only exitpoints."
     )
     exitpoint_metrics_parser.add_argument("--dataset", nargs="+",
@@ -1826,12 +1838,14 @@ def main():
                                           help="Testset size in float. Default: 0.2")
     exitpoint_metrics_parser.add_argument("--output", "-o", type=str, 
                                          help="Output files directory path.")
-    exitpoint_metrics_parser.add_argument("--threshold", type=float,
-                                          help="Threshold value for clustering.")
-    exitpoint_metrics_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param. Default: 50")
-    exitpoint_metrics_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param. Default: 0.2")
+    exitpoint_metrics_parser.add_argument("--threshold", type=float, default=0.7,
+                                          help="Threshold value for clustering. Default: 0.7")
+    exitpoint_metrics_parser.add_argument("--preprocessed", action="store_true", help="If dataset is already preprocessed, use this flag for faster loading. Default: False")
+    exitpoint_metrics_parser.add_argument("--enter-exit-distance", type=float, default=0.4, help="Euclidean distance threshold for enter and exit points. Default: 0.4")
+    exitpoint_metrics_parser.add_argument("--min-samples", default=50, type=int, help="OPTICS clustering param. Default: 50")
+    exitpoint_metrics_parser.add_argument("--max-eps", default=0.2, type=float, help="OPTICS clustering param. Default: 0.2")
     exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param. Default: 0.15")
-    exitpoint_metrics_parser.add_argument("-p", "--p_norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
+    exitpoint_metrics_parser.add_argument("-p", "--p-norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 

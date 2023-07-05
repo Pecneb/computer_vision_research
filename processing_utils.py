@@ -374,7 +374,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
     return filteredTracks
 
-def filter_trajectories(trackedObjects: list, threshold: float, detectionDistanceFiltering: bool = True, detDist: float = 0.05):
+def filter_trajectories(trackedObjects: list, threshold: float, enter_exit_dist: float = 0.4, detectionDistanceFiltering: bool = True, detDist: float = 0.05):
     """Run filtering process on trajectory datase.
 
     Args:
@@ -385,7 +385,7 @@ def filter_trajectories(trackedObjects: list, threshold: float, detectionDistanc
         denoised_trajectories: filtered trajectories without noice 
     """
     trajectories = filter_out_edge_detections(trackedObjects, threshold)
-    trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, 0.4)
+    trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, enter_exit_dist)
     if detectionDistanceFiltering:
         trajectories = filter_out_noise_trajectories(trajectories, detDist)
     return trajectories 

@@ -1653,19 +1653,19 @@ def main():
     argparser.add_argument("-db", "--database", help="Path to joblib dataset.", required=True)
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
     argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
-    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=None)
+    argparser.add_argument("--n-jobs", type=int, help="Number of processes.", default=None)
     argparser.add_argument("--filtered", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
 
     optics_parser = subparser.add_parser("optics", help="OPTICS clustering.")
-    optics_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
-    optics_parser.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    optics_parser.add_argument("--min-samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    optics_parser.add_argument("--max-eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
     optics_parser.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
-    optics_parser.add_argument("--min_cluster_size", type=float, default=None, help="Minimum number of samples in an OPTICS cluster, expressed as an absolute number or" 
+    optics_parser.add_argument("--min-cluster-size", type=float, default=None, help="Minimum number of samples in an OPTICS cluster, expressed as an absolute number or" 
                                                                               "a fraction of the number of samples (rounded to be at least 2). If flag not used," 
                                                                               "then min_cluster_size = max_samples.")
-    optics_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    optics_parser.add_argument("-p", "--p-norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     optics_parser.set_defaults(func=submodule_optics)
 
     birch_parser = subparser.add_parser("birch", help="Birch clustering.")
@@ -1675,35 +1675,35 @@ def main():
         help="Maximum number of CF subclusters in each node. If a new samples enters such that the number of subclusters exceed the branching_factor then that node is split into two nodes" 
              "with the subclusters redistributed in each. The parent subcluster of that node is removed and two new subclusters are added as parents of the 2 split nodes."
     )
-    birch_parser.add_argument("--n_clusters", type=int, default=None, 
+    birch_parser.add_argument("--n-clusters", type=int, default=None, 
         help="Number of clusters after the final clustering step, which treats the subclusters from the leaves as new samples."
     )
     birch_parser.set_defaults(func=submodule_birch)
 
     kmeans_parser = subparser.add_parser("kmeans", help="KMeans clustering.")
-    kmeans_parser.add_argument("--n_clusters", type=int, default=10, help="Number of clusters.")
+    kmeans_parser.add_argument("--n-clusters", type=int, default=10, help="Number of clusters.")
     kmeans_parser.set_defaults(func=submodule_kmeans)
 
     dbscan_parser = subparser.add_parser("dbscan", help="DBSCAN clustering.")
-    dbscan_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    dbscan_parser.add_argument("--min-samples", default=10, type=int, help="Set minimum sample number for a cluster.")
     dbscan_parser.add_argument("--eps", type=float, default=np.inf, help="Set epsilon distance that can be between samples of a cluster.")
-    dbscan_parser.add_argument("-p", "--p_norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    dbscan_parser.add_argument("-p", "--p-norm", type=int, default=2, help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     dbscan_parser.set_defaults(func=submodule_dbscan)
 
-    aoi_optics = subparser.add_parser("aoi_optics_search", help="Cluster reduction estimator parameter search.")
-    aoi_optics.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
-    aoi_optics.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    aoi_optics = subparser.add_parser("aoi-optics-search", help="Cluster reduction estimator parameter search.")
+    aoi_optics.add_argument("--min-samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    aoi_optics.add_argument("--max-eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
     aoi_optics.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
     aoi_optics.add_argument("--threshold", type=float, default=0.7)
     aoi_optics.set_defaults(func=submodule_aoi_birch)
 
-    kmeans_mse_search_parser = subparser.add_parser("kmeans_mse_search", help="KMeans clustering with max squared error search.")
+    kmeans_mse_search_parser = subparser.add_parser("kmeans-mse-search", help="KMeans clustering with max squared error search.")
     kmeans_mse_search_parser.add_argument("--mse", type=float, default=0.5,
                                           help="Mean squared error threshold.")
-    kmeans_mse_search_parser.add_argument("--min_samples", default=10, type=int, help="Set minimum sample number for a cluster.")
-    kmeans_mse_search_parser.add_argument("--max_eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
+    kmeans_mse_search_parser.add_argument("--min-samples", default=10, type=int, help="Set minimum sample number for a cluster.")
+    kmeans_mse_search_parser.add_argument("--max-eps", type=float, default=np.inf, help="Set maximum epsilon distance that can be between samples of a cluster.")
     kmeans_mse_search_parser.add_argument("--xi", type=float, default=0.15, help="Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
-    kmeans_mse_search_parser.add_argument("-p", "--pnorm", default=2, type=int, help="P norm for optics clustering.")
+    kmeans_mse_search_parser.add_argument("-p", "--p-norm", default=2, type=int, help="P norm for optics clustering.")
     kmeans_mse_search_parser.add_argument("--threshold", type=float, default=0.7, help="Threshold for data filtering.")
     kmeans_mse_search_parser.set_defaults(func=submodule_aoi_kmeans)
 
