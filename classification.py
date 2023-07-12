@@ -1592,7 +1592,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
 
     models = {
         "SVM" : SVC,
-        "KNN" : KNeighborsClassifier,
+        #"KNN" : KNeighborsClassifier,
         "DT" : DecisionTreeClassifier
     }
 
@@ -1603,11 +1603,13 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
                 }]
 
     # create top-k score functions
+    """
     top_k_scorers = {
         'top_1' : make_scorer(top_k_accuracy_score, k=1, needs_proba=True),
         'top_2' : make_scorer(top_k_accuracy_score, k=2, needs_proba=True),
         'top_3' : make_scorer(top_k_accuracy_score, k=3, needs_proba=True) 
     }
+    """
 
     original_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy'])
     reduced_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy']) 
