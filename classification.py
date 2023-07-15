@@ -1592,7 +1592,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
 
     models = {
         "SVM" : SVC,
-        #"KNN" : KNeighborsClassifier,
+        "KNN" : KNeighborsClassifier,
         "DT" : DecisionTreeClassifier
     }
 
@@ -1730,7 +1730,7 @@ def exitpoint_metric_module(args):
 def main():
     import argparse
     argparser = argparse.ArgumentParser("Train, validate and test for renitent detection.")
-    argparser.add_argument("--n_jobs", type=int, help="Number of processes.", default=1)
+    argparser.add_argument("--n-jobs", type=int, help="Number of processes.", default=1)
 
     submodule_parser = argparser.add_subparsers(help="Program functionalities.")
 

@@ -1644,7 +1644,7 @@ def submodule_aoi_kmeans(args):
                       min_samples=args.min_samples,
                       max_eps=args.max_eps,
                       xi=args.xi,
-                      p=args.pnorm
+                      p=args.p_norm
     )
 
 def main():
