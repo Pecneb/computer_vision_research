@@ -56,6 +56,7 @@ class Detection:
 @dataclass
 class TrackedObject():
     """This class is used to represent a tracked objects lifetime.
+    One can say a tracked object's trajectory.
 
 
     Attributes
@@ -80,7 +81,28 @@ class TrackedObject():
         the velocity of dimension Y calculated from the history_Y numpy array
     history_AX_calculated : ndarray
         the acceleration of dimension X calculated from the history_VX_calculated numpy array
-    history_VY_calculated : ndarray
+    history_AY_calculated : ndarray
+        the acceleration of dimension Y calculated from the history_VY_calculated numpy array
+    isMoving: bool
+        a boolean value, that tells if the object is moving or not
+    time_since_update : int
+        the number of frames since the last detection of the object
+    max_age : int
+        the maximum number of frames, that an object can be tracked without a detection,
+        if the time_since_update attribute reaches this value, the object is deleted from the tracker
+    mean : list
+        a list of the mean values of the detections, this is used for the kalman filter
+    X : int
+        the X coordinate of the last detection
+    Y : int
+        the Y coordinate of the last detection
+    VX : float
+        the velocity of dimension X calculated from the history_X numpy array
+    VY : float
+        the velocity of dimension Y calculated from the history_Y numpy array
+    AX : float
+        the acceleration of dimension X calculated from the history_VX_calculated numpy array
+    AY : float
         the acceleration of dimension Y calculated from the history_VY_calculated numpy array
 
     Returns:
@@ -111,6 +133,14 @@ class TrackedObject():
     # featureVector: np.ndarray = field(init=False)
 
     def __init__(self, id, first, max_age=30):
+        """Constructor method for TrackedObject class.
+
+        Args:
+            id (int): Unique identification number of the object. 
+            first (Detection): First detection of the object.
+            max_age (int, optional): The maximum frame number an object
+                can be tracked. Defaults to 30.
+        """
         self.objID = id
         self.history = [first]
         self.history_X = np.array([first.X])
@@ -143,6 +173,11 @@ class TrackedObject():
         return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
 
     def avgArea(self):
+        """Calculate average area of the bounding boxes of the object.
+
+        Returns:
+            float: Average area of the bounding boxes of the object. 
+        """
         areas = [(det.Width*det.Height) for det in self.history]
         return np.average(areas)
     
@@ -234,10 +269,9 @@ class TrackedObject():
                         
     def feature_(self):
         """Return feature vector of track.
-
-        Args:
-            framewidth/ratio (int): Width of the video frame.
-            frameheight (int): Height of the video frame. 
+        A simple feature vector consisting,
+        of the first, middle and last detection's X and Y coordinates.
+        The first and last detection's velocity is also included.
         """
         n = len(self.history)-1
         if n < 3:
@@ -247,12 +281,10 @@ class TrackedObject():
                         self.history[n].X, self.history[n].Y, self.history[n].VX, 
                         self.history[n].VY])
     
-    def feature_v3(self):
+    def feature_v3_v4(self):
         """Return feature vector of track.
-
-        Args:
-            framewidth/ratio (int): Width of the video frame.
-            frameheight (int): Height of the video frame. 
+        A simple feature vector consisting,
+        if the first, middle and last detection's X and Y coordinates.
         """
         n = len(self.history)-1
         if n < 3:
@@ -261,26 +293,22 @@ class TrackedObject():
                         self.history[n//2].X, self.history[n//2].Y,
                         self.history[n].X, self.history[n].Y])
 
+    """This is the same as the v3 feature vector.
     def feature_v4(self):
-        """Return feature vector of track.
-
-        Args:
-            framewidth/ratio (int): Width of the video frame.
-            frameheight (int): Height of the video frame. 
-        """
         n = len(self.history)-1
         if n < 3:
             return None
         return np.array([self.history[0].X, self.history[0].Y, 
                         self.history[n//2].X, self.history[n//2].Y, 
                         self.history[n].X, self.history[n].Y])
+    """
     
-    def feature_v7(self, k_velocity=10):
-        """Return feature vector of track.
-
-        Args:
-            framewidth/ratio (int): Width of the video frame.
-            frameheight (int): Height of the video frame. 
+    def feature_v7(self):
+        """Return version 7 feature vector.
+        The first and last detection's X and Y coordinates.
+        Also the velocities of the first and last detection.
+        The feature vector is weighted by a hardcoded value.
+        [frist.X, first.Y, first.VX, first.VY, last.X, last.Y, last.VX, last.VY] * [1, 1, 100, 100, 2, 2, 200, 200]
         """
         n = len(self.history_X)-1
         if self.history_X.shape[0] < self.max_age:
@@ -291,6 +319,19 @@ class TrackedObject():
                         self.history_VX_calculated[n-1], self.history_VY_calculated[n-1]]) * np.array([1, 1, 100, 100, 2, 2, 200, 200])
 
     def feature_v5(self, n_weights: int):
+        """Return version 5 feature vector.
+        This feature vector consists, of
+        the first and last detection's X and Y coordinates,
+        Also the n_weight number controls the number of
+        inserted coordinates between the first and the last
+        detection's coordinates.
+
+        Args:
+            n_weights (int):  
+
+        Returns:
+            feature: A numpy ndarray. 
+        """
         n = (self.history_X.shape[0] // 2)
         if (n // n_weights) < 1:
             return None
@@ -337,7 +378,7 @@ class TrackedObject():
             self.history_AY_calculated = np.append(self.history_AY_calculated, [dvy])  
 
     def update(self, detection=None, mean=None, k_velocity=10, k_acceleration=2, historyDepth = 30):
-        """Update tracking
+        """Update tracking.
 
         Args:
             detection (Detection, optional): historyClass Detecton object. If none, increment time_since_update. Defaults to None.
