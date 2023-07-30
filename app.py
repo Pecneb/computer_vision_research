@@ -1,14 +1,20 @@
 import sys
+import os
+import logging
 from PyQt5.QtWidgets import (QApplication, 
                              QMainWindow,
                              QWidget, 
                              QPushButton, 
                              QMessageBox,
                              QGridLayout,
+                             QHBoxLayout,
+                             QVBoxLayout,
                              QToolBar,
                              QAction,
                              QLineEdit,
                              QLabel)
+
+logging.basicConfig(level=logging.DEBUG)
 
 class MyApp(QMainWindow):
     """Main application class. Tha implements
@@ -53,42 +59,83 @@ class MyApp(QMainWindow):
         """
 
         ### Main view ### 
-        layout = QGridLayout()
+        vertical_layout = QVBoxLayout() 
+        horizontal_layout = QHBoxLayout()
+        grid_layout = QGridLayout()
 
         # Run button setup
         btn_run = QPushButton('Run', self) 
         # btn.resize(btn2.sizeHint())
-        btn_run.clicked.connect(self.run_button_clicked)
-        layout.addWidget(btn_run, 0, 1)
+        horizontal_layout.addWidget(btn_run)
+
+        # show toggle button
+        show_toggle = QPushButton('Show', self)
+        show_toggle.setCheckable(True)
+        horizontal_layout.addWidget(show_toggle)
+
+        # resume toggle button
+        resume_toggle = QPushButton('Resume', self)
+        resume_toggle.setCheckable(True)
+        horizontal_layout.addWidget(resume_toggle)
+
+        # device toggle button
+        device_switch = QPushButton('GPU', self)
+        device_switch.setCheckable(True)
+        horizontal_layout.addWidget(device_switch)
+
+        # add horizontal layout to vertical layout
+        vertical_layout.addLayout(horizontal_layout)
 
         # Source video input box
         source_input = QLineEdit("Source", self)
-        layout.addWidget(source_input, 1, 2)
+        grid_layout.addWidget(source_input, 1, 2)
         source_input_label = QLabel("Source", self)
-        layout.addWidget(source_input_label, 1, 1)
+        grid_layout.addWidget(source_input_label, 1, 1)
 
         # k_velocity input text
         k_velocity_input = QLineEdit("10", self)
-        layout.addWidget(k_velocity_input, 2, 2)
+        grid_layout.addWidget(k_velocity_input, 2, 2)
         k_velocity_input_label = QLabel("k-velocity", self)
-        layout.addWidget(k_velocity_input_label, 2, 1)
+        grid_layout.addWidget(k_velocity_input_label, 2, 1)
 
         # k_acceleration input text
         k_acceleration_input = QLineEdit("2", self)
-        layout.addWidget(k_acceleration_input, 3, 2)
+        grid_layout.addWidget(k_acceleration_input, 3, 2)
         k_acceleration_input_label = QLabel("k-acceleration", self)
-        layout.addWidget(k_acceleration_input_label, 3, 1)
+        grid_layout.addWidget(k_acceleration_input_label, 3, 1)
+
+        # output path input text
+        output_path_input = QLineEdit("Output path", self)
+        grid_layout.addWidget(output_path_input, 4, 2)
+        output_path_input_label = QLabel("Output", self)
+        grid_layout.addWidget(output_path_input_label, 4, 1)
+
+        # add grid layout to vertical layout
+        vertical_layout.addLayout(grid_layout)
 
         ### Widget ###
         self.detection_widget = QWidget()
-        self.detection_widget.setLayout(layout)
+        self.detection_widget.setLayout(vertical_layout)
         self.setCentralWidget(self.detection_widget)
 
-    def run_button_clicked(self):
-        run_alert = QMessageBox(self)
-        run_alert.setWindowTitle("Run")
-        run_alert.setText("Detection started")
-        run_alert.exec()
+        def run_button_clicked():
+            """Run detection on video.
+            """
+            run_alert = QMessageBox(self)
+            run_alert.setWindowTitle("Run")
+            run_alert.setText("Detection started")
+            run_alert.exec()
+            logging.debug(f"Show video: {show_toggle.isChecked()}")
+            logging.debug(f"Resume video: {resume_toggle.isChecked()}")
+            logging.debug(f"GPU toggle: {device_switch.isChecked()}")
+            logging.debug(f"Video source: {source_input.text()}")
+            logging.debug(f"Database output path: {output_path_input.text()}")
+            logging.debug(f"k-velocity: {k_velocity_input.text()}")
+            logging.debug(f"k-acceleration: {k_acceleration_input.text()}")
+            os.system(f"python3 detector.py {source_input.text()} --output {output_path_input.text()} --k-velocity {k_velocity_input.text()} --k-acceleration {k_acceleration_input.text()} {'--show' if show_toggle.isChecked() else ''} {'--resume' if resume_toggle.isChecked() else ''} --device {'cuda' if device_switch.isChecked() else 'cpu'}") 
+
+        btn_run.clicked.connect(run_button_clicked)
+
 
     def predictionView(self):
         layout = QGridLayout()
