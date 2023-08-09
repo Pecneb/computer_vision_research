@@ -18,6 +18,7 @@
 6. [Classification](#classification)
    - [Feature vectors](#featvect)
    - [Save Scikit model](#savescikitmodel)
+   - [Neural Networks](#nn)
 7. [Documentation](#document)
 8. [Classification Results](#classresfeatv1)
 9.  [Testing for decision tree depth](#testdectree)
@@ -311,20 +312,30 @@ Scikit-FeatureSelection
 
 https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
-## 8 | Threshold 4-6 Bence | Done 
-## 8 | Balanced accuracy Bence | Done
-## 21 | Monitor time in trajectory... Bence | Done
+<a id="nn"/>
 
-```python
-def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
-    #TODO add time vector
-    return featureVectors, labels, timeVector
-```
+## Neural Networks
 
-## 21 | Build feature vectors from second half of trajectories. Bence | Done
-## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron 
+For trajectory prediction tasks, several types of neural network architectures can be effective, depending on the specific characteristics of your data and the complexity of the problem. Here are a few neural network types commonly used for trajectory prediction:  
 
-Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
+    - Recurrent Neural Networks (RNNs): RNNs are a natural choice for sequential data like trajectories. Long Short-Term Memory (LSTM) and Gated Recurrent Unit (GRU) are popular variants of RNNs that are designed to handle long-range dependencies and mitigate the vanishing gradient problem. They can capture temporal patterns and relationships in trajectory data.
+
+    - Convolutional Neural Networks (CNNs): While CNNs are commonly associated with image data, they can also be applied to trajectory prediction tasks. You can treat trajectory data as a sequence of spatial positions and use 1D or 2D convolutions to capture spatial patterns and features.
+
+    - Transformer-based Models: Transformers, originally designed for natural language processing, have been adapted for sequence-to-sequence tasks. They can model long-range dependencies and have shown promise in trajectory prediction tasks by attending to relevant context in the input sequence.
+
+    - Graph Neural Networks (GNNs): If your trajectory data can be represented as a graph (where each point is a node and edges represent relationships), GNNs can be used to capture interactions and dependencies between different trajectory points.
+
+    - Hybrid Models: Depending on the characteristics of your data, you might find that a combination of different neural network types works well. For instance, you could use an RNN to capture temporal patterns and a CNN to capture spatial features.
+
+    - Encoder-Decoder Architectures: These architectures are often used for sequence-to-sequence tasks. An encoder processes the input trajectory, and a decoder generates the predicted trajectory. Variants like Seq2Seq models, as well as attention mechanisms, can enhance the accuracy of trajectory prediction.
+
+    - Variational Autoencoders (VAEs): VAEs can learn a latent representation of trajectory data, which can be useful for generating diverse predictions. They can also handle uncertainty estimation.
+
+    - Ensemble Models: Combining predictions from multiple neural networks or models can lead to improved accuracy and robustness in trajectory prediction.
+
+When deciding on a neural network type, consider factors such as the length of trajectories, the presence of noise or missing data, the availability of historical context, and the computational resources available. Experimenting with different architectures and tuning hyperparameters is often necessary to find the best approach for your specific trajectory prediction problem.
+
 
 VIDEO:0001_1_37min
 Top picks
