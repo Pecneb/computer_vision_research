@@ -1491,7 +1491,7 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, enter_exit_dist: float, n_jobs: int, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
+def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, enter_exit_dist: float, n_jobs: int, models_to_benchmark: list[str], mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
 
@@ -1615,7 +1615,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
     reduced_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy']) 
 
     # train classifiers
-    for m in models:
+    for m in models_to_benchmark:
         start = time.time()
         clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=train, n_jobs=n_jobs, centroids_labels=centroids_labels)
         clf_ovr.fit(X_train, y_train)
@@ -1720,6 +1720,7 @@ def exitpoint_metric_module(args):
         preprocessed=args.preprocessed,
         enter_exit_dist=args.enter_exit_distance,
         n_jobs=args.n_jobs,
+        models_to_benchmark=args.models,
         mse_threshold=args.mse,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
@@ -1849,6 +1850,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param. Default: 0.15")
     exitpoint_metrics_parser.add_argument("-p", "--p-norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
+    exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
