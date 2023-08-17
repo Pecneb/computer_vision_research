@@ -1288,7 +1288,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
+def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
     """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
     Return the number of clusters where the mean squared error is below the threshold.
 
@@ -1306,7 +1306,9 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     from sklearn.cluster import OPTICS
     from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
-    trackedObjects = filter_trajectories(trackedObjects, threshold)
+    if not preprocessed:
+        trackedObjects = filter_trajectories(trackedObjects, threshold, detectionDistanceFiltering=False)
+    trackedObjects = np.array(trackedObjects, dtype=object)
     feature_vectors = make_4D_feature_vectors(trackedObjects)
     _, labels = clustering_on_feature_vectors(feature_vectors, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
@@ -1641,6 +1643,7 @@ def submodule_aoi_kmeans(args):
                       args.threshold,
                       args.n_jobs,
                       args.mse,
+                      args.preprocessed,
                       min_samples=args.min_samples,
                       max_eps=args.max_eps,
                       xi=args.xi,
@@ -1654,7 +1657,7 @@ def main():
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
     argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
     argparser.add_argument("--n-jobs", type=int, help="Number of processes.", default=None)
-    argparser.add_argument("--filtered", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
+    argparser.add_argument("--preprocessed", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
 

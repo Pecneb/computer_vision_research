@@ -388,7 +388,7 @@ def filter_trajectories(trackedObjects: list, threshold: float, enter_exit_dist:
     trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, enter_exit_dist)
     if detectionDistanceFiltering:
         trajectories = filter_out_noise_trajectories(trajectories, detDist)
-    return trajectories 
+    return np.array(trajectories, dtype=object)
 
 def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
