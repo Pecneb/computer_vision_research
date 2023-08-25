@@ -10,11 +10,14 @@ import argparse
 import cv2
 from joblib import dump
 import numpy as np
+import logging
 from tqdm import tqdm
 from dataManagementClasses import TrackedObject
 from copy import deepcopy
 from itertools import starmap
 from pathlib import Path
+
+logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
 def mainmodule_function(args): 
     path = Path(args.database[0])

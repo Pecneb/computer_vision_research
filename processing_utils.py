@@ -384,11 +384,12 @@ def filter_trajectories(trackedObjects: list, threshold: float, enter_exit_dist:
     Returns:
         denoised_trajectories: filtered trajectories without noice 
     """
-    trajectories = filter_out_edge_detections(trackedObjects, threshold)
-    trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, enter_exit_dist)
+    edge_trajectories = filter_out_edge_detections(trackedObjects, threshold)
+    filtered_trajectories = filter_out_false_positive_detections_by_enter_exit_distance(edge_trajectories, enter_exit_dist)
     if detectionDistanceFiltering:
-        trajectories = filter_out_noise_trajectories(trajectories, detDist)
-    return np.array(trajectories, dtype=object)
+        denoised_trajectories = filter_out_noise_trajectories(filtered_trajectories, detDist)
+        return np.array(denoised_trajectories, dtype=object)
+    return np.array(filtered_trajectories, dtype=object)
 
 def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
@@ -402,7 +403,12 @@ def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float
         return False
     trajectories = load_dataset(dataset)
     logging.info(f"Trajectories \"{dataset}\" loaded")
-    trajs2save = filter_trajectories(trajectories, threshold, euclidean_filtering, max_dist)
+    trajs2save = filter_trajectories(
+        trackedObjects=trajectories, 
+        threshold=threshold, 
+        detectionDistanceFiltering=euclidean_filtering, 
+        detDist=max_dist
+    )
     logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
     if outdir is not None:

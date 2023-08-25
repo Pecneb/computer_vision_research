@@ -1498,7 +1498,7 @@ def submodule_optics(args):
     """
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
-    if args.filtered:
+    if args.preprocessed:
         path = Path(args.database)
         if path.is_dir():
             dataset = loadDatasetsFromDirectory(args.database) # load dataset from directory
