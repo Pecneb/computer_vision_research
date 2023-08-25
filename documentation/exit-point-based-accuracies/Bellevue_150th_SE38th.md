@@ -48,6 +48,7 @@ Classifier SVM evaluation based on exit point centroids: balanced accuracy: 0.70
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | SVM | 0.775906 | 0.895753 | 0.952738 |            0.610717 |
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | SVM | 0.798084 | 0.919048 | 0.969056 |            0.707545 |
@@ -100,6 +101,7 @@ Classifier DT evaluation based on exit point centroids: balanced accuracy: 0.907
 |    |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:---|---------:|---------:|---------:|--------------------:|
 | DT | 0.907983 | 0.929044 | 0.929379 |             0.90457 |
+
 |    |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:---|---------:|---------:|---------:|--------------------:|
 | DT | 0.915536 | 0.931215 | 0.931247 |            0.907395 |
@@ -153,6 +155,7 @@ Classifier KNN evaluation based on exit point centroids: balanced accuracy: 0.94
 |     |    Top-1 |   Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|--------:|---------:|--------------------:|
 | KNN | 0.941929 | 0.99208 | 0.992959 |            0.920993 |
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | KNN | 0.951509 | 0.993709 | 0.993869 |            0.948333 |

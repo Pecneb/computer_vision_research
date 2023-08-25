@@ -45,9 +45,11 @@ Feature vectors generated in 0 s
 Classifier KNN trained in 7 s
 Classifier KNN evaluation based on original clusters: balanced accuracy: 0.875785, top-1: 0.927191, top-2: 0.984904, top-3: 0.990047
 Classifier KNN evaluation based on exit point centroids: balanced accuracy: 0.925471, top-1: 0.940307, top-2: 0.986893, top-3: 0.989573
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | KNN | 0.927191 | 0.984904 | 0.990047 |            0.875785 |
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | KNN | 0.940307 | 0.986893 | 0.989573 |            0.925471 |
@@ -99,12 +101,15 @@ Feature vectors generated in 0 s
 Classifier SVM trained in 127 s
 Classifier SVM evaluation based on original clusters: balanced accuracy: 0.722348, top-1: 0.830876, top-2: 0.956332, top-3: 0.996373
 Classifier SVM evaluation based on exit point centroids: balanced accuracy: 0.843607, top-1: 0.883106, top-2: 0.973312, top-3: 0.999725
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | SVM | 0.830876 | 0.956332 | 0.996373 |            0.722348 |
+
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
 | SVM | 0.883106 | 0.973312 | 0.999725 |            0.843607 |
+
 (yolov7) pecneb@rigel:/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research$ 
 
 
@@ -154,10 +159,13 @@ Feature vectors generated in 0 s
 Classifier DT trained in 2 s
 Classifier DT evaluation based on original clusters: balanced accuracy: 0.865413, top-1: 0.881533, top-2: 0.915144, top-3: 0.923677
 Classifier DT evaluation based on exit point centroids: balanced accuracy: 0.888597, top-1: 0.897870, top-2: 0.916508, top-3: 0.916603
+
 |    |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:---|---------:|---------:|---------:|--------------------:|
 | DT | 0.881533 | 0.915144 | 0.923677 |            0.865413 |
+
 |    |   Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:---|--------:|---------:|---------:|--------------------:|
 | DT | 0.89787 | 0.916508 | 0.916603 |            0.888597 |
+
 (yolov7) pecneb@rigel:/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research$ 
