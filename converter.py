@@ -64,6 +64,7 @@ def submodule_preprocess(args):
     datasetPath = Path(args.database[0])
     if datasetPath.is_dir():
         for ds in datasetPath.glob("*.joblib"):
+            print(ds)
             save_filtered_dataset(dataset=ds, 
                 threshold=args.threshold, 
                 max_dist=args.enter_exit_distance,

@@ -1522,7 +1522,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
 
     # create output directories if output is given
     if output is not None:
-        outputModels = Path(output, "Models")
+        outputModels = Path(output)
         outputTables = Path(output, "Tables")
         if not outputModels.exists():
             outputModels.mkdir(parents=True)
@@ -1642,11 +1642,16 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
         # add results to table
         reduced_results.loc[m] = {'Top-1': final_top_k_centroids[0], 'Top-2': final_top_k_centroids[1], 'Top-3': final_top_k_centroids[2], 'Balanced Accuracy': balanced_accuracy_centroids}
         print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
+        ### Save model if output path is given ###
         if output is not None:
             save_model(outputModels, m, clf_ovr)
         
+    ### Print out tables ###
+    print()
     print(original_results.to_markdown())
+    print()
     print(reduced_results.to_markdown())
+    print()
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
@@ -1840,7 +1845,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--test", type=float, default=0.2,
                                           help="Testset size in float. Default: 0.2")
     exitpoint_metrics_parser.add_argument("--output", "-o", type=str, 
-                                         help="Output files directory path.")
+                                         help="Output files directory path. If not given, models wont be saved.")
     exitpoint_metrics_parser.add_argument("--threshold", type=float, default=0.7,
                                           help="Threshold value for clustering. Default: 0.7")
     exitpoint_metrics_parser.add_argument("--preprocessed", action="store_true", help="If dataset is already preprocessed, use this flag for faster loading. Default: False")

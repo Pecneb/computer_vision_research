@@ -22,7 +22,7 @@ from processing_utils import (
     trackedObjectFactory, 
     filter_out_false_positive_detections_by_enter_exit_distance, 
     filter_trajectories, 
-    filter_tracks, 
+    filter_by_class, 
     make_2D_feature_vectors,
     make_4D_feature_vectors, 
     make_6D_feature_vectors,
@@ -266,7 +266,7 @@ def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_j
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
@@ -357,7 +357,7 @@ def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
@@ -441,7 +441,7 @@ def simple_dbscan_plotter(path2db: str, threshold:float, eps: float, min_samples
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     dbscan_clustering_on_nx4(tracksFiltered, eps, min_samples, n_jobs, min_samples)
 
 def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_jobs: int, threshold=(0.1, 0.7), k=(2,16), shuffle=False):
@@ -463,7 +463,7 @@ def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_job
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     if shuffle: # shuffle data to get different results
         shuffle_data(trackedObjects)
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
@@ -553,7 +553,7 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
 def simple_optics_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, max_eps, outdir)
 
 def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cluster_size: float, max_eps: float, threshold=(0.1, 0.7), k=(2,16), n_jobs=16):
@@ -577,7 +577,7 @@ def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cl
         return False
     trackedObjects = load_dataset(path2db)
     #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
     #max_progress = k[1] * int(threshold[1] / thres_interval)
@@ -672,7 +672,7 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
 def cluster_optics_dbscan_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, eps, outdir)
 
 def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min_cluster_size=0.05, eps=0.2, threshold=(0.1, 0.7), k=(2,16), n_jobs=16):
@@ -695,7 +695,7 @@ def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min
         return False
     trackedObjects = load_dataset(path2db)
     #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
     #max_progress = k[1] * int(threshold[1] / thres_interval)
@@ -1094,7 +1094,7 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1120,7 +1120,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1146,7 +1146,7 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1334,8 +1334,6 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
             clr_best = clr
             aoi_labels_best = aoi_labels
         n_clusters+=1
-    print(aoi_labels_best)
-    print(n_clusters_best)
     outdir = os.path.join(dirpath, f"{clr_best}_n_clusters_{n_clusters_best}_mse_{mse:.6f}") # create outdir path
     if not os.path.exists(outdir): # check if outdir already exists
         os.mkdir(outdir) # make dir if not
