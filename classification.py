@@ -1491,7 +1491,16 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, enter_exit_dist: float, n_jobs: int, models_to_benchmark: list[str], mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
+def calculate_metrics_exitpoints(dataset: str | list[str], 
+                                 test_ratio: float, 
+                                 output: str, threshold: float, 
+                                 enter_exit_dist: float, 
+                                 n_jobs: int, 
+                                 models_to_benchmark: list[str], 
+                                 mse_threshold: float = 0.5, 
+                                 preprocessed: bool = False,
+                                 test_trajectory_part: float = 1,
+                                 **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
 
@@ -1587,7 +1596,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
     start = time.time()
     from processing_utils import make_feature_vectors_version_one
     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
+    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
     print("Feature vectors generated in %d s" % (time.time() - start))
 
     models = {
@@ -1727,6 +1736,7 @@ def exitpoint_metric_module(args):
         n_jobs=args.n_jobs,
         models_to_benchmark=args.models,
         mse_threshold=args.mse,
+        test_trajectory_part=args.test_part,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
         xi=args.xi,
@@ -1844,6 +1854,8 @@ def main():
                                           help="Dataset database path.")
     exitpoint_metrics_parser.add_argument("--test", type=float, default=0.2,
                                           help="Testset size in float. Default: 0.2")
+    exitpoint_metrics_parser.add_argument("--test-part", type=float, default=1,
+                                          help="Which part of the test set's trajectories should be used, 1/3, 2/3 or 3/3. Default: 1")
     exitpoint_metrics_parser.add_argument("--output", "-o", type=str, 
                                          help="Output files directory path. If not given, models wont be saved.")
     exitpoint_metrics_parser.add_argument("--threshold", type=float, default=0.7,
