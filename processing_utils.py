@@ -569,7 +569,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None):
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -589,7 +589,7 @@ def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.nd
         step = len(trackedObjects[j].history)//k
         if step > 0:
             midstep = step//2
-            for i in range(0, len(trackedObjects[j].history)-step, step):
+            for i in range(0, int(len(trackedObjects[j].history)*up_until)-step, step):
                 featureVectors.append(np.array([trackedObjects[j].history[i].X, trackedObjects[j].history[i].Y, 
                                             trackedObjects[j].history[i].VX, trackedObjects[j].history[i].VY,
                                             trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
