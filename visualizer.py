@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from processing_utils import load_joblib_tracks, load_model
+from processing_utils import load_model
 from dataManagementClasses import Detection, TrackedObject
 import cv2 as cv
 import argparse
@@ -28,7 +28,7 @@ from detector import getTargets
 from detector import draw_boxes
 from classifier import OneVSRestClassifierExtended
 from masker import masker
-from clustering import calc_cluster_centers
+from processing_utils import calc_cluster_centers 
 
 def parseArgs():
     """Handle command line arguments.
@@ -54,6 +54,7 @@ def parseArgs():
                         help="Use this flag if want to record video of prediction results.")
     parser.add_argument("--output", type=str, 
                         help="Use this flag if want to record video of prediction results.")
+    parser.add_argument("--pool", action="store_true", default=False, help="Use this flag to enable cluster center pooling.")
     args = parser.parse_args()
     return args
 
@@ -247,6 +248,7 @@ def main():
     model = load_model(args.model)
     model.n_jobs = 18
     dataset = model.tracks
+    centroids_labels = model.centroid_labels
     """
     dataset = load_joblib_tracks(args.train_tracks) 
     if type(dataset[0]) != dict:
@@ -258,9 +260,13 @@ def main():
     """
     tracks = [d["track"] for d in dataset]
     classes = [d["class"] for d in dataset]
+    reduced_classes = [d["reduced_class"] for d in dataset if d["reduced_class"] != -1]
 
     # extract cluster centroids from dataset of classes and tracks
-    cluster_centroids = cluster_centroids_upscaled(tracks, classes)
+    if args.pool:
+        cluster_centroids = calc_cluster_centers(tracks, reduced_classes)
+    else:
+        cluster_centroids = calc_cluster_centers(tracks, classes)
     # upscale the coordinates of the centroids to the video's scale
     cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
 
@@ -310,6 +316,13 @@ def main():
                         if feature is not None:
                             if VERSION_3:
                                 predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), args.top_k, centroids=cluster_centroids).reshape((-1))
+                            elif args.pool:
+                                predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)]), classes=centroids_labels)
+                                # print(predictions_proba)
+                                predictions = np.argsort(predictions_proba)[:, -args.top_k:]
+                                # print(predictions)
+                                predictions = predictions.reshape((-1))
+                                predictions_proba = predictions_proba.reshape((-1))
                             else:
                                 predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), args.top_k).reshape((-1))
                                 predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))

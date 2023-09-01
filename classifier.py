@@ -301,7 +301,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
     
     """
 
-    def __init__(self, estimator, tracks, n_jobs=16):
+    def __init__(self, estimator, tracks, n_jobs=16, centroids_labels = None):
         """_summary_
 
         Parameters
@@ -318,6 +318,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Default n_jobs value is 16.
         """
         self.tracks = tracks
+        self.centroid_labels = centroids_labels
         self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
     
@@ -467,6 +468,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         If cluster centroids dictionary is given, then 
         version three feature vectors are used, that are
         calculated per cluster.
+        If classes paramter is given, then the prediction
+        vector is pooled from the given classes. The pooled
+        probabilities are the maximum probabilities of the
+        original prediction vector.
 
         Parameters
         ----------

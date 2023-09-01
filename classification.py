@@ -1491,7 +1491,16 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, output: str, threshold: float, enter_exit_dist: float, n_jobs: int, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
+def calculate_metrics_exitpoints(dataset: str | list[str], 
+                                 test_ratio: float, 
+                                 output: str, threshold: float, 
+                                 enter_exit_dist: float, 
+                                 n_jobs: int, 
+                                 models_to_benchmark: list[str], 
+                                 mse_threshold: float = 0.5, 
+                                 preprocessed: bool = False,
+                                 test_trajectory_part: float = 1,
+                                 **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
 
@@ -1522,7 +1531,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
 
     # create output directories if output is given
     if output is not None:
-        outputModels = Path(output, "Models")
+        outputModels = Path(output)
         outputTables = Path(output, "Tables")
         if not outputModels.exists():
             outputModels.mkdir(parents=True)
@@ -1587,7 +1596,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
     start = time.time()
     from processing_utils import make_feature_vectors_version_one
     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
+    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
     print("Feature vectors generated in %d s" % (time.time() - start))
 
     models = {
@@ -1615,9 +1624,9 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
     reduced_results = pd.DataFrame(columns=['Top-1', 'Top-2', 'Top-3', 'Balanced Accuracy']) 
 
     # train classifiers
-    for m in models:
+    for m in models_to_benchmark:
         start = time.time()
-        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=tracks_train, n_jobs=n_jobs)
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=train, n_jobs=n_jobs, centroids_labels=centroids_labels)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
         y_pred = clf_ovr.predict(X_test)
@@ -1642,11 +1651,16 @@ def calculate_metrics_exitpoints(dataset: str | list[str], test_ratio: float, ou
         # add results to table
         reduced_results.loc[m] = {'Top-1': final_top_k_centroids[0], 'Top-2': final_top_k_centroids[1], 'Top-3': final_top_k_centroids[2], 'Balanced Accuracy': balanced_accuracy_centroids}
         print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
+        ### Save model if output path is given ###
         if output is not None:
             save_model(outputModels, m, clf_ovr)
         
+    ### Print out tables ###
+    print()
     print(original_results.to_markdown())
+    print()
     print(reduced_results.to_markdown())
+    print()
     
 # submodule functions
 def train_binary_classifiers_submodule(args):
@@ -1720,7 +1734,9 @@ def exitpoint_metric_module(args):
         preprocessed=args.preprocessed,
         enter_exit_dist=args.enter_exit_distance,
         n_jobs=args.n_jobs,
+        models_to_benchmark=args.models,
         mse_threshold=args.mse,
+        test_trajectory_part=args.test_part,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
         xi=args.xi,
@@ -1838,8 +1854,10 @@ def main():
                                           help="Dataset database path.")
     exitpoint_metrics_parser.add_argument("--test", type=float, default=0.2,
                                           help="Testset size in float. Default: 0.2")
+    exitpoint_metrics_parser.add_argument("--test-part", type=float, default=1,
+                                          help="Which part of the test set's trajectories should be used, 1/3, 2/3 or 3/3. Default: 1")
     exitpoint_metrics_parser.add_argument("--output", "-o", type=str, 
-                                         help="Output files directory path.")
+                                         help="Output files directory path. If not given, models wont be saved.")
     exitpoint_metrics_parser.add_argument("--threshold", type=float, default=0.7,
                                           help="Threshold value for clustering. Default: 0.7")
     exitpoint_metrics_parser.add_argument("--preprocessed", action="store_true", help="If dataset is already preprocessed, use this flag for faster loading. Default: False")
@@ -1849,6 +1867,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param. Default: 0.15")
     exitpoint_metrics_parser.add_argument("-p", "--p-norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
+    exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()

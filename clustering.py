@@ -22,7 +22,7 @@ from processing_utils import (
     trackedObjectFactory, 
     filter_out_false_positive_detections_by_enter_exit_distance, 
     filter_trajectories, 
-    filter_tracks, 
+    filter_by_class, 
     make_2D_feature_vectors,
     make_4D_feature_vectors, 
     make_6D_feature_vectors,
@@ -266,7 +266,7 @@ def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_j
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
@@ -357,7 +357,7 @@ def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
         thres = threshold[0]
         while thres <= threshold[1]:
@@ -441,7 +441,7 @@ def simple_dbscan_plotter(path2db: str, threshold:float, eps: float, min_samples
     """
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     dbscan_clustering_on_nx4(tracksFiltered, eps, min_samples, n_jobs, min_samples)
 
 def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_jobs: int, threshold=(0.1, 0.7), k=(2,16), shuffle=False):
@@ -463,7 +463,7 @@ def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_job
         print("Error: this is not how we use this program properly")
         return False
     trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     if shuffle: # shuffle data to get different results
         shuffle_data(trackedObjects)
     for i in range(k[0], k[1]+1): # plus 1 because range goes from k[0] to k[0]-1
@@ -553,7 +553,7 @@ def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, 
 def simple_optics_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, max_eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, max_eps, outdir)
 
 def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cluster_size: float, max_eps: float, threshold=(0.1, 0.7), k=(2,16), n_jobs=16):
@@ -577,7 +577,7 @@ def optics_worker(path2db: str, outdir: str, min_samples: int, xi: float, min_cl
         return False
     trackedObjects = load_dataset(path2db)
     #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
     #max_progress = k[1] * int(threshold[1] / thres_interval)
@@ -672,7 +672,7 @@ def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: flo
 def cluster_optics_dbscan_plotter(path2db: str, outdir: str, min_samples=10, xi=0.05, threshold=0.3, min_cluster_size=0.05, eps=0.2, n_jobs=16):
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
     tracksFiltered = filter_trajectories(tracks, threshold)
-    tracksFiltered = filter_tracks(tracksFiltered)
+    tracksFiltered = filter_by_class(tracksFiltered)
     optics_clustering_on_nx4(tracksFiltered, min_samples, xi, min_cluster_size, threshold, eps, outdir)
 
 def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min_cluster_size=0.05, eps=0.2, threshold=(0.1, 0.7), k=(2,16), n_jobs=16):
@@ -695,7 +695,7 @@ def optics_dbscan_worker(path2db: str, outdir: str, min_samples=10, xi=0.05, min
         return False
     trackedObjects = load_dataset(path2db)
     #trackedObjects = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     progress = 1
     thres_interval = 0.1
     #max_progress = k[1] * int(threshold[1] / thres_interval)
@@ -1094,7 +1094,7 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1120,7 +1120,7 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1146,7 +1146,7 @@ def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: st
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
-    trackedObjects = filter_tracks(trackedObjects) # filter out only cars
+    trackedObjects = filter_by_class(trackedObjects) # filter out only cars
     # Create 
     progress = 1
     thres_interval = 0.1
@@ -1288,7 +1288,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 elbow_on_clustering(X, threshold=thres, dirpath=dirpaths[model][metric], model=model, metric=metric, show=False)
         thres += 0.1
 
-def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, **estkwargs):
+def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
     """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
     Return the number of clusters where the mean squared error is below the threshold.
 
@@ -1306,7 +1306,9 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     from sklearn.cluster import OPTICS
     from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
-    trackedObjects = filter_trajectories(trackedObjects, threshold)
+    if not preprocessed:
+        trackedObjects = filter_trajectories(trackedObjects, threshold, detectionDistanceFiltering=False)
+    trackedObjects = np.array(trackedObjects, dtype=object)
     feature_vectors = make_4D_feature_vectors(trackedObjects)
     _, labels = clustering_on_feature_vectors(feature_vectors, OPTICS, n_jobs, **estkwargs)
     filtered_labels = labels[labels > -1]
@@ -1332,8 +1334,6 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
             clr_best = clr
             aoi_labels_best = aoi_labels
         n_clusters+=1
-    print(aoi_labels_best)
-    print(n_clusters_best)
     outdir = os.path.join(dirpath, f"{clr_best}_n_clusters_{n_clusters_best}_mse_{mse:.6f}") # create outdir path
     if not os.path.exists(outdir): # check if outdir already exists
         os.mkdir(outdir) # make dir if not
@@ -1496,7 +1496,7 @@ def submodule_optics(args):
     """
     #optics_worker(args.database, args.outdir, args.min_samples, args.xi, args.min_cluster_size, args.max_eps, n_jobs=args.n_jobs)
     from sklearn.cluster import OPTICS
-    if args.filtered:
+    if args.preprocessed:
         path = Path(args.database)
         if path.is_dir():
             dataset = loadDatasetsFromDirectory(args.database) # load dataset from directory
@@ -1641,6 +1641,7 @@ def submodule_aoi_kmeans(args):
                       args.threshold,
                       args.n_jobs,
                       args.mse,
+                      args.preprocessed,
                       min_samples=args.min_samples,
                       max_eps=args.max_eps,
                       xi=args.xi,
@@ -1654,7 +1655,7 @@ def main():
     argparser.add_argument("--outdir", "-o", help="Output directory path.", required=True)
     argparser.add_argument("--dimensions", type=str, choices=["2D", "4D", "6D"], help="Choose the dimensions of the feature vector.", required=True)
     argparser.add_argument("--n-jobs", type=int, help="Number of processes.", default=None)
-    argparser.add_argument("--filtered", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
+    argparser.add_argument("--preprocessed", action="store_true", default=False,help="Use this flag if db is already preprocessed.")
 
     subparser = argparser.add_subparsers(help="Chose from clustering methods.")
 

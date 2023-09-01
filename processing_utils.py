@@ -374,7 +374,7 @@ def filter_out_edge_detections(trackedObjects: list, threshold: float):
     # even though we did the edge filtering, we can run an euclidean distance based filtering, which's threshold is hardcoded for now
     return filteredTracks
 
-def filter_trajectories(trackedObjects: list, threshold: float, enter_exit_dist: float = 0.4, detectionDistanceFiltering: bool = True, detDist: float = 0.05):
+def filter_trajectories(trackedObjects: list, threshold: float = 0.7, enter_exit_dist: float = 0.4, detectionDistanceFiltering: bool = True, detDist: float = 0.05):
     """Run filtering process on trajectory datase.
 
     Args:
@@ -384,11 +384,12 @@ def filter_trajectories(trackedObjects: list, threshold: float, enter_exit_dist:
     Returns:
         denoised_trajectories: filtered trajectories without noice 
     """
-    trajectories = filter_out_edge_detections(trackedObjects, threshold)
-    trajectories = filter_out_false_positive_detections_by_enter_exit_distance(trajectories, enter_exit_dist)
+    edge_trajectories = filter_out_edge_detections(trackedObjects, threshold)
+    filtered_trajectories = filter_out_false_positive_detections_by_enter_exit_distance(edge_trajectories, enter_exit_dist)
     if detectionDistanceFiltering:
-        trajectories = filter_out_noise_trajectories(trajectories, detDist)
-    return trajectories 
+        denoised_trajectories = filter_out_noise_trajectories(filtered_trajectories, detDist)
+        return np.array(denoised_trajectories, dtype=object)
+    return np.array(filtered_trajectories, dtype=object)
 
 def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float, euclidean_filtering: bool = False, outdir = None):
     """Filter dataset and save to joblib binary.
@@ -400,9 +401,18 @@ def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float
     if "filtered" in str(dataset):
         print(f"{dataset} is already filtered.")
         return False
-    trajectories = load_dataset(dataset)
+    try:
+        trajectories = load_dataset(dataset)
+    except EOFError as e:
+        print(e)
+        return False
     logging.info(f"Trajectories \"{dataset}\" loaded")
-    trajs2save = filter_trajectories(trajectories, threshold, euclidean_filtering, max_dist)
+    trajs2save = filter_trajectories(
+        trackedObjects=trajectories, 
+        threshold=threshold, 
+        detectionDistanceFiltering=euclidean_filtering, 
+        detDist=max_dist
+    )
     logging.info(f"Dataset filtered. Trajectories reduced from {len(trajectories)} to {len(trajs2save)}")
     datasetPath = Path(dataset)
     if outdir is not None:
@@ -415,7 +425,7 @@ def save_filtered_dataset(dataset: str | Path, threshold: float, max_dist: float
     joblib.dump(trajs2save, filteredDatasetPath)
     logging.info(f"Filtered dataset saved to {filteredDatasetPath.absolute()}")
 
-def filter_tracks(trackedObjects: list, label="car"):
+def filter_by_class(trackedObjects: list, label="car"):
     """Only return objects with given label.
 
     Args:
@@ -559,7 +569,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None):
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -579,7 +589,7 @@ def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.nd
         step = len(trackedObjects[j].history)//k
         if step > 0:
             midstep = step//2
-            for i in range(0, len(trackedObjects[j].history)-step, step):
+            for i in range(0, int(len(trackedObjects[j].history)*up_until)-step, step):
                 featureVectors.append(np.array([trackedObjects[j].history[i].X, trackedObjects[j].history[i].Y, 
                                             trackedObjects[j].history[i].VX, trackedObjects[j].history[i].VY,
                                             trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
@@ -931,7 +941,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_trajectories(tracks, threshold=thres)
-    filteredTracks = filter_tracks(filteredTracks)
+    filteredTracks = filter_by_class(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
 
     if from_half:
@@ -987,7 +997,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_trajectories(tracks, threshold=thres)
-    filteredTracks = filter_tracks(filteredTracks)
+    filteredTracks = filter_by_class(filteredTracks)
     labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
     X, y = make_features_for_classification(filteredTracks, 6, labels)
     X = X[y > -1]
@@ -1098,7 +1108,7 @@ def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0
     from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
-    tracks = filter_tracks(tracks)
+    tracks = filter_by_class(tracks)
     tracks = filter_trajectories(trackedObjects=tracks, threshold=threshold)
 
     if cluster_features_version == "4D":
@@ -1200,7 +1210,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
         return False
     
     tracks_filtered = filter_trajectories(tracks, threshold=threshold)
-    tracks_car_only = filter_tracks(tracks_filtered)
+    tracks_car_only = filter_by_class(tracks_filtered)
 
     if cluster_dimensions == "6D":
         cluster_features = make_6D_feature_vectors(tracks_car_only)

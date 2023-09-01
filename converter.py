@@ -10,11 +10,14 @@ import argparse
 import cv2
 from joblib import dump
 import numpy as np
+import logging
 from tqdm import tqdm
 from dataManagementClasses import TrackedObject
 from copy import deepcopy
 from itertools import starmap
 from pathlib import Path
+
+logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
 def mainmodule_function(args): 
     path = Path(args.database[0])
@@ -61,6 +64,7 @@ def submodule_preprocess(args):
     datasetPath = Path(args.database[0])
     if datasetPath.is_dir():
         for ds in datasetPath.glob("*.joblib"):
+            print(ds)
             save_filtered_dataset(dataset=ds, 
                 threshold=args.threshold, 
                 max_dist=args.enter_exit_distance,

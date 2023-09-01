@@ -39,6 +39,8 @@ import tqdm
 from masker import masker
 from processing_utils import downscale_TrackedObjects
 
+VIDEO_EXTENSIONS = [".mp4", ".avi", ".mkv", ".webm"]
+
 def parseArgs():
     """Function for Parsing Arguments
 
@@ -168,9 +170,12 @@ def generateOutputName(input, outdir):
 def getDirectoryEntries(dirpath):
     path = Path(dirpath)
     inputs = []
-    for p in path.glob("*.mp4"):
-        inputs.append(str(p))
-        print(p)
+    #for p in path.glob("*.mp4"):
+    #    inputs.append(str(p))
+    #    print(p)
+    for i in path.iterdir():
+        if i.suffix in VIDEO_EXTENSIONS:
+            inputs.append(str(i))
     return inputs
 
 def main():
