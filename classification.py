@@ -33,6 +33,7 @@ from processing_utils import (
     preprocess_dataset_for_training,
     load_dataset,
     level_features,
+    plot_misclassified_feature_vectors
     )
 from tqdm import tqdm
 from pathlib import Path
@@ -1626,7 +1627,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
     # train classifiers
     for m in models_to_benchmark:
         start = time.time()
-        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), tracks=train, n_jobs=n_jobs, centroids_labels=centroids_labels)
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), n_jobs=n_jobs, centroids_labels=centroids_labels)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
         y_pred = clf_ovr.predict(X_test)
@@ -1654,6 +1655,9 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
         ### Save model if output path is given ###
         if output is not None:
             save_model(outputModels, m, clf_ovr)
+        misclassified = [X_test[i] for i in range(len(X_test)) if y_test[i] != y_pred[i]]
+        print(f"Misclassified trajectories: {len(misclassified)}")
+        plot_misclassified_feature_vectors(misclassified, output=output)
         
     ### Print out tables ###
     print()

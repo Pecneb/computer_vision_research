@@ -28,6 +28,7 @@ import dataManagementClasses
 import logging
 from pathlib import Path
 from copy import deepcopy
+from typing import List
 
 logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
@@ -1561,3 +1562,54 @@ def loadDatasetMultiprocessed(path, n_jobs=-1):
             tmpDatasetLabeled = pool.apply_async(load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
             dataset.append(tmpDatasetLabeled.get())
     return np.array(dataset)
+
+def plot_misclassified(misclassifiedTracks: List[dataManagementClasses.TrackedObject], output: str = None):
+    """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
+
+    Args:
+        misclassifiedTracks (List[dataManagementClasses.TrackedObject]): List of TrackedObjects, which was misclassified by an estimator.
+        output (str, optional): Output directory path. Defaults to None.
+    """
+    X_enter = [t.history_X[0] for t in misclassifiedTracks]
+    Y_enter = [t.history_Y[0] for t in misclassifiedTracks]
+    X_exit = [t.history_X[-1] for t in misclassifiedTracks]
+    Y_exit = [t.history_Y[-1] for t in misclassifiedTracks]
+    X_traj = np.ravel([t.history_X[1:-1] for t in misclassifiedTracks])
+    Y_traj = np.ravel([t.history_Y[1:-1] for t in misclassifiedTracks])
+    fig, ax = plt.subplots(figsize=(7,7))
+    ax.scatter(X_enter, Y_enter, s=10, c='g')
+    ax.scatter(X_exit, Y_exit, s=10, c='r')
+    ax.scatter(X_traj, Y_traj, s=5, c='b')
+    fig.show()
+    if output is not None:
+        _output = Path(output) / "plots"
+        _output.mkdir(exist_ok=True)
+        fig.savefig(fname=(_output / "misclassified.png"))
+
+def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str = None, background: str = None):
+    """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
+
+    Args:
+        misclassifiedTracks (List[dataManagementClasses.TrackedObject]): List of TrackedObjects, which was misclassified by an estimator.
+        mask (List[bool]): Mask of feature vectors.
+        output (str, optional): Output directory path. Defaults to None.
+    """
+    X_mask = [False, False, False, False, False, False, True, False, False, False]
+    Y_mask = [False, False, False, False, False, False, False, True, False, False]
+    X = np.ravel([f[X_mask] for f in misclassifiedFV])
+    Y = np.ravel([f[Y_mask] for f in misclassifiedFV])
+    fig, ax = plt.subplots(figsize=(7,7))
+    background = True
+    if background is not None:
+        # I = plt.imread(fname=background)
+        I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
+        ax.imshow(I, alpha=0.4, extent=[0, 1280, 0, 720])
+    ax.scatter((X * I.shape[1]) / (I.shape[1] / I.shape[0]), (1-Y) * I.shape[0], s=0.05, c='r')
+    ax.set_xlim(left=0, right=1280)
+    ax.set_ylim(bottom=0, top=720)
+    ax.grid(visible=True)
+    fig.show()
+    if output is not None:
+        _output = Path(output) / "plots"
+        _output.mkdir(exist_ok=True)
+        fig.savefig(fname=(_output / "misclassified.png"))
