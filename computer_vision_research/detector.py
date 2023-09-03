@@ -20,6 +20,8 @@
 # disable sklearn warning
 def warn(*arg, **args):
     pass
+import os
+import tqdm
 from joblib import dump
 import warnings
 warnings.warn = warn
@@ -27,17 +29,17 @@ import cv2 as cv
 import argparse
 import time
 from pathlib import Path
-from dataManagementClasses import Detection
-from deepsortTracking import (
+
+
+import computer_vision_research.databaseLogger as databaseLogger
+from computer_vision_research.masker import masker
+from computer_vision_research.deepsortTracking import (
     initTrackerMetric, 
     getTracker, 
     updateHistory
 )
-import databaseLogger as databaseLogger
-import os
-import tqdm
-from masker import masker
-from processing_utils import downscale_TrackedObjects
+from computer_vision_research.dataManagementClasses import Detection
+from utils.dataset import downscale_TrackedObjects, load_dataset
 
 VIDEO_EXTENSIONS = [".mp4", ".avi", ".mkv", ".webm"]
 
@@ -236,7 +238,6 @@ def main():
         # If joblib database is already exists and video is requested to be resumed, 
         # load existing data and continue detection where it was left off
         if os.path.exists(path2joblib) and args.resume:
-            from processing_utils import load_dataset
             buffer2joblibTracks = load_dataset(path2joblib) 
         buffer2joblibTracks = []
 

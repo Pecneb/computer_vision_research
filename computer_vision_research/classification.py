@@ -17,27 +17,671 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from datetime import date 
+### System ###
 import time
+import os
+from datetime import date 
+from pathlib import Path
+
+### Third Party ###
+import pandas as pd
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import pandas as pd
-from processing_utils import (
-    load_model, 
-    save_model, 
-    data_preprocessing_for_calibrated_classifier, 
-    data_preprocessing_for_classifier, 
-    data_preprocessing_for_classifier_from_joblib_model, 
-    preprocess_dataset_for_training,
-    load_dataset,
-    level_features,
-    plot_misclassified_feature_vectors
-    )
 from tqdm import tqdm
-from pathlib import Path
+
 np.seterr(divide='ignore', invalid='ignore')
+
+### Local ###
+from utils.models import (
+   load_model,
+   save_model 
+)
+from utils.dataset import (
+    load_dataset,
+    save_trajectories,
+    preprocess_database_data_multiprocessed
+)
+from utils.general import (
+    strfy_dict_params
+)
+from utils.preprocessing import (
+    filter_trajectories,
+    filter_by_class,
+)
+from utils.training import (
+    iter_minibatches
+)
+from computer_vision_research.clustering import make_4D_feature_vectors
+
+import numpy as np
+import tqdm
+
+
+def make_features_for_classification(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray: featurevectors and the new labels to fit the featurevectors 
+    """
+    featureVectors = []
+    newLabels = []
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
+                newLabels.append(labels[j])
+    return np.array(featureVectors), np.array(newLabels)
+
+def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray: featureVectors, labels 
+    """
+    featureVectors = []
+    newLabels = []
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                newLabels.append(labels[j])
+    return np.array(featureVectors), np.array(newLabels)
+
+def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray, np.ndarray: featureVectors, labels, timeOfFeatureVectors
+    """
+    featureVectors = []
+    newLabels = []
+    newReducedLabels = []
+    track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
+    #TODO remove time vector, use track_history_metadata instead
+    for j in range(len(trackedObjects)):
+        step = len(trackedObjects[j].history)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(0, int(len(trackedObjects[j].history)*up_until)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X, trackedObjects[j].history[i].Y, 
+                                            trackedObjects[j].history[i].VX, trackedObjects[j].history[i].VY,
+                                            trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
+                                            trackedObjects[j].history[i+step].X, trackedObjects[j].history[i+step].Y,
+                                            trackedObjects[j].history[i+step].VX, trackedObjects[j].history[i+step].VY]))
+                newLabels.append(labels[j])
+                newReducedLabels.append(reduced_labels[j])
+                track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
+                trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
+    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata), np.array(newReducedLabels)
+
+def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors for classification algorithm
+
+    Args:
+        trackedObjects (list): Tracked objects 
+        k (int): K is the number of slices, the object history should be sliced up into.
+        labels (np.ndarray): Results of clustering.
+
+    Returns:
+        np.ndarray, np.ndarray, np.ndarray: featureVectors, labels, timeOfFeatureVectors
+    """
+    featureVectors = []
+    newLabels = []
+    track_history_metadata = [] # list of [start_time, mid_time, end_time, history_length, trackID]
+    #TODO remove time vector, use track_history_metadata instead
+    for j in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
+        step = (len(trackedObjects[j].history)//2)//k
+        if step > 0:
+            midstep = step//2
+            for i in range(len(trackedObjects[j].history)//2, len(trackedObjects[j].history)-step, step):
+                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,
+                                                trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,
+                                                trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,
+                                                trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,
+                                                trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                newLabels.append(labels[j])
+                track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
+                                                trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
+    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
+
+def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = [] # [history[0].X, history[0]. Y,history[0].VX, history[0].VY,history[mid].X, history[mid].Y,history[end].X, history[end]. Y,history[end].VX, history[end].VY]
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        step = (len(track.history))//k
+        if step >= 2:
+            for j in range(step, len(track.history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([track.history[0].X, track.history[0].Y, 
+                                                track.history[0].VX, track.history[0].VY, 
+                                                track.history[midx].X, track.history[midx].Y, 
+                                                track.history[j].X, track.history[j].Y, 
+                                                track.history[j].VX, track.history[j].VY])) 
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([track.history[0].frameID, track.history[midx].frameID, 
+                                            track.history[j].frameID, len(track.history), track.objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i, track in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                trackedObjects[i].history[0].VX, trackedObjects[i].history[0].VY, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y, 
+                                                trackedObjects[i].history[j].VX, trackedObjects[i].history[j].VY])) 
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history.
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range(step, len(trackedObjects[i].history), step):
+                midx = j//2
+                fv = np.array([
+                            trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                            trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                            trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y])
+                X_featurevectors.append(fv)
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels: np.ndarray):
+    """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
+    A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
+    this last detection reaches the end of the history. 
+
+    Args:
+        trackedObjects (list): Tracked objects. 
+        labels (np.ndarray): Labels of the tracks, which belongs to a given cluster, given by the clustering algo. 
+
+    Returns:
+        tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
+    """
+    X_featurevectors = []
+    y_newLabels = []
+    featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
+    for i in tqdm.tqdm(range(len(trackedObjects)), desc="Features for classification."):
+        step = (len(trackedObjects[i].history))//k
+        if step >= 2:
+            for j in range((len(trackedObjects[i].history)//2)+step, len(trackedObjects[i].history), step):
+                midx = j//2
+                X_featurevectors.append(np.array([trackedObjects[i].history[0].X, trackedObjects[i].history[0].Y, 
+                                                trackedObjects[i].history[midx].X, trackedObjects[i].history[midx].Y, 
+                                                trackedObjects[i].history[j].X, trackedObjects[i].history[j].Y]))
+                y_newLabels.append(labels[i])
+                featurevector_metadata.append(np.array([trackedObjects[i].history[0].frameID, trackedObjects[i].history[midx].frameID, 
+                                            trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
+    return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
+
+def make_feature_vectors_version_four(trackedObjects: list, max_stride: int, labels: np.ndarray):
+    """Make multiple feature vectors from one object's history. When max_stride is reached, use sliding window method to create the vectors.
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+        max_stride (int): max window size 
+        labels (np.ndarray): cluster label of each tracked object 
+
+    Returns:
+        _type_: _description_
+    """
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = 3
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(t.history_X.shape[0]-max_stride):
+            if stride < max_stride:
+                midx = stride // 2 
+                end_idx = stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[0], t.history_Y[0], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                stride += 1
+            else:
+                midx = j + (stride // 2)
+                end_idx = j + stride-1
+                X_feature_vectors = np.append(X_feature_vectors, np.array([
+                    t.history_X[j], t.history_Y[j], # enter coordinates
+                    t.history_X[midx], t.history_Y[midx], # mid 
+                    t.history_X[end_idx], t.history_Y[end_idx] # exit
+                ])).reshape(-1, 6)
+                metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
+
+def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, max_stride: int, n_weights: int):
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = max_stride
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(0, t.history_X.shape[0]-max_stride):
+            """
+            if stride < max_stride:
+                midx = stride // 2
+                end_idx = stride-1
+                feature_vector = np.array([t.history_X[0], t.history_Y[0],
+                                        t.history_X[midx], t.history_Y[midx],
+                                        t.history_X[end_idx], t.history_Y[end_idx]])
+                #feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
+                metadata.append(np.array([t.history[0].frameID, t.history[midx].frameID, 
+                                            t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+                if X_feature_vectors.shape == (0,):
+                    X_feature_vectors = np.array([np.array([feature_vector])])
+                else:
+                    X_feature_vectors = np.append(X_feature_vectors, np.array([[feature_vector]]), axis=0)
+                stride += 1
+            else:
+            """
+            midx = j + (stride // 2) - 1
+            end_idx = j + stride - 1
+            feature_vector = np.array([t.history_X[j], t.history_Y[j],
+                                    t.history_X[end_idx], t.history_Y[end_idx]])
+            feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_X, t.history_Y, 2, feature_vector)
+            feature_vector = insert_weights_into_feature_vector(midx, end_idx, n_weights, t.history_VX_calculated, t.history_VY_calculated, 2, feature_vector)
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape((-1,4+(n_weights*4)))
+            else:
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+            metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
+
+def make_feature_vectors_version_six(trackedObjects: list, labels: np.ndarray, max_stride: int, weights: np.ndarray):
+    if weights.shape != (12,):
+        raise ValueError("Shape of weights must be equal to shape(12,).")
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = max_stride
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
+            midx = j + (3*stride // 4) - 1
+            end_idx = j + stride - 1
+            feature_vector = np.array([t.history_X[j], t.history_Y[j], t.history_VX_calculated[j], t.history_VY_calculated[j],
+                                    t.history_X[midx], t.history_Y[midx], t.history_VX_calculated[midx], t.history_VY_calculated[midx],
+                                    t.history_X[end_idx], t.history_Y[end_idx], t.history_VX_calculated[end_idx], t.history_VY_calculated[end_idx]]) * weights
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape((-1,12))
+            else:
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+            metadata.append(np.array([t.history[j].frameID, t.history[midx].frameID, 
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
+
+def make_feature_vectors_version_seven(trackedObjects: list, labels: np.ndarray, max_stride: int):
+    weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
+    X_feature_vectors = np.array([])
+    y_new_labels = np.array([])
+    metadata = []
+    for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+        stride = max_stride
+        if stride > t.history_X.shape[0]:
+            continue
+        for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
+            #midx = j + (3*stride // 4) - 1
+            end_idx = j + stride - 1
+            feature_vector = np.array([t.history_X[j], t.history_Y[j], t.history_VX_calculated[j], t.history_VY_calculated[j],
+                                    t.history_X[end_idx], t.history_Y[end_idx], t.history_VX_calculated[end_idx], t.history_VY_calculated[end_idx]]) * weights
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))
+            else:
+                X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+            metadata.append(np.array([t.history[j].frameID,
+                                        t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
+            y_new_labels = np.append(y_new_labels, labels[i])
+    return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
+
+def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
+    """Level out the nuber of features.
+
+    Args:
+        X (np.ndarray): features of shape(n_samples, n_features) 
+        y (np.ndarray): labels of shape(n_samples,) 
+
+    Raises:
+        ValueError: If the length of axis 0 of both X and y are not equal raise ValueError. 
+
+    Returns:
+        np.ndarray, np.ndarray: Numpy array of leveled out X and y.
+    """
+    if X.shape[0] != y.shape[0]:
+        raise ValueError("Number of samples and number of labels should be equal.")
+    labels = list(set(y))
+    label_counts = np.zeros(shape=(len(labels)), dtype=int) # init counter vector
+    y = y.astype(int)
+    for y_ in y:
+        label_counts[y_] += 1
+    # find min count
+    #min_sample_count = np.min(label_counts) 
+    min_sample_label = np.argmin(label_counts)
+    # init X and y vectors that will be filled and returned
+    X_leveled = np.array([], dtype=float) 
+    y_leveled = np.array([], dtype=int)
+    print(labels)
+    print(label_counts)
+    new_label_counts = np.array([])
+    for l in tqdm.tqdm(labels):
+        i = 0
+        j = 0
+        if l != min_sample_label:
+            sample_limit = int(ratio_to_min * label_counts[min_sample_label])
+        else:
+            sample_limit = label_counts[min_sample_label]
+        new_label_counts = np.append(new_label_counts, [sample_limit])
+        while i < sample_limit and i < label_counts[int(l)]:
+            if y[j] == l:
+                if X_leveled.shape == (0,):
+                    X_leveled = np.array([X[j]], dtype=float) 
+                else:
+                    X_leveled = np.append(X_leveled, [X[j]], axis=0)
+                y_leveled = np.append(y_leveled, [y[j]])
+                i+=1
+            j+=1
+    print(labels)
+    print(new_label_counts)
+    return X_leveled, y_leveled
+
+def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): Path to database. 
+        min_samples (int, optional): Optics Clustering param. Defaults to 10.
+        max_eps (float, optional): Optics Clustering param. Defaults to 0.1.
+        xi (float, optional): Optics clustering param. Defaults to 0.15.
+        min_cluster_size (int, optional): Optics clustering param. Defaults to 10.
+        n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test, filteredTracks
+    """
+    from computer_vision_research.clustering import optics_clustering_on_nx4
+
+    thres = 0.5
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    filteredTracks = filter_trajectories(tracks, threshold=thres)
+    filteredTracks = filter_by_class(filteredTracks)
+    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, n_jobs=n_jobs, path2db=path2db, threshold=thres)
+
+    if from_half:
+        X, y, metadata = make_feature_vectors_version_one_half(filteredTracks, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(filteredTracks, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(filteredTracks, 6, labels)
+    elif features_v3:
+        X, y, metadata = make_feature_vectors_version_three(filteredTracks, 6, labels)
+    else:
+        X, y, metadata = make_feature_vectors_version_one(filteredTracks, 6, labels)
+
+    X = X[y > -1]
+    y = y[y > -1]
+
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    metadata_train = []
+    metadata_test = []
+
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+            metadata_test.append(metadata[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+            metadata_train.append(metadata[i])
+
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test), filteredTracks
+
+def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, max_eps=0.2, xi=0.1, min_cluster_size=10, n_jobs=18):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): _description_
+        min_samples (int, optional): _description_. Defaults to 10.
+        max_eps (float, optional): _description_. Defaults to 0.1.
+        xi (float, optional): _description_. Defaults to 0.15.
+        min_cluster_size (int, optional): _description_. Defaults to 10.
+        n_jobs (int, optional): _description_. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: Return X and y train and test dataset 
+    """
+    from computer_vision_research.clustering import optics_clustering_on_nx4 
+    thres = 0.5
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
+    filteredTracks = filter_trajectories(tracks, threshold=thres)
+    filteredTracks = filter_by_class(filteredTracks)
+    labels = optics_clustering_on_nx4(filteredTracks, min_samples=min_samples, max_eps=max_eps, xi=xi, min_cluster_size=min_cluster_size, path2db=path2db, threshold=thres, n_jobs=n_jobs, show=True)
+    X, y = make_features_for_classification(filteredTracks, 6, labels)
+    X = X[y > -1]
+    y = y[y > -1]
+    X_train = []
+    y_train = []
+    X_calib = []
+    y_calib = []
+    X_test = []
+    y_test = []
+    first_third_limit = int(len(X) * 0.4) 
+    second_third_limit = 2*first_third_limit
+    for i in range(len(X)):
+        if i > second_third_limit-1:
+            X_test.append(X[i])
+            y_test.append(y[i])
+        elif i > first_third_limit-1 and i < second_third_limit-1: 
+            X_calib.append(X[i])
+            y_calib.append(y[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+    return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
+
+def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, from_half=False, features_v2=False, features_v2_half=False, features_v3=False):
+    """Preprocess database data for classification.
+    Load, filter, run clustering on dataset then extract feature vectors from dataset.
+
+    Args:
+        path2db (str): _description_
+        min_samples (int, optional): _description_. Defaults to 10.
+        max_eps (float, optional): _description_. Defaults to 0.1.
+        xi (float, optional): _description_. Defaults to 0.15.
+        min_cluster_size (int, optional): _description_. Defaults to 10.
+        n_jobs (int, optional): _description_. Defaults to 18.
+
+    Returns:
+        List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test
+    """
+    from computer_vision_research.clustering import optics_on_featureVectors 
+
+    featureVectors = make_4D_feature_vectors(model.tracks)
+    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
+
+    if from_half:
+        X, y, metadata = make_feature_vectors_version_one_half(model.tracks, 6, labels)
+    elif features_v2:
+        X, y, metadata = make_feature_vectors_version_two(model.tracks, 6, labels)
+    elif features_v2_half:
+        X, y, metadata = make_feature_vectors_version_two_half(model.tracks, 6, labels)
+    elif features_v3:
+        X, y, metadata = make_feature_vectors_version_three(model.tracks, 6, labels)
+    else:
+        X, y, metadata = make_feature_vectors_version_one(model.tracks, 6, labels)
+
+    X = X[y > -1]
+    y = y[y > -1]
+
+    X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    metadata_test = []
+    metadata_train = []
+
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+            metadata_test.append(metadata[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+            metadata_train.append(metadata[i])
+
+    return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
+
+def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, p_norm: int = 2):
+    from computer_vision_research.clustering import optics_on_featureVectors 
+
+    tracks = load_dataset(path2dataset)
+    tracks = filter_by_class(tracks)
+    tracks = filter_trajectories(trackedObjects=tracks, threshold=threshold)
+
+    if cluster_features_version == "4D":
+        featureVectors = make_4D_feature_vectors(tracks)
+    elif cluster_features_version == "6D":
+        featureVectors = make_6D_feature_vectors(tracks)
+
+    labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs, p=p_norm) 
+
+    if classification_features_version == "v1":
+        X, y, metadata = make_feature_vectors_version_one(tracks, 6, labels)
+    elif classification_features_version == "v1_half":
+        X, y, metadata = make_feature_vectors_version_one_half(tracks, 6, labels)
+    elif classification_features_version == "v2":
+        X, y, metadata = make_feature_vectors_version_two(tracks, 6, labels)
+    elif classification_features_version == "v2_half":
+        X, y, metadata = make_feature_vectors_version_two_half(tracks, 6, labels)
+    elif classification_features_version == "v3":
+        X, y, metadata = make_feature_vectors_version_three(tracks, 6, labels)
+    elif classification_features_version == "v3_half":
+        X, y, metadata = make_feature_vectors_version_three_half(tracks, 6, labels)
+    elif classification_features_version == "v4":
+        X, y, metadata = make_feature_vectors_version_four(tracks, stride, labels)
+    elif classification_features_version == "v5":
+        X, y, metadata = make_feature_vectors_version_five(tracks, labels, stride, n_weights)
+    elif classification_features_version == "v6":
+        weights_presets = {
+            1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
+            2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
+        }
+        X, y, metadata = make_feature_vectors_version_five(tracks, labels, stride, weights_presets[weights_preset])
+    elif classification_features_version == "v7":
+        X, y, metadata = make_feature_vectors_version_seven(tracks, labels, stride)
+
+
+    X = X[y > -1]
+    y = y[y > -1]
+
+    if level is not None:
+        X, y = level_features(X, y, level)
+
+    """X_train = []
+    y_train = []
+    X_test = []
+    y_test = []
+    metadata_test = []
+    metadata_train = []
+
+    for i in range(len(X)):
+        if i%5==0:
+            X_test.append(X[i])
+            y_test.append(y[i])
+            metadata_test.append(metadata[i])
+        else:
+            X_train.append(X[i])
+            y_train.append(y[i])
+            metadata_train.append(metadata[i])
+    """
+
+    return np.array(X), np.array(y), np.array(metadata), tracks, labels
 
 def KNNClassification(X: np.ndarray, y: np.ndarray, n_neighbours: int):
     """Run K Nearest Neighbours classification on samples X and labels y with neighbour numbers n_neighbours.
@@ -397,7 +1041,6 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
-    from processing_utils import strfy_dict_params
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
 
@@ -522,7 +1165,6 @@ def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
     from sklearn.svm import SVC
     from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
-    from processing_utils import strfy_dict_params, iter_minibatches
     from visualizer import aoiextraction
 
     X, y, metadata, tracks, labels = preprocess_dataset_for_training(
@@ -871,11 +1513,6 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     Returns:
         tuple: cross validation results in pandas datastructure 
     """
-    from processing_utils import (
-                                    load_dataset, 
-                                    filter_trajectories,
-                                    make_4D_feature_vectors
-                                )
     from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
@@ -918,23 +1555,18 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     fit_params = None
 
     if classification_features_version == "v1":
-        from processing_utils import make_feature_vectors_version_one
         X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v1_half":
-        from processing_utils import make_feature_vectors_version_one_half
         X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2":
-        from processing_utils import make_feature_vectors_version_two
         X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2_half":
-        from processing_utils import make_feature_vectors_version_two_half
         X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v3":
-        from processing_utils import make_feature_vectors_version_three
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -942,7 +1574,6 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
-        from processing_utils import make_feature_vectors_version_three_half
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -950,15 +1581,12 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v4":
-        from processing_utils import make_feature_vectors_version_four
         X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
     elif classification_features_version == "v5":
-        from processing_utils import make_feature_vectors_version_five
         X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
         X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
     elif classification_features_version == "v6":
-        from processing_utils import make_feature_vectors_version_six
         weights_presets = {
             1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
             2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
@@ -969,7 +1597,6 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
         X_train, y_train = level_features(X_train, y_train, level)
         X_test, y_test = level_features(X_test, y_test, level)
     elif classification_features_version == "v7":
-        from processing_utils import make_feature_vectors_version_seven
         X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
         X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
 
@@ -1199,11 +1826,6 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     Returns:
         tuple: cross validation results in pandas datastructure 
     """
-    from processing_utils import (
-                                    load_dataset, 
-                                    filter_trajectories,
-                                    make_4D_feature_vectors
-                                )
     from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
     from sklearn.neighbors import KNeighborsClassifier
@@ -1246,23 +1868,18 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     fit_params = None
 
     if classification_features_version == "v1":
-        from processing_utils import make_feature_vectors_version_one
         X_train, y_train, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v1_half":
-        from processing_utils import make_feature_vectors_version_one_half
         X_train, y_train, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_one_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2":
-        from processing_utils import make_feature_vectors_version_two
         X_train, y_train, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v2_half":
-        from processing_utils import make_feature_vectors_version_two_half
         X_train, y_train, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_two_half(trackedObjects=tracks_test, k=6, labels=labels_test)
     elif classification_features_version == "v3":
-        from processing_utils import make_feature_vectors_version_three
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -1270,7 +1887,6 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
-        from processing_utils import make_feature_vectors_version_three_half
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
         cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
@@ -1278,15 +1894,12 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v4":
-        from processing_utils import make_feature_vectors_version_four
         X_train, y_train, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_train, max_stride=stride, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_four(trackedObjects=tracks_test, max_stride=stride, labels=labels_test)
     elif classification_features_version == "v5":
-        from processing_utils import make_feature_vectors_version_five
         X_train, y_train, metadata_train = make_feature_vectors_version_five(trackedObjects=tracks_train, labels=labels_train, max_stride=stride, n_weights=n_weights)
         X_test, y_test, metadata_test = make_feature_vectors_version_five(trackedObjects=tracks_test, labels=labels_test, max_stride=stride, n_weights=n_weights)
     elif classification_features_version == "v6":
-        from processing_utils import make_feature_vectors_version_six
         weights_presets = {
             1 : np.array([1.0, 1.0, 1.0, 1.0, 1.5, 1.5, 1.5, 1.5, 2.0, 2.0, 2.0, 2.0]),
             2 : np.array([1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0])
@@ -1297,7 +1910,6 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
         X_train, y_train = level_features(X_train, y_train, level)
         X_test, y_test = level_features(X_test, y_test, level)
     elif classification_features_version == "v7":
-        from processing_utils import make_feature_vectors_version_seven
         X_train, y_train, _ = make_feature_vectors_version_seven(trackedObjects=tracks_train, labels=labels_train, max_stride=stride)
         X_test, y_test, _ = make_feature_vectors_version_seven(trackedObjects=tracks_test, labels=labels_test, max_stride=stride)
 
@@ -1501,6 +2113,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
                                  mse_threshold: float = 0.5, 
                                  preprocessed: bool = False,
                                  test_trajectory_part: float = 1,
+                                 background: str = None,
                                  **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
@@ -1522,11 +2135,6 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
     from clustering import (
         clustering_on_feature_vectors,
         kmeans_mse_clustering
-    )
-    from processing_utils import (
-        load_dataset, 
-        filter_trajectories, 
-        make_4D_feature_vectors, 
     )
     from classifier import OneVSRestClassifierExtended
 
@@ -1595,9 +2203,8 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
 
     # Generate version one feature vectors for clustering
     start = time.time()
-    from processing_utils import make_feature_vectors_version_one
     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    X_test, y_test, metadata_train, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
+    X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
     print("Feature vectors generated in %d s" % (time.time() - start))
 
     models = {
@@ -1652,12 +2259,18 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
         # add results to table
         reduced_results.loc[m] = {'Top-1': final_top_k_centroids[0], 'Top-2': final_top_k_centroids[1], 'Top-3': final_top_k_centroids[2], 'Balanced Accuracy': balanced_accuracy_centroids}
         print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
+        misclassified = {tracks_test[j] for i in range(len(X_test)) if y_test[i] != y_pred[i] for j in range(len(tracks_test)) if metadata_test[i][4] == tracks_test[j].objID}
         ### Save model if output path is given ###
         if output is not None:
             save_model(outputModels, m, clf_ovr)
-        misclassified = [X_test[i] for i in range(len(X_test)) if y_test[i] != y_pred[i]]
-        print(f"Misclassified trajectories: {len(misclassified)}")
-        plot_misclassified_feature_vectors(misclassified, output=output)
+            print(save_trajectories(np.array(misclassified, dtype=object), output=output, classifier=m))
+        # print(f"Misclassified trajectories: {len(misclassified)}")
+        # plot_misclassified_feature_vectors(
+        #     misclassifiedFV=misclassified, 
+        #     output=output, 
+        #     background=background, 
+        #     classifier=m
+        # )
         
     ### Print out tables ###
     print()
@@ -1741,6 +2354,7 @@ def exitpoint_metric_module(args):
         models_to_benchmark=args.models,
         mse_threshold=args.mse,
         test_trajectory_part=args.test_part,
+        background=args.background,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
         xi=args.xi,
@@ -1872,6 +2486,7 @@ def main():
     exitpoint_metrics_parser.add_argument("-p", "--p-norm", default=2, type=float, help="OPTICS clustering param. Default: 2")
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
+    exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()

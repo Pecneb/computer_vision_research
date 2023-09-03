@@ -18,9 +18,9 @@
     Contact email: ecneb2000@gmail.com
 """
 
-from dataclasses import dataclass, field
 import numpy as np
-import processing_utils
+from dataclasses import dataclass, field
+from typing import List
 
 @dataclass
 class Detection:
@@ -52,6 +52,16 @@ class Detection:
 
     def __repr__(self) -> str:
         return f"Label: {self.label}, Confidence: {self.confidence}, X: {self.X}, Y: {self.Y}, Width: {self.Width}, Height: {self.Height}, Framenumber: {self.frameID}"
+    
+    def __eq__(self, other) -> bool:
+        if self.label != other.label: return False
+        if self.confidence != other.confidence : return False 
+        if self.X != other.X: return False 
+        if self.Y != other.Y: return False 
+        if self.Width != other.Width: return False 
+        if self.Height != other.Height: return False 
+        if self.frameID != other.frameID: return False 
+        return True
 
 @dataclass
 class TrackedObject():
@@ -112,7 +122,7 @@ class TrackedObject():
     label: int = field(init=False)
     futureX: list = field(init=False)
     futureY: list = field(init=False)
-    history: np.ndarray 
+    history: List[Detection] = field(init=False)
     history_X: np.ndarray = field(init=False) 
     history_Y: np.ndarray = field(init=False) 
     history_VX_calculated: np.ndarray = field(init=False) 
@@ -132,7 +142,7 @@ class TrackedObject():
     # bugged: int = field(init=False)
     # featureVector: np.ndarray = field(init=False)
 
-    def __init__(self, id, first, max_age=30):
+    def __init__(self, id: int, first: Detection, max_age: int =30):
         """Constructor method for TrackedObject class.
 
         Args:
@@ -171,6 +181,16 @@ class TrackedObject():
     
     def __repr__(self) -> str:
         return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
+    
+    def __hash__(self) -> int:
+        return self.objID
+    
+    def __eq__(self, other) -> bool:
+        for i in range(len(self.history)):
+            for j in range(len(other.history)):
+                if self.history[i] != other.history[j]:
+                    return False
+        return self.objID == other.objID
 
     def avgArea(self):
         """Calculate average area of the bounding boxes of the object.
@@ -337,7 +357,7 @@ class TrackedObject():
             return None
         feature = np.array([self.history_X[0], self.history_Y[0],
                             self.history_X[-1], self.history_Y[-1]])
-        feature = processing_utils.insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
+        feature = insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
         return feature
 
 
@@ -424,3 +444,80 @@ class TrackedObject():
         #        self.bugged += 1
         #else:
         #    self.bugged = 0
+
+def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax:float, ay: float):
+    """Create Detection object.
+
+    Args:
+        objID (int): Object ID, to which object the Detection belongs to. 
+        frameNum (int): Frame number when the Detection occured. 
+        label (str): Label of the object, etc: car, person... 
+        confidence (float): Confidence number, of how confident the neural network is in the detection. 
+        x (float):  X coordinate of the object.
+        y (float): Y coordinate of the object. 
+        width (float): Width of the bounding box of the object. 
+        height (float): Height of the bounging box of the object. 
+        vx (float): Velocity on the X axis. 
+        vy (float): Velocity on the Y axis. 
+        ax (float): Acceleration on the X axis. 
+        ay (float): Acceleration on the Y axis. 
+
+    Returns:
+        Detection: The Detection object, which is to be returned. 
+    """
+    retDet = Detection(label, confidence, x,y,width,height,frameNum)
+    retDet.objID = objID
+    retDet.VX = vx
+    retDet.VY = vy
+    retDet.AX = ax
+    retDet.AY = ay
+    return retDet
+
+def trackedObjectFactory(detections: tuple):
+    """Create trackedObject object from list of detections
+
+    Args:
+        detections (list): list of detection 
+
+    Returns:
+        TrackedObject:  trackedObject
+    """
+    history, history_X, history_Y, history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated = detections
+    tmpObj = TrackedObject(history[0].objID, history[0], len(detections))
+    tmpObj.label = detections[0][-1].label
+    tmpObj.history = history
+    tmpObj.history_X = history_X
+    tmpObj.history_Y = history_Y
+    tmpObj.history_VX_calculated = history_VX_calculated
+    tmpObj.history_VY_calculated = history_VY_calculated
+    tmpObj.history_AX_calculated = history_AX_calculated
+    tmpObj.history_AY_calculated = history_AY_calculated
+    tmpObj.X = detections[0][-1].X
+    tmpObj.Y = detections[0][-1].Y
+    tmpObj.VX = detections[0][-1].VX
+    tmpObj.VY = detections[0][-1].VY
+    tmpObj.AX = detections[0][-1].AX
+    tmpObj.AY = detections[0][-1].AY
+    return tmpObj
+
+def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X: np.ndarray, Y: np.ndarray, insert_idx: int, feature_vector: np.ndarray):
+    """Insert coordinates into feature vector starting from the start_insert_idx index.
+
+    Args:
+        start (int): first index of inserted coordinates 
+        stop (int): stop index of coordinate vectors, which will not be inserted, this is the open end of the limits
+        n_weights (int): number of weights to be inserted
+        X (ndarray): x coordinate array
+        Y (ndarray): y coordinate array
+        start_insert_idx (int): the index where the coordinates will be inserted into the feature vector 
+    """
+    retv = feature_vector.copy()
+    stepsize = (stop-start)//n_weights
+    assert n_weights, f"n_weights={n_weights} and max_stride are not compatible, lower n_weights or increase max_stride"
+    weights_inserted = 0
+    for widx in range(stop-1, start-1, -stepsize):
+        if weights_inserted == n_weights:
+            break
+        retv = np.insert(retv, insert_idx, [X[widx], Y[widx]])
+        weights_inserted += 1
+    return retv

@@ -17,18 +17,25 @@
 
     Contact email: ecneb2000@gmail.com
 """
+### System ###
+import time
+import os
+import logging
+from typing import List
+from copy import deepcopy
+from pathlib import Path
+
+### Third Party ###
 import matplotlib.pyplot as plt
 import numpy as np
-import time
-import databaseLoader
 import tqdm
-import os
 import joblib 
-import dataManagementClasses
-import logging
-from pathlib import Path
-from copy import deepcopy
-from typing import List
+
+### Local ###
+import computer_vision_research.databaseLoader as databaseLoader
+from computer_vision_research.classifier import OneVSRestClassifierExtended 
+from computer_vision_research.visualizer import aoiextraction
+import computer_vision_research.dataManagementClasses as dataManagementClasses
 
 logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
@@ -734,7 +741,6 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     Returns:
         tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
     """
-    from visualizer import aoiextraction
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
@@ -937,7 +943,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     Returns:
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test, filteredTracks
     """
-    from clustering import optics_clustering_on_nx4
+    from computer_vision_research.clustering import optics_clustering_on_nx4
 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
@@ -994,7 +1000,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     Returns:
         List[np.ndarray]: Return X and y train and test dataset 
     """
-    from clustering import optics_clustering_on_nx4 
+    from computer_vision_research.clustering import optics_clustering_on_nx4 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_trajectories(tracks, threshold=thres)
@@ -1023,7 +1029,6 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
             y_train.append(y[i])
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
-from classifier import OneVSRestClassifierExtended 
 def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
     """Save model to research_data dir.
 
@@ -1067,7 +1072,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     Returns:
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test
     """
-    from clustering import optics_on_featureVectors 
+    from computer_vision_research.clustering import optics_on_featureVectors 
 
     featureVectors = make_4D_feature_vectors(model.tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
@@ -1106,7 +1111,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
 def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, p_norm: int = 2):
-    from clustering import optics_on_featureVectors 
+    from computer_vision_research.clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
     tracks = filter_by_class(tracks)
@@ -1198,7 +1203,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
     Returns:
         _type_: _description_
     """
-    from clustering import clustering_on_feature_vectors 
+    from computer_vision_research.clustering import clustering_on_feature_vectors 
     from sklearn.cluster import OPTICS
     filext = path2tracks.split('/')[-1].split('.')[-1]
     
@@ -1586,30 +1591,38 @@ def plot_misclassified(misclassifiedTracks: List[dataManagementClasses.TrackedOb
         _output.mkdir(exist_ok=True)
         fig.savefig(fname=(_output / "misclassified.png"))
 
-def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str = None, background: str = None):
+def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str = None, background: str = None, classifier: str = "SVM"):
     """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
 
     Args:
         misclassifiedTracks (List[dataManagementClasses.TrackedObject]): List of TrackedObjects, which was misclassified by an estimator.
-        mask (List[bool]): Mask of feature vectors.
         output (str, optional): Output directory path. Defaults to None.
+        background (str, optional): Background image of plot for better visualization.
     """
     X_mask = [False, False, False, False, False, False, True, False, False, False]
     Y_mask = [False, False, False, False, False, False, False, True, False, False]
     X = np.ravel([f[X_mask] for f in misclassifiedFV])
     Y = np.ravel([f[Y_mask] for f in misclassifiedFV])
     fig, ax = plt.subplots(figsize=(7,7))
-    background = True
     if background is not None:
-        # I = plt.imread(fname=background)
-        I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
+        print(background)
+        I = plt.imread(fname=background)
+        # I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
         ax.imshow(I, alpha=0.4, extent=[0, 1280, 0, 720])
     ax.scatter((X * I.shape[1]) / (I.shape[1] / I.shape[0]), (1-Y) * I.shape[0], s=0.05, c='r')
     ax.set_xlim(left=0, right=1280)
     ax.set_ylim(bottom=0, top=720)
     ax.grid(visible=True)
+    ax.set_title(label=f"{classifier} misclassifications")
     fig.show()
     if output is not None:
         _output = Path(output) / "plots"
         _output.mkdir(exist_ok=True)
-        fig.savefig(fname=(_output / "misclassified.png"))
+        fig.savefig(fname=(_output / f"{classifier}_misclassified.png"))
+
+def save_trajectories(trajectories: List[dataManagementClasses.TrackedObject] or np.ndarray, output: str or Path, classifier: str = "SVM") -> List[str]:
+    _output = Path(output)
+    _outdir = _output / "misclassified_trajectories"
+    _outdir.mkdir(exist_ok=True)
+    _filename = _outdir / f"{classifier}_miclassified_trajectories.joblib"
+    return joblib.dump(trajectories, filename=_filename)

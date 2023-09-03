@@ -23,7 +23,7 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures, SplineTransformer
 from sklearn.pipeline import make_pipeline
 
-from dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import TrackedObject
 
 def movementIsRight(obj: TrackedObject):
     """Returns true, if the object moving right, false otherwise. 

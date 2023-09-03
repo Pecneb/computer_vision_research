@@ -1,8 +1,11 @@
-from dataManagementClasses import TrackedObject, Detection
-from processing_utils import load_dataset
+### Third Party ###
 from argparse import ArgumentParser
 import cv2
 import numpy as np
+
+### Local ###
+from utils.dataset import load_dataset
+from computer_vision_research.dataManagementClasses import TrackedObject, Detection
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.

@@ -29,15 +29,12 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.cluster import OPTICS
 from typing import List
-from processing_utils import (
-    load_dataset, 
-    filter_trajectories, 
-    make_4D_feature_vectors,
-    calc_cluster_centers,
-    upscale_cluster_centers,
-)
-from clustering import clustering_on_feature_vectors
-from dataManagementClasses import TrackedObject
+
+from computer_vision_research.clustering import clustering_on_feature_vectors
+from computer_vision_research.dataManagementClasses import TrackedObject
+from utils.dataset import load_dataset
+from utils.preprocessing import filter_trajectories
+from utils.cluster import calc_cluster_centers, upscale_cluster_centers, make_4D_feature_vectors
 sns.set_theme()
 
 logging.basicConfig(level=logging.INFO)

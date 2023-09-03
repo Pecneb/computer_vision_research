@@ -17,31 +17,136 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from processing_utils import (
-    detectionParser, 
-    trackedObjectFactory, 
-    filter_out_false_positive_detections_by_enter_exit_distance, 
-    filter_trajectories, 
-    filter_by_class, 
-    make_2D_feature_vectors,
-    make_4D_feature_vectors, 
-    make_6D_feature_vectors,
-    makeFeatureVectors_Nx2, 
-    preprocess_database_data_multiprocessed, 
-    shuffle_data,  
-    load_dataset,
-    loadDatasetsFromDirectory
-)
-from dataManagementClasses import Detection, TrackedObject
-import databaseLoader
+
+### Third Party ###
 import matplotlib
-from matplotlib import pyplot as plt
 import numpy as np
 import os 
 import tqdm
+from matplotlib import pyplot as plt
 from pathlib import Path
 from sklearn.cluster import KMeans
 matplotlib.use('Agg')
+
+### Local ###
+import utils.databaseLoader as databaseLoader
+from computer_vision_research.dataManagementClasses import Detection, TrackedObject
+from utils.dataset import (
+    detectionParser,
+    trackedObjectFactory,
+    load_dataset,
+    loadDatasetsFromDirectory,
+    preprocess_database_data_multiprocessed
+)
+from utils.preprocessing import (
+    filter_out_false_positive_detections_by_enter_exit_distance,
+    filter_trajectories,
+    filter_by_class,
+    shuffle_data,
+    euclidean_distance
+)
+
+def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in different vectors. Only creating 2D vectors.
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = [] 
+    for obj in trackedObjects:
+        featureVectors.append(obj.history[0].X, obj.history[0].Y)
+        featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
+    return np.array(featureVectors)
+
+def make_2D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 2D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+
+def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 4D feature vectors from tracks.
+    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    v = [enterX, enterY, exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+
+def make_6D_feature_vectors(trackedObjects: list) -> np.ndarray:
+    """Create 6D feature vectors from tracks.
+    The enter, middle and exit coordinates are put in one vector. Creating 6D vectors.
+    v = [enterX, enterY, exitX, exitY]
+
+    Args:
+        trackedObjects (list): list of tracked objects 
+
+    Returns:
+        np.ndarray: numpy array of feature vectors 
+    """
+    featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[len(obj.history) // 2].X, obj.history[len(obj.history) // 2].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors
+
+def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
+    """Scale centroids of clusters up to the video's resolution.
+
+    Args:
+        centroids (dict): Output of aoiextraction() function. 
+        framewidth (int): Width resolution of the video. 
+        frameheight (int): Height resolution of the video. 
+
+    Returns:
+        dict: Upscaled centroid coordinates. 
+    """
+    ratio = framewidth / frameheight
+    retarr = centroids.copy()
+    for i in range(centroids.shape[0]):
+        retarr[i, 0] = (centroids[i, 0] * framewidth) / ratio
+        retarr[i, 1] = centroids[i, 1] * frameheight
+    return retarr
+
+def calc_cluster_centers(tracks, labels, exit = True):
+    """Calculate center of mass for every class's exit points.
+    These will be the exit points of the clusters.
+
+    Args:
+        tracks (List[TrackedObject]): List of tracked objects 
+        labels (_type_): Labels of tracked objects 
+
+    Returns:
+        cluster_centers: The center of mass for every class's exits points
+    """
+    classes = set(labels)
+    cluster_centers = np.zeros(shape=(len(classes),2))
+    for i, c in enumerate(classes):
+        tracks_xy = []
+        for j, l in enumerate(labels):
+            if l==c:
+                if exit:
+                    tracks_xy.append([tracks[j].history[-1].X, tracks[j].history[-1].Y])
+                else:
+                    tracks_xy.append([tracks[j].history[0].X, tracks[j].history[0].Y])
+        tracks_xy = np.array(tracks_xy)
+        cluster_centers[i,0] = np.average(tracks_xy[:,0])
+        cluster_centers[i,1] = np.average(tracks_xy[:,1])
+    return cluster_centers
 
 # the function below is deprectated, do not use
 def affinityPropagation_on_featureVector(featureVectors: np.ndarray):
@@ -1304,7 +1409,6 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     """
     from sklearn.cluster import KMeans
     from sklearn.cluster import OPTICS
-    from processing_utils import euclidean_distance, calc_cluster_centers
     trackedObjects = load_dataset(database)
     if not preprocessed:
         trackedObjects = filter_trajectories(trackedObjects, threshold, detectionDistanceFiltering=False)
@@ -1378,7 +1482,6 @@ def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_th
     Returns:
         tuple(ndarray, classifier, int, float): Returns the labels of the trajectories, the classifier with the best mean squared error, the number of clusters and the mean squared error.
     """
-    from processing_utils import euclidean_distance, calc_cluster_centers
     Y_exitcluster_centers = calc_cluster_centers(X, Y)
     mse = 9999
     n_clusters = 1
@@ -1434,7 +1537,6 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
 
 def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimensions="4D", **estkwargs):
     from sklearn.cluster import Birch, OPTICS, KMeans
-    from processing_utils import load_dataset
     from visualizer import aoiextraction
     matplotlib.use('Agg')
     tracks = load_dataset(tracks_path)
