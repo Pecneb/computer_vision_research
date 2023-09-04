@@ -52,7 +52,8 @@ from utils.preprocessing import (
 from utils.training import (
     iter_minibatches
 )
-from computer_vision_research.clustering import make_4D_feature_vectors
+from computer_vision_research.clustering import make_4D_feature_vectors, make_6D_feature_vectors
+from computer_vision_research.dataManagementClasses import insert_weights_into_feature_vector
 
 import numpy as np
 import tqdm
@@ -1569,14 +1570,14 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     elif classification_features_version == "v3":
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
-        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filtered], [t["class"] for t in tracks_filtered]) 
         fit_params = {
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
-        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filtered], [t["class"] for t in tracks_filtered]) 
         fit_params = {
             'centroids' : cluster_centroids
         }
@@ -1882,14 +1883,14 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     elif classification_features_version == "v3":
         X_train, y_train, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three(trackedObjects=tracks_test, k=6, labels=labels_test)
-        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filtered], [t["class"] for t in tracks_filtered]) 
         fit_params = {
             'centroids' : cluster_centroids
         }
     elif classification_features_version == "v3_half":
         X_train, y_train, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_train, k=6, labels=labels_train)
         X_test, y_test, metadata_train = make_feature_vectors_version_three_half(trackedObjects=tracks_test, k=6, labels=labels_test)
-        cluster_centroids = aoiextraction([t["track"] for t in tracks_filteted], [t["class"] for t in tracks_filteted]) 
+        cluster_centroids = aoiextraction([t["track"] for t in tracks_filtered], [t["class"] for t in tracks_filtered]) 
         fit_params = {
             'centroids' : cluster_centroids
         }
