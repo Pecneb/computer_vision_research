@@ -2370,103 +2370,103 @@ def main():
     submodule_parser = argparser.add_subparsers(help="Program functionalities.")
 
     # add subcommands for training binary classifiers
-    train_binary_classifiers_parser = submodule_parser.add_parser(
-        "train",
-        help="Run Classification on dataset, but not as a multi class classification, rather do "
-             "binary classification for each cluster."
-    )
-    train_binary_classifiers_parser.add_argument("-db", "--database", help="Path to database file. This should be an unclustered joblib dataset file.", type=str)
-    train_binary_classifiers_parser.add_argument("--outdir", "-o", help="Output directory path.", type=str)
-    train_binary_classifiers_parser.add_argument("--min_samples", default=10, type=int, 
-        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
-    train_binary_classifiers_parser.add_argument("--max_eps", type=float, default=0.2, 
-        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
-    train_binary_classifiers_parser.add_argument("--xi", type=float, default=0.15, 
-        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
-    train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
-        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
-    train_binary_classifiers_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
-    train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
-    train_binary_classifiers_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
-    train_binary_classifiers_parser.add_argument("--batchsize", type=int, default=None, help="Set training batch size.")
-    train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
-    train_binary_classifiers_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
-    train_binary_classifiers_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
-    train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.4, help="Threshold value for clustering.")
-    train_binary_classifiers_parser.add_argument("-p", "--p_norm", default=2, type=int, help="P parameter of the clustering algorithm.")
-    train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
+    # train_binary_classifiers_parser = submodule_parser.add_parser(
+    #     "train",
+    #     help="Run Classification on dataset, but not as a multi class classification, rather do "
+    #          "binary classification for each cluster."
+    # )
+    # train_binary_classifiers_parser.add_argument("-db", "--database", help="Path to database file. This should be an unclustered joblib dataset file.", type=str)
+    # train_binary_classifiers_parser.add_argument("--outdir", "-o", help="Output directory path.", type=str)
+    # train_binary_classifiers_parser.add_argument("--min_samples", default=10, type=int, 
+    #     help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    # train_binary_classifiers_parser.add_argument("--max_eps", type=float, default=0.2, 
+    #     help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    # train_binary_classifiers_parser.add_argument("--xi", type=float, default=0.15, 
+    #     help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    # train_binary_classifiers_parser.add_argument("--min_cluster_size", default=10, type=float,
+    #     help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).")
+    # train_binary_classifiers_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
+    # train_binary_classifiers_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    # train_binary_classifiers_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    # train_binary_classifiers_parser.add_argument("--batchsize", type=int, default=None, help="Set training batch size.")
+    # train_binary_classifiers_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    # train_binary_classifiers_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    # train_binary_classifiers_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    # train_binary_classifiers_parser.add_argument("--threshold", type=float, default=0.4, help="Threshold value for clustering.")
+    # train_binary_classifiers_parser.add_argument("-p", "--p_norm", default=2, type=int, help="P parameter of the clustering algorithm.")
+    # train_binary_classifiers_parser.set_defaults(func=train_binary_classifiers_submodule)
 
-    # add subcommands for cross validating classifiers 
-    cross_validation_parser = submodule_parser.add_parser(
-        "cross-validation",
-        help="Run cross validation with given dataset."
-    )
-    cross_validation_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
-    cross_validation_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
-    cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
-    cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
-    cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
-    cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
-    cross_validation_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
-    #cross_validation_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
-    cross_validation_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
-    cross_validation_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
-    cross_validation_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
-    cross_validation_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
-    cross_validation_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
-    cross_validation_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
-    cross_validation_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
-    cross_validation_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
-    cross_validation_parser.set_defaults(func=cross_validation_submodule)
+    # # add subcommands for cross validating classifiers 
+    # cross_validation_parser = submodule_parser.add_parser(
+    #     "cross-validation",
+    #     help="Run cross validation with given dataset."
+    # )
+    # cross_validation_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
+    # cross_validation_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
+    # cross_validation_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    # cross_validation_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    # cross_validation_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+    # cross_validation_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    # cross_validation_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    # #cross_validation_parser.add_argument("--cluster_features_version", choices=["4D", "6D"], help="Choose which version of features to use for clustering.", default="6D")
+    # cross_validation_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    # cross_validation_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    # cross_validation_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    # cross_validation_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
+    # cross_validation_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    # cross_validation_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    # cross_validation_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    # cross_validation_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    # cross_validation_parser.set_defaults(func=cross_validation_submodule)
 
-    # add subcommands for renitent investigation module
-    renitent_filter_parser = submodule_parser.add_parser(
-        "renitent-filter",
-        help="Look at detections, that cant be predicted above a given threshold value."
-    )
-    renitent_filter_parser.add_argument("--model", help="Trained classifier.", type=str)
-    renitent_filter_parser.add_argument("--threshold", type=float, default=0.5, help="Balanced accuracy threshold.")
-    renitent_filter_parser.add_argument("--min_samples", default=10, type=int, 
-        help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
-    renitent_filter_parser.add_argument("--max_eps", type=float, default=0.2,
-        help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
-    renitent_filter_parser.add_argument("--xi", type=float, default=0.15,
-        help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
-    renitent_filter_parser.add_argument("--min_cluster_size", default=10, type=float, 
-        help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction" 
-             "of the number of samples (rounded to be at least 2).")
-    renitent_filter_parser.set_defaults(func=investigate_renitent_features)
+    # # add subcommands for renitent investigation module
+    # renitent_filter_parser = submodule_parser.add_parser(
+    #     "renitent-filter",
+    #     help="Look at detections, that cant be predicted above a given threshold value."
+    # )
+    # renitent_filter_parser.add_argument("--model", help="Trained classifier.", type=str)
+    # renitent_filter_parser.add_argument("--threshold", type=float, default=0.5, help="Balanced accuracy threshold.")
+    # renitent_filter_parser.add_argument("--min_samples", default=10, type=int, 
+    #     help="OPTICS parameter: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.")
+    # renitent_filter_parser.add_argument("--max_eps", type=float, default=0.2,
+    #     help="OPTICS parameter: The maximum distance between two samples for one to be considered as in the neighborhood of the other.")
+    # renitent_filter_parser.add_argument("--xi", type=float, default=0.15,
+    #     help="OPTICS parameter: Determines the minimum steepness on the reachability plot that constitutes a cluster boundary.")
+    # renitent_filter_parser.add_argument("--min_cluster_size", default=10, type=float, 
+    #     help="OPTICS parameter: Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction" 
+    #          "of the number of samples (rounded to be at least 2).")
+    # renitent_filter_parser.set_defaults(func=investigate_renitent_features)
 
-    cross_validation_multiclass_parser = submodule_parser.add_parser(
-        "cross-val-multiclass",
-        help="Run classification with stock multiclass models."
-    )
-    cross_validation_multiclass_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
-    cross_validation_multiclass_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
-    cross_validation_multiclass_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
-    cross_validation_multiclass_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
-    cross_validation_multiclass_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
-    cross_validation_multiclass_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
-    cross_validation_multiclass_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
-    cross_validation_multiclass_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
-    cross_validation_multiclass_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
-    cross_validation_multiclass_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
-    cross_validation_multiclass_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
-    cross_validation_multiclass_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
-    cross_validation_multiclass_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
-    cross_validation_multiclass_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
-    cross_validation_multiclass_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
-    cross_validation_multiclass_parser.set_defaults(func=cross_validation_multiclass_submodule)
+    # cross_validation_multiclass_parser = submodule_parser.add_parser(
+    #     "cross-val-multiclass",
+    #     help="Run classification with stock multiclass models."
+    # )
+    # cross_validation_multiclass_parser.add_argument("-db", "--database", help="Path to database file. This should be an already clustered joblib dataset file.", type=str)
+    # cross_validation_multiclass_parser.add_argument("--output", "-o", help="Output file path, make sure that the directory of the outputted file exists.", type=str)
+    # cross_validation_multiclass_parser.add_argument("--train_ratio", help="Size of the train dataset. (0-1 float)", type=float, default=0.75)
+    # cross_validation_multiclass_parser.add_argument("--seed", help="Seed for random number generator to be able to reproduce dataset shuffle.", type=int, default=1)
+    # cross_validation_multiclass_parser.add_argument("--param_set", help="Choose between the parameter sets that will be given to the classifiers.", type=int, choices=[1,2,3,4], default=1)
+    # cross_validation_multiclass_parser.add_argument("--classification_features_version", choices=["v1", "v1_half", "v2", "v2_half", "v3", "v3_half", "v4", "v5", "v6", "v7", "v8", "v9"], help="Choose which version of features to use for classification.", default="v1")
+    # cross_validation_multiclass_parser.add_argument("--stride", default=15, type=int, help="Set stride value of classification features v4.")
+    # cross_validation_multiclass_parser.add_argument("--level", default=None, type=float, help="Use this flag to set the level ratio of the samples count balancer function.")
+    # cross_validation_multiclass_parser.add_argument("--n_weights", default=3, type=int, help="The number of dimensions to add into the feature vector, between the first and the last dimension.")
+    # cross_validation_multiclass_parser.add_argument("--weights_preset", choices=[1, 2], type=int, default=1, help="Choose the weight vector. 1 = [1.,1.,1.,1.,1.5,1.5,1.5,1.5,2.,2.,2.,2.], 2 = [1.,1.,1.,1.,2.,2.,2.,2.,3.,3.,3.,3.]")
+    # cross_validation_multiclass_parser.add_argument("--threshold", default=0.7, type=float, help="Threshold value for min max filtering of tracked object.")
+    # cross_validation_multiclass_parser.add_argument("--min_samples", default=50, type=int, help="OPTICS clustering param.")
+    # cross_validation_multiclass_parser.add_argument("--max_eps", default=0.2, type=float, help="OPTICS clustering param.")
+    # cross_validation_multiclass_parser.add_argument("--xi", default=0.15, type=float, help="OPTICS clustering param.")
+    # cross_validation_multiclass_parser.add_argument("-p", "--p_norm", default=0.15, type=float, help="OPTICS clustering param.")
+    # cross_validation_multiclass_parser.set_defaults(func=cross_validation_multiclass_submodule)
 
     plot_parser = submodule_parser.add_parser(
-        "plot",
+        "plot-dt",
         help="Run plotting functions."
     )
     plot_parser.add_argument("--decision_tree", help="Path to decision tree joblib modell.")
     plot_parser.set_defaults(func=plot_module)
 
     exitpoint_metrics_parser = submodule_parser.add_parser(
-        "exitpoint-metrics",
+        "train-test",
         help="Calculate metrics on only exitpoints."
     )
     exitpoint_metrics_parser.add_argument("--dataset", nargs="+",
