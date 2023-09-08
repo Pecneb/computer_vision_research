@@ -141,6 +141,7 @@ class TrackedObject():
     AY: float = field(init=False)
     # bugged: int = field(init=False)
     # featureVector: np.ndarray = field(init=False)
+    _dataset: str = field(init=False)
 
     def __init__(self, id: int, first: Detection, max_age: int =30):
         """Constructor method for TrackedObject class.
@@ -178,12 +179,15 @@ class TrackedObject():
         self.time_since_update = 0
         self.mean = []
         #self.bugged = 0 
+        self._dataset = ""
     
     def __repr__(self) -> str:
         return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
     
     def __hash__(self) -> int:
-        return int(self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
+        retval = int(self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
+        print(retval, self.objID, self._dataset)
+        return retval
     
     def __eq__(self, other) -> bool:
         for i in range(len(self.history)):

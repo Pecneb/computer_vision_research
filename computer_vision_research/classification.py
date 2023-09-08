@@ -2260,11 +2260,10 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
         # add results to table
         reduced_results.loc[m] = {'Top-1': final_top_k_centroids[0], 'Top-2': final_top_k_centroids[1], 'Top-3': final_top_k_centroids[2], 'Balanced Accuracy': balanced_accuracy_centroids}
         print("Classifier %s evaluation based on exit point centroids: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy_centroids, final_top_k_centroids[0], final_top_k_centroids[1], final_top_k_centroids[2]))
-        misclassified = list({metadata_test[i][-1] for i in range(len(X_test)) if y_test[i] != y_pred[i]})
         ### Save model if output path is given ###
         if output is not None:
+            misclassified = list({metadata_test[i][-1] for i in range(len(X_test)) if y_test[i] != y_pred[i]})
             save_model(outputModels, m, clf_ovr)
-            print(save_trajectories(np.array(misclassified, dtype=object), output=output, classifier=m))
             paths = {o._dataset for o in misclassified}
             for p in paths:
                 _misclassified = []
@@ -2272,7 +2271,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
                     if misclassified[j]._dataset == p:
                         _misclassified.append(misclassified[j])
                 _output = Path(output) / "misclassified"
-                print(save_trajectories(_misclassified, _output, f"{m}_misclassified"))
+                print(save_trajectories(_misclassified, _output, f"{m}_{str(Path(p).stem)}"))
 
         
     ### Print out tables ###
