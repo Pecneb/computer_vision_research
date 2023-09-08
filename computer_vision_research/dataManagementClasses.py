@@ -183,7 +183,7 @@ class TrackedObject():
         return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
     
     def __hash__(self) -> int:
-        return self.objID
+        return int(self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
     
     def __eq__(self, other) -> bool:
         for i in range(len(self.history)):
