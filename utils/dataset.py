@@ -157,20 +157,14 @@ def load_dataset(path2dataset: str | Path | list[str]):
     if ext == ".joblib":
         dataset = joblib.load(path2dataset)
         if type(dataset[0]) == dict:
-            ret_dataset = [d['track'] for d in dataset] 
-            return ret_dataset
-        else:
-            return np.array(dataset)
+            dataset = [d['track'] for d in dataset] 
+        for e in dataset:
+            e._dataset = str(path2dataset)
+        return np.array(dataset)
     elif ext == ".db":
         return np.array(preprocess_database_data_multiprocessed(path2dataset, n_jobs=None))
     elif Path.is_dir(datasetPath):
         return mergeDatasets(loadDatasetsFromDirectory(datasetPath))
-    elif type(path2dataset) == list:
-        tmp_dataset = []
-        for d in path2dataset:
-            tmp_dataset.append(load_dataset(d))
-        tmp_dataset = np.array(tmp_dataset)
-        return mergeDatasets(tmp_dataset)
     raise Exception("Wrong file type.")
 
 def mergeDatasets(datasets: np.ndarray):
@@ -259,10 +253,20 @@ def loadDatasetMultiprocessed(path, n_jobs=-1):
             dataset.append(tmpDatasetLabeled.get())
     return np.array(dataset)
 
-def save_trajectories(trajectories: List[TrackedObject] or np.ndarray, output: str or Path, classifier: str = "SVM") -> List[str]:
-    _output = Path(output)
-    _outdir = _output / "misclassified_trajectories"
-    _outdir.mkdir(exist_ok=True)
-    _filename = _outdir / f"{classifier}_miclassified_trajectories.joblib"
+def save_trajectories(trajectories: List[TrackedObject] or np.ndarray, dir: str or Path, filename: str) -> List[str]:
+    """Save trajectories with output path as directory path, with given classifier prefix
+
+    Args:
+        trajectories (List[TrackedObject]ornp.ndarray): _description_
+        output (strorPath): _description_
+        classifier (str, optional): _description_. Defaults to "SVM".
+
+    Returns:
+        List[str]: _description_
+    """
+    _filename = Path(filename).stem
+    _output = Path(dir)
+    _output.mkdir(exist_ok=True)
+    _filename = _output / f"{_filename}.joblib"
     return joblib.dump(trajectories, filename=_filename)
 
