@@ -17,17 +17,25 @@
 
     Contact email: ecneb2000@gmail.com
 """
+### System ###
+import time
+import os
+import logging
+from typing import List
+from copy import deepcopy
+from pathlib import Path
+
+### Third Party ###
 import matplotlib.pyplot as plt
 import numpy as np
-import time
-import databaseLoader
 import tqdm
-import os
 import joblib 
-import dataManagementClasses
-import logging
-from pathlib import Path
-from copy import deepcopy
+
+### Local ###
+import databaseLoader as databaseLoader
+from classifier import OneVSRestClassifierExtended 
+from visualizer import aoiextraction
+import dataManagementClasses as dataManagementClasses
 
 logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
@@ -733,7 +741,6 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
     Returns:
         tuple of numpy arrays: The newly created feature vectors, the labels created for each feature vector, and the metadata that contains the information of time frames, and to which object does the feature belongs to. 
     """
-    from visualizer import aoiextraction
     X_featurevectors = []
     y_newLabels = []
     featurevector_metadata = [] # [start_time, mid_time, end_time, history_length, trackID]
@@ -1022,7 +1029,6 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
             y_train.append(y[i])
     return np.array(X_train), np.array(y_train), np.array(X_calib), np.array(y_calib), np.array(X_test), np.array(y_test)
 
-from classifier import OneVSRestClassifierExtended 
 def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
     """Save model to research_data dir.
 
@@ -1561,3 +1567,62 @@ def loadDatasetMultiprocessed(path, n_jobs=-1):
             tmpDatasetLabeled = pool.apply_async(load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
             dataset.append(tmpDatasetLabeled.get())
     return np.array(dataset)
+
+def plot_misclassified(misclassifiedTracks: List[dataManagementClasses.TrackedObject], output: str = None):
+    """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
+
+    Args:
+        misclassifiedTracks (List[dataManagementClasses.TrackedObject]): List of TrackedObjects, which was misclassified by an estimator.
+        output (str, optional): Output directory path. Defaults to None.
+    """
+    X_enter = [t.history_X[0] for t in misclassifiedTracks]
+    Y_enter = [t.history_Y[0] for t in misclassifiedTracks]
+    X_exit = [t.history_X[-1] for t in misclassifiedTracks]
+    Y_exit = [t.history_Y[-1] for t in misclassifiedTracks]
+    X_traj = np.ravel([t.history_X[1:-1] for t in misclassifiedTracks])
+    Y_traj = np.ravel([t.history_Y[1:-1] for t in misclassifiedTracks])
+    fig, ax = plt.subplots(figsize=(7,7))
+    ax.scatter(X_enter, Y_enter, s=10, c='g')
+    ax.scatter(X_exit, Y_exit, s=10, c='r')
+    ax.scatter(X_traj, Y_traj, s=5, c='b')
+    fig.show()
+    if output is not None:
+        _output = Path(output) / "plots"
+        _output.mkdir(exist_ok=True)
+        fig.savefig(fname=(_output / "misclassified.png"))
+
+def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str = None, background: str = None, classifier: str = "SVM"):
+    """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
+
+    Args:
+        misclassifiedTracks (List[dataManagementClasses.TrackedObject]): List of TrackedObjects, which was misclassified by an estimator.
+        output (str, optional): Output directory path. Defaults to None.
+        background (str, optional): Background image of plot for better visualization.
+    """
+    X_mask = [False, False, False, False, False, False, True, False, False, False]
+    Y_mask = [False, False, False, False, False, False, False, True, False, False]
+    X = np.ravel([f[X_mask] for f in misclassifiedFV])
+    Y = np.ravel([f[Y_mask] for f in misclassifiedFV])
+    fig, ax = plt.subplots(figsize=(7,7))
+    if background is not None:
+        print(background)
+        I = plt.imread(fname=background)
+        # I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
+        ax.imshow(I, alpha=0.4, extent=[0, 1280, 0, 720])
+    ax.scatter((X * I.shape[1]) / (I.shape[1] / I.shape[0]), (1-Y) * I.shape[0], s=0.05, c='r')
+    ax.set_xlim(left=0, right=1280)
+    ax.set_ylim(bottom=0, top=720)
+    ax.grid(visible=True)
+    ax.set_title(label=f"{classifier} misclassifications")
+    fig.show()
+    if output is not None:
+        _output = Path(output) / "plots"
+        _output.mkdir(exist_ok=True)
+        fig.savefig(fname=(_output / f"{classifier}_misclassified.png"))
+
+def save_trajectories(trajectories: List[dataManagementClasses.TrackedObject] or np.ndarray, output: str or Path, classifier: str = "SVM") -> List[str]:
+    _output = Path(output)
+    _outdir = _output / "misclassified_trajectories"
+    _outdir.mkdir(exist_ok=True)
+    _filename = _outdir / f"{classifier}_miclassified_trajectories.joblib"
+    return joblib.dump(trajectories, filename=_filename)

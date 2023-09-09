@@ -18,9 +18,8 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
-import databaseLogger
-import argparse
-import databaseLoader
+import utils.databaseLogger
+import utils.databaseLoader as databaseLoader
 
 argparser = argparse.ArgumentParser("Testing databaseLogger functions.")
 argparser.add_argument("-db", "--database", type=str, help="Path to database file.")

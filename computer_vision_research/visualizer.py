@@ -17,18 +17,22 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from processing_utils import load_model
-from dataManagementClasses import Detection, TrackedObject
+
+### Third Party ###
 import cv2 as cv
 import argparse
 import tqdm
 import numpy as np
-from deepsortTracking import initTrackerMetric, getTracker, updateHistory
+
+### Local ###
 from detector import getTargets
-from detector import draw_boxes
-from classifier import OneVSRestClassifierExtended
 from masker import masker
-from processing_utils import calc_cluster_centers 
+from classifier import OneVSRestClassifierExtended
+from dataManagementClasses import Detection, TrackedObject
+from deepsortTracking import initTrackerMetric, getTracker, updateHistory
+from clustering import calc_cluster_centers
+from utility.models import load_model
+from utility.dataset import load_dataset
 
 def parseArgs():
     """Handle command line arguments.
@@ -39,6 +43,7 @@ def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", required=True, help="Path to video.", type=str)
     parser.add_argument("--model", required=True, help="Path to trained model.", type=str)
+    parser.add_argument("--dataset", help="Path to dataset.", type=str)
     parser.add_argument("--history", type=int, default=30, 
                         help="How many detections will be saved in the track's history.")
     parser.add_argument("--max_cosine_distance",  type=float, default=10.0,
@@ -247,7 +252,10 @@ def main():
 
     model = load_model(args.model)
     model.n_jobs = 18
-    dataset = model.tracks
+    try:
+        dataset = model.tracks
+    except:
+        dataset = load_dataset(args.dataset)
     centroids_labels = model.centroid_labels
     """
     dataset = load_joblib_tracks(args.train_tracks) 

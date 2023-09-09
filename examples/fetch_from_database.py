@@ -3,7 +3,7 @@ Script to load detections from database into simple lists.
 Befire usage 'export PYTHONPATH="<path to computer_vision_research dir>", 
 example 'export PYTHONPATH="$PYTHONPATH:/home/pecneb/gitclones/computer_vision_research/"'
 """
-import databaseLoader
+import utils.databaseLoader
 from dataAnalyzer import preprocess_database_data_multiprocessed
 import argparse
 import tqdm

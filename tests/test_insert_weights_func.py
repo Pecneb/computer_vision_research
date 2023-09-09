@@ -1,5 +1,5 @@
 import numpy as np
-from processing_utils import insert_weights_into_feature_vector
+from computer_vision_research.dataManagementClasses import insert_weights_into_feature_vector
 
 class TestInsertWeightsFunc:
     X = np.array([1,2,3,4,5,6,7,8,9,10])

@@ -17,13 +17,24 @@
 
     Contact email: ecneb2000@gmail.com
 """
+
+### Third Part ###
 import argparse
-import databaseLoader
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-from processing_utils import detectionParser, cvCoord2npCoord, makeColormap, checkDir, load_dataset
 from pathlib import Path
+
+### Local ###
+import utility.databaseLoader as databaseLoader 
+from utility.general import (
+    checkDir
+)
+from utility.plots import (
+    cvCoord2npCoord,
+)
+from utility.dataset import (
+    load_dataset
+)
 
 # disable sklearn warning
 def warn(*arg, **args):
