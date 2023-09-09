@@ -28,32 +28,35 @@ import pandas as pd
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
+import icecream
 from tqdm import tqdm
+from icecream import ic
+icecream.install()
 
 np.seterr(divide='ignore', invalid='ignore')
 
 ### Local ###
-from utils.models import (
+from utility.models import (
    load_model,
    save_model 
 )
-from utils.dataset import (
+from utility.dataset import (
     load_dataset,
     save_trajectories,
     preprocess_database_data_multiprocessed
 )
-from utils.general import (
+from utility.general import (
     strfy_dict_params
 )
-from utils.preprocessing import (
+from utility.preprocessing import (
     filter_trajectories,
     filter_by_class,
 )
-from utils.training import (
+from utility.training import (
     iter_minibatches
 )
-from computer_vision_research.clustering import make_4D_feature_vectors, make_6D_feature_vectors
-from computer_vision_research.dataManagementClasses import insert_weights_into_feature_vector
+from clustering import make_4D_feature_vectors, make_6D_feature_vectors
+from dataManagementClasses import insert_weights_into_feature_vector
 
 import numpy as np
 import tqdm
@@ -480,7 +483,7 @@ def data_preprocessing_for_classifier(path2db: str, min_samples=10, max_eps=0.2,
     Returns:
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test, filteredTracks
     """
-    from computer_vision_research.clustering import optics_clustering_on_nx4
+    from clustering import optics_clustering_on_nx4
 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
@@ -536,7 +539,7 @@ def data_preprocessing_for_calibrated_classifier(path2db: str, min_samples=10, m
     Returns:
         List[np.ndarray]: Return X and y train and test dataset 
     """
-    from computer_vision_research.clustering import optics_clustering_on_nx4 
+    from clustering import optics_clustering_on_nx4 
     thres = 0.5
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_trajectories(tracks, threshold=thres)
@@ -580,7 +583,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     Returns:
         List[np.ndarray]: X_train, y_train, metadata_train, X_test, y_test, metadata_test
     """
-    from computer_vision_research.clustering import optics_on_featureVectors 
+    from clustering import optics_on_featureVectors 
 
     featureVectors = make_4D_feature_vectors(model.tracks)
     labels = optics_on_featureVectors(featureVectors, min_samples=min_samples, xi=xi, min_cluster_size=min_cluster_size, max_eps=max_eps, n_jobs=n_jobs) 
@@ -619,7 +622,7 @@ def data_preprocessing_for_classifier_from_joblib_model(model, min_samples=10, m
     return np.array(X_train), np.array(y_train), np.array(metadata_train), np.array(X_test), np.array(y_test), np.array(metadata_test) 
 
 def preprocess_dataset_for_training(path2dataset: str, min_samples=10, max_eps=0.2, xi=0.15, min_cluster_size=10, n_jobs=18, cluster_features_version: str = "4D", threshold: float = 0.4, classification_features_version: str = "v1", stride: int = 15, level: float = None, n_weights: int = 3, weights_preset: int = 1, p_norm: int = 2):
-    from computer_vision_research.clustering import optics_on_featureVectors 
+    from clustering import optics_on_featureVectors 
 
     tracks = load_dataset(path2dataset)
     tracks = filter_by_class(tracks)
@@ -2271,6 +2274,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
                     if misclassified[j]._dataset == p:
                         _misclassified.append(misclassified[j])
                 _output = Path(output) / "misclassified"
+                _output.mkdir(parents=True, exist_ok=True)
                 print(save_trajectories(_misclassified, _output, f"{m}_{str(Path(p).stem)}"))
 
         

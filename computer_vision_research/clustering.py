@@ -29,16 +29,16 @@ from sklearn.cluster import KMeans
 matplotlib.use('Agg')
 
 ### Local ###
-import utils.databaseLoader as databaseLoader
-from computer_vision_research.dataManagementClasses import Detection, TrackedObject
-from utils.dataset import (
+import utility.databaseLoader as databaseLoader
+from dataManagementClasses import Detection, TrackedObject
+from utility.dataset import (
     detectionParser,
     trackedObjectFactory,
     load_dataset,
     loadDatasetsFromDirectory,
     preprocess_database_data_multiprocessed
 )
-from utils.preprocessing import (
+from utility.preprocessing import (
     filter_out_false_positive_detections_by_enter_exit_distance,
     filter_trajectories,
     filter_by_class,

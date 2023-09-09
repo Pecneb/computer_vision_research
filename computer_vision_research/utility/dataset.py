@@ -7,8 +7,8 @@ from pathlib import Path
 from copy import deepcopy
 from typing import List
 
-import computer_vision_research.utils.databaseLoader as databaseLoader
-from computer_vision_research.dataManagementClasses import trackedObjectFactory, detectionFactory, TrackedObject, Detection
+import utility.databaseLoader as databaseLoader
+from dataManagementClasses import trackedObjectFactory, detectionFactory, TrackedObject, Detection
 
 def findEnterAndExitPoints(path2db: str):
     """Extracting only the first and the last detections of tracked objects.

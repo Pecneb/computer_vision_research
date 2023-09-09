@@ -25,14 +25,14 @@ import tqdm
 import numpy as np
 
 ### Local ###
-from computer_vision_research.detector import getTargets
-from computer_vision_research.masker import masker
-from computer_vision_research.classifier import OneVSRestClassifierExtended
-from computer_vision_research.dataManagementClasses import Detection, TrackedObject
-from computer_vision_research.deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from computer_vision_research.clustering import calc_cluster_centers
-from utils.models import load_model
-from utils.dataset import load_dataset
+from detector import getTargets
+from masker import masker
+from classifier import OneVSRestClassifierExtended
+from dataManagementClasses import Detection, TrackedObject
+from deepsortTracking import initTrackerMetric, getTracker, updateHistory
+from clustering import calc_cluster_centers
+from utility.models import load_model
+from utility.dataset import load_dataset
 
 def parseArgs():
     """Handle command line arguments.

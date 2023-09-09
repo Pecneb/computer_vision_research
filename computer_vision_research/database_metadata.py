@@ -25,14 +25,14 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 ### Local ###
-import utils.databaseLoader as databaseLoader 
-from utils.general import (
+import utility.databaseLoader as databaseLoader 
+from utility.general import (
     checkDir
 )
-from utils.plots import (
+from utility.plots import (
     cvCoord2npCoord,
 )
-from utils.dataset import (
+from utility.dataset import (
     load_dataset
 )
 

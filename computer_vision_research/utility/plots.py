@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import List
 
-import computer_vision_research.utils.databaseLoader as databaseLoader
+import computer_vision_research.utility.databaseLoader as databaseLoader
 from computer_vision_research.dataManagementClasses import (
     TrackedObject
 )

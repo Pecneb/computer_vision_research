@@ -1,6 +1,6 @@
 import os
 import joblib
-from computer_vision_research.classifier import OneVSRestClassifierExtended
+from classifier import OneVSRestClassifierExtended
 
 def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
     """Save model to research_data dir.

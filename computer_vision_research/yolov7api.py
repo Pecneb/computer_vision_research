@@ -22,11 +22,11 @@ import cv2 as cv
 import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
-from yolov7.models.experimental import attempt_load
-from yolov7.utils.datasets import letterbox
-from yolov7.utils.general import check_img_size, non_max_suppression, apply_classifier, \
+# from yolov7.models.experimental import attempt_load
+from utils.datasets import letterbox
+from utils.general import check_img_size, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh
-from yolov7.utils.torch_utils import select_device, load_classifier
+from utils.torch_utils import select_device, load_classifier
 
 CONFIG = "yolov7/cfg/deploy/yolov7.yaml" #"yolov7/cfg/deploy/yolov7.yaml"
 WEIGHTS = "yolov7/yolov7.pt" #"yolov7/yolov7.pt"
@@ -55,6 +55,9 @@ def free_gpu_cache():
     print("GPU Usage after emptying the cache")
     gpu_usage()
 
+def load_weights(weights: str, map_location: str = "0"):
+    ckpt = torch.load(weights, map_location=map_location)  # load
+    return ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval() # FP32 model
 
 def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
     free_gpu_cache()
@@ -63,7 +66,8 @@ def load_model(device=DEVICE, weights=WEIGHTS, imgsz=IMGSZ, classify=CLASSIFY):
     half = device.type != 'cpu'
 
     # Start initializing our yolov7 model
-    model = attempt_load(weights, map_location=device)
+    # model = attempt_load(weights, map_location=device)
+    model = load_weights(weights, device)
     stride = int(model.stride.max())
     imgsz = check_img_size(imgsz, s=stride)
 

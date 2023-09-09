@@ -31,15 +31,31 @@ import time
 from pathlib import Path
 
 
-import computer_vision_research.databaseLogger as databaseLogger
-from computer_vision_research.masker import masker
-from computer_vision_research.deepsortTracking import (
+from yolov7api import (
+    COLORS,
+    IMGSZ,
+    STRIDE,
+    CONF_THRES,
+    IOU_THRES,
+    detect
+)
+from masker import masker
+from deepsortTracking import (
     initTrackerMetric, 
     getTracker, 
     updateHistory
 )
-from computer_vision_research.dataManagementClasses import Detection
-from utils.dataset import downscale_TrackedObjects, load_dataset
+from dataManagementClasses import Detection
+from utility.dataset import downscale_TrackedObjects, load_dataset
+from utility.databaseLogger import (
+    init_db,
+    getConnection,
+    logMetaData,
+    logRegression,
+    getLatestFrame,
+    logBufferSpeedy,
+    closeConnection
+)
 
 VIDEO_EXTENSIONS = [".mp4", ".avi", ".mkv", ".webm"]
 
@@ -193,26 +209,12 @@ def main():
     if not outdir.exists():
         outdir.mkdir()
 
-    if args.yolov7:
-        import yolov7api as yolov7api 
-    else:
-        import hldnapi as hldnapi
-        from darknet import class_colors
-
     # buffer to log at the end
     buffer2log = []
-
-    # generating colors for bounding boxes based on the class names of the neural net
-    if args.yolov7:
-        colors = yolov7api.COLORS 
-    else:
-        colors = hldnapi.colors
 
     # log metadata to database
     if args.yolov7:
         yoloVersion = '7'
-    else:
-        yoloVersion = '4'
 
     cap = cv.VideoCapture(inputs[0]) # retrieve an initial image from video to create mask
 
@@ -224,12 +226,12 @@ def main():
         outputName = generateOutputName(input, args.output) # generate output name
 
         path2db = outputName.parent / (outputName.name + ".db") # add .db suffix to output name fo SQL db
-        path2db = databaseLogger.init_db(path2db) # initialize database
+        path2db = init_db(path2db) # initialize database
         print(f"SQL DB path: {path2db}")
 
         print(path2db)
         # create database connection
-        db_connection = databaseLogger.getConnection(path2db)
+        db_connection = getConnection(path2db)
 
         # generate joblib file output path
         path2joblib = outputName.parent / (outputName.name + ".joblib")
@@ -242,8 +244,8 @@ def main():
         buffer2joblibTracks = []
 
         # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
-        databaseLogger.logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", yolov7api.IMGSZ, yolov7api.STRIDE, yolov7api.CONF_THRES, yolov7api.IOU_THRES)
-        databaseLogger.logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
+        logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", IMGSZ, STRIDE, CONF_THRES, IOU_THRES)
+        logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
 
         # get video capture object
         cap = cv.VideoCapture(input)
@@ -263,7 +265,7 @@ def main():
 
         # resume video where it was left off, if resume flag is set
         if args.resume:
-            lastframeNum = databaseLogger.getLatestFrame(db_connection)
+            lastframeNum = getLatestFrame(db_connection)
             if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
                 cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
             # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
@@ -293,10 +295,7 @@ def main():
                 prev_time = time.time()
 
                 # run yolo inference 
-                if args.yolov7:
-                    detections = yolov7api.detect(cv.bitwise_or(frame, frame, mask=mask)) 
-                else:
-                    detections = hldnapi.cvimg2detections(cv.bitwise_or(frame, frame, mask=mask))
+                detections = detect(cv.bitwise_or(frame, frame, mask=mask)) 
 
                 # filter detections, only return the ones given in the targetNames tuple
                 targets = getTargets(detections, frameNumber, targetNames=("car", "motorcycle", "bus", "truck"))
@@ -306,7 +305,7 @@ def main():
 
                 # draw bounding boxes of filtered detections
                 if args.show:
-                    draw_boxes(trackedObjects, frame, colors, frameNumber)
+                    draw_boxes(trackedObjects, frame, COLORS, frameNumber)
 
                 # load moving objects into buffer, that will be saved to the sqlite db at exit 
                 for obj in trackedObjects:
@@ -356,8 +355,8 @@ def main():
         dump(downscaled_tracks, path2joblib)
         print("Joblib database succesfully saved!")
         # log buffered detections in sqlite db
-        databaseLogger.logBufferSpeedy(db_connection, img, buffer2log)
-        databaseLogger.closeConnection(db_connection)
+        logBufferSpeedy(db_connection, img, buffer2log)
+        closeConnection(db_connection)
 
         if args.show:
             cv.destroyAllWindows()

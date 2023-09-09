@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 
 ### Local ###
-from utils.dataset import load_dataset
-from computer_vision_research.dataManagementClasses import TrackedObject, Detection
+from utility.dataset import load_dataset
+from dataManagementClasses import TrackedObject, Detection
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.

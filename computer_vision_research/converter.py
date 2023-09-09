@@ -10,17 +10,17 @@ from joblib import dump
 from tqdm import tqdm
 
 ### Local ###
-from utils.dataset import (
+from utility.dataset import (
     tracks2joblib,
     mergeDatasets,
     downscale_TrackedObjects,
     load_dataset,
     preprocess_database_data_multiprocessed
 )
-from utils.general import diffmap
-from utils.preprocessing import filter_by_class, filter_trajectories
-from computer_vision_research.dataManagementClasses import TrackedObject
-from computer_vision_research.clustering import (
+from utility.general import diffmap
+from utility.preprocessing import filter_by_class, filter_trajectories
+from dataManagementClasses import TrackedObject
+from clustering import (
     make_4D_feature_vectors,
     make_6D_feature_vectors
 )
@@ -75,7 +75,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
     Returns:
         _type_: _description_
     """
-    from computer_vision_research.clustering import clustering_on_feature_vectors 
+    from clustering import clustering_on_feature_vectors 
     from sklearn.cluster import OPTICS
     filext = path2tracks.split('/')[-1].split('.')[-1]
     

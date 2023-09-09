@@ -22,12 +22,12 @@ from deep_sort.deep_sort.tracker import Tracker
 from deep_sort.deep_sort.detection import Detection
 import sqlite3
 
-from computer_vision_research.dataManagementClasses import (
+from dataManagementClasses import (
     Detection as darknetDetection,
     TrackedObject
 )
-import utils.databaseLogger as databaseLogger
-import utils.databaseLoader as databaseLoader
+import utility.databaseLogger as databaseLogger
+import utility.databaseLoader as databaseLoader
 
 def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
     """DeepSort metric factory
