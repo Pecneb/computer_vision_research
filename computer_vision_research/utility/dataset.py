@@ -136,7 +136,7 @@ def tracks2joblib(path2db: str, n_jobs=18):
     print('Saving: ', savepath)
     joblib.dump(tracks, savepath)
 
-def load_dataset(path2dataset: str | Path | list[str]):
+def load_dataset(path2dataset: str or Path or list[str]):
     """Load dataset from either a joblib file or a database file.
     If dataset path is a directory load all joblib files from the directory.
     dict['track': TrackedObject, 'class': label].

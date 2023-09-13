@@ -5,7 +5,10 @@ import numpy as np
 
 ### Local ###
 from utility.dataset import load_dataset
+from utility.models import load_model
 from dataManagementClasses import TrackedObject, Detection
+from clustering import calc_cluster_centers, upscale_cluster_centers
+from visualizer import draw_prediction, draw_clusters, draw_prediction_line
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.
@@ -136,6 +139,8 @@ def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
     tracks = load_dataset(args.database)
+    model = load_model(args.model)
+    print(model)
     
     i_track = 0
     while i_track >= 0 and i_track < len(tracks):
@@ -144,14 +149,19 @@ def examine_tracks(args):
             raise IOError("Can not open video.")
 
         start_frame = tracks[i_track].history[0].frameID
+        print(start_frame)
         video.set(cv2.CAP_PROP_POS_FRAMES, start_frame-1)
         act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)+1
+        frame_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        frame_width = video.get(cv2.CAP_PROP_FRAME_WIDTH)
+        centroids_upscaled = upscale_cluster_centers(model.centroid_coordinates, frame_width, frame_height)
 
         if act_start_frame == start_frame:
             window_name = f"Object ID{tracks[i_track].objID}"
             cv2.namedWindow(window_name)
             i_det = 0
             i_frame = 0
+            act_frame_num = video.get(cv2.CAP_PROP_FRAME_COUNT)
             while i_frame < tracks[i_track].history[-1].frameID-tracks[i_track].history[0].frameID and i_frame >= 0:
                 ret, frame = video.read()
                 if not ret:
@@ -161,6 +171,8 @@ def examine_tracks(args):
                 frame = 255 - (255 - frame) * 0.5
                 frame = frame.astype(np.uint8)
 
+                draw_clusters(centroids_upscaled, frame)
+
                 act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
                     print_object_info(tracks[i_track], i_det, frame)
@@ -169,6 +181,16 @@ def examine_tracks(args):
                         tracks[i_track].history[i_det],
                         frame_traj
                     )
+                    fv = tracks[i_track].feature_()
+                    if fv is not None:
+                        #TODO actual feature vector, not last
+                        pred_proba = model.predict_proba(fv.reshape(1, -1), classes=model.centroid_labels)
+                        pred = np.argsort(pred_proba)[:, -1:] # -args.top_k:]
+                        pred = pred.reshape((-1))
+                        print(pred)
+                        print(pred_proba)
+                        fv_upscaled = tracks[i_track].upscale_feature(fv, frame_width, frame_height)
+                        draw_prediction_line(frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
 
                     i_det += 1
                 else:
@@ -230,6 +252,12 @@ def main():
         type=str,
         required=True,
         help="Path to joblib database file."
+    )
+    argparser.add_argument(
+        "-m", "--model",
+        type=str,
+        required=True,
+        help="Path to model."
     )
     argparser.add_argument(
         "--video",

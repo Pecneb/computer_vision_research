@@ -23,6 +23,7 @@ import cv2 as cv
 import argparse
 import tqdm
 import numpy as np
+from typing import List, Tuple
 
 ### Local ###
 from detector import getTargets
@@ -150,7 +151,7 @@ def upscale_aoi(centroids, framewidth: int, frameheight: int):
         retarr[i, 1] = centroids[i, 1] * frameheight
     return retarr 
 
-def draw_prediction(trackedObject, centroid: list[np.ndarray], image: np.ndarray, framenum: int, predictions: np.ndarray, confidences: np.ndarray):
+def draw_prediction(trackedObject, centroid: List[np.ndarray], image: np.ndarray, framenum: int, predictions: np.ndarray, confidences: np.ndarray):
     """Draw prediction path.
 
     Args:
@@ -226,6 +227,17 @@ def prediction_paralell(t: TrackedObject, model: OneVSRestClassifierExtended, fr
             centroids = [cluster_centroids_upscaled[p] for p in predictions]
             #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
             draw_prediction((int(t.X), int(t.Y)), centroids, frame)
+
+def draw_clusters(cluster_centroids_upscaled: np.ndarray, image: np.ndarray):
+    for i in range(cluster_centroids_upscaled.shape[0]):
+        cv.circle(image, (int(cluster_centroids_upscaled[i][0]), int(cluster_centroids_upscaled[i][1])), 10, (0,0,255), 3)
+        cv.putText(image, f"Cluster: {i}", 
+                    (int(cluster_centroids_upscaled[i][0]), int(cluster_centroids_upscaled[i][1])),
+                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
+
+def draw_prediction_line(image:np.ndarray, cluster_centroids_upscaled: np.ndarray, predicted_cluster: int, coordinates: Tuple[int, int]):
+    print(cluster_centroids_upscaled, coordinates)
+    cv.line(image, (int(coordinates[0]), int(coordinates[1])), (int(cluster_centroids_upscaled[predicted_cluster, 0]), int(cluster_centroids_upscaled[predicted_cluster, 1])), (0,0,255), 3)
 
 def main():
     args = parseArgs()

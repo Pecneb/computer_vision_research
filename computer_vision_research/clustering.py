@@ -26,6 +26,7 @@ import tqdm
 from matplotlib import pyplot as plt
 from pathlib import Path
 from sklearn.cluster import KMeans
+from typing import List, Tuple
 matplotlib.use('Agg')
 
 ### Local ###
@@ -46,7 +47,7 @@ from utility.preprocessing import (
     euclidean_distance
 )
 
-def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
+def makeFeatureVectors_Nx2(trackedObjects: List) -> np.ndarray:
     """Create 2D feature vectors from tracks.
     The enter and exit coordinates are put in different vectors. Only creating 2D vectors.
 
@@ -62,7 +63,7 @@ def makeFeatureVectors_Nx2(trackedObjects: list) -> np.ndarray:
         featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
     return np.array(featureVectors)
 
-def make_2D_feature_vectors(trackedObjects: list) -> np.ndarray:
+def make_2D_feature_vectors(trackedObjects: List) -> np.ndarray:
     """Create 2D feature vectors from tracks.
     The enter and exit coordinates are put in one vector. Creating 4D vectors.
     v = [exitX, exitY]
@@ -76,7 +77,7 @@ def make_2D_feature_vectors(trackedObjects: list) -> np.ndarray:
     featureVectors = np.array([np.array([obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
-def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
+def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
     """Create 4D feature vectors from tracks.
     The enter and exit coordinates are put in one vector. Creating 4D vectors.
     v = [enterX, enterY, exitX, exitY]
@@ -90,7 +91,7 @@ def make_4D_feature_vectors(trackedObjects: list) -> np.ndarray:
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
-def make_6D_feature_vectors(trackedObjects: list) -> np.ndarray:
+def make_6D_feature_vectors(trackedObjects: List) -> np.ndarray:
     """Create 6D feature vectors from tracks.
     The enter, middle and exit coordinates are put in one vector. Creating 6D vectors.
     v = [enterX, enterY, exitX, exitY]
@@ -291,7 +292,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
     filename = f"{path2db.split('/')[-1].split('.')[0]}_kmeans_n_cluster_{n_clusters}.png"
     fig.savefig(fname=os.path.join("research_data", path2db.split('/')[-1].split('.')[0], filename), dpi='figure', format='png')
 
-def kmeans_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, outdir: str, show=True):
+def kmeans_clustering_on_nx4(trackedObjects: List, n_clusters: int, threshold: float, outdir: str, show=True):
     """Run kmeans clutering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -379,7 +380,7 @@ def kmeans_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n_j
             kmeans_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir=outdir, show=False)
             thres += 0.1
 
-def spectral_clustering_on_nx4(trackedObjects: list, n_clusters: int, threshold: float, outdir: str, show=True):
+def spectral_clustering_on_nx4(trackedObjects: List, n_clusters: int, threshold: float, outdir: str, show=True):
     """Run spectral clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -470,7 +471,7 @@ def spectral_worker(path2db: str, outdir: str, threshold=(0.1, 0.7), k=(2,16), n
             spectral_clustering_on_nx4(filteredTrackedObjects, i, thres, outdir, show=False)
             thres += 0.1
 
-def dbscan_clustering_on_nx4(trackedObjects: list, eps: float, min_samples: int, n_jobs: int, threshold: float, outdir: str, show=True, shuffle=False):
+def dbscan_clustering_on_nx4(trackedObjects: List, eps: float, min_samples: int, n_jobs: int, threshold: float, outdir: str, show=True, shuffle=False):
     """Run dbscan clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -581,7 +582,7 @@ def dbscan_worker(path2db: str, outdir: str, eps: float, min_samples: int, n_job
                 dbscan_clustering_on_nx4(trackedObjects=filteredTrackedObjects, threshold=thres, outdir=outdir, n_jobs=n_jobs, eps=eps, min_samples=min_samples, show=False, shuffle=False)
             thres += 0.1
 
-def optics_clustering_on_nx4(trackedObjects: list, min_samples: int, xi: float, min_cluster_size: float, max_eps:float, threshold: float, outdir: str, n_jobs=16, show=True):
+def optics_clustering_on_nx4(trackedObjects: List, min_samples: int, xi: float, min_cluster_size: float, max_eps:float, threshold: float, outdir: str, n_jobs=16, show=True):
     """Run optics clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -717,7 +718,7 @@ def cluster_optics_dbscan_on_featurevectors(featureVectors:np.ndarray, min_sampl
                                     ordering=clust.ordering_, eps=eps)
     return labels
 
-def cluster_optics_dbscan_on_nx4(trackedObjects: list, min_samples: int, xi: float, min_cluster_size: float, eps:float, threshold: float, outdir: str, n_jobs=16, show=True):
+def cluster_optics_dbscan_on_nx4(trackedObjects: List, min_samples: int, xi: float, min_cluster_size: float, eps:float, threshold: float, outdir: str, n_jobs=16, show=True):
     """Run optics clustering on N x 4 (x,y,x,y) feature vectors.
 
     Args:
@@ -832,7 +833,7 @@ def clustering_on_feature_vectors(X: np.ndarray, estimator, n_jobs: int = -1, **
         cls = estimator(**estkwargs).fit(X)
     return cls, cls.labels_
 
-def clustering_on_2D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
+def clustering_on_2D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
@@ -951,7 +952,7 @@ def clustering_on_2D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     plt.close()
 
-def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
+def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
@@ -1070,7 +1071,7 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: list[TrackedObje
     historgram_fig.savefig(fname=os.path.join(dirpath, hist_filename), dpi='figure', format='png')
     plt.close()
 
-def clustering_on_6D_feature_vectors(estimator, trackedObjects: list[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
+def clustering_on_6D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
     """Run clustering on 6 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
@@ -1469,7 +1470,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
         fig.savefig(filename) 
     return clr_best, n_clusters_best, mse
 
-def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> tuple[np.ndarray, KMeans, int, float]:
+def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> Tuple[np.ndarray, KMeans, int, float]:
     """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
     Return the clustering results based on cluster exit point centers.
 

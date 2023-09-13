@@ -301,7 +301,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
     
     """
 
-    def __init__(self, estimator, tracks = None, n_jobs=16, centroids_labels = None):
+    def __init__(self, estimator, tracks = None, n_jobs=16, centroid_labels = None, centroid_coordinates = None):
         """_summary_
 
         Parameters
@@ -318,7 +318,9 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Default n_jobs value is 16.
         """
         self.tracks = tracks
-        self.centroid_labels = centroids_labels
+        self.centroid_labels = centroid_labels 
+        self.centroid_coordinates = centroid_coordinates
+        self.verbose = False
         self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
     

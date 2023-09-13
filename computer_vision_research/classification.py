@@ -22,6 +22,7 @@ import time
 import os
 from datetime import date 
 from pathlib import Path
+from typing import List
 
 ### Third Party ###
 import pandas as pd
@@ -55,14 +56,14 @@ from utility.preprocessing import (
 from utility.training import (
     iter_minibatches
 )
-from clustering import make_4D_feature_vectors, make_6D_feature_vectors
+from clustering import make_4D_feature_vectors, make_6D_feature_vectors, calc_cluster_centers
 from dataManagementClasses import insert_weights_into_feature_vector
 
 import numpy as np
 import tqdm
 
 
-def make_features_for_classification(trackedObjects: list, k: int, labels: np.ndarray):
+def make_features_for_classification(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -84,7 +85,7 @@ def make_features_for_classification(trackedObjects: list, k: int, labels: np.nd
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
+def make_features_for_classification_velocity(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -106,7 +107,7 @@ def make_features_for_classification_velocity(trackedObjects: list, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
+def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -138,7 +139,7 @@ def make_feature_vectors_version_one(trackedObjects: list, k: int, labels: np.nd
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j]])
     return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata), np.array(newReducedLabels)
 
-def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_one_half(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -168,7 +169,7 @@ def make_feature_vectors_version_one_half(trackedObjects: list, k: int, labels: 
                                                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j].objID])
     return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata)
 
-def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_two(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
     this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
@@ -198,7 +199,7 @@ def make_feature_vectors_version_two(trackedObjects: list, k: int, labels: np.nd
                                             track.history[j].frameID, len(track.history), track.objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_two_half(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
     this last detection reaches the end of the history. Next to the coordinates, also the velocity of the object is being included in the feature vector.
@@ -228,7 +229,7 @@ def make_feature_vectors_version_two_half(trackedObjects: list, k: int, labels: 
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_three(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
     this last detection reaches the end of the history.
@@ -258,7 +259,7 @@ def make_feature_vectors_version_three(trackedObjects: list, k: int, labels: np.
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels: np.ndarray):
+def make_feature_vectors_version_three_half(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors from track histories, such as starting from the first detection incrementing the vectors length by a given factor, building multiple vectors from one history.
     A vector is made up from the absolute first detection of the history, a relative middle detection, and a last detecion, that's index is incremented, for the next feature vector until 
     this last detection reaches the end of the history. 
@@ -286,7 +287,7 @@ def make_feature_vectors_version_three_half(trackedObjects: list, k: int, labels
                                             trackedObjects[i].history[j].frameID, len(trackedObjects[i].history), trackedObjects[i].objID]))
     return np.array(X_featurevectors), np.array(y_newLabels), np.array(featurevector_metadata)
 
-def make_feature_vectors_version_four(trackedObjects: list, max_stride: int, labels: np.ndarray):
+def make_feature_vectors_version_four(trackedObjects: List, max_stride: int, labels: np.ndarray):
     """Make multiple feature vectors from one object's history. When max_stride is reached, use sliding window method to create the vectors.
 
     Args:
@@ -329,7 +330,7 @@ def make_feature_vectors_version_four(trackedObjects: list, max_stride: int, lab
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels), np.array(metadata)
 
-def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, max_stride: int, n_weights: int):
+def make_feature_vectors_version_five(trackedObjects: List, labels: np.ndarray, max_stride: int, n_weights: int):
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
     metadata = []
@@ -370,7 +371,7 @@ def make_feature_vectors_version_five(trackedObjects: list, labels: np.ndarray, 
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
 
-def make_feature_vectors_version_six(trackedObjects: list, labels: np.ndarray, max_stride: int, weights: np.ndarray):
+def make_feature_vectors_version_six(trackedObjects: List, labels: np.ndarray, max_stride: int, weights: np.ndarray):
     if weights.shape != (12,):
         raise ValueError("Shape of weights must be equal to shape(12,).")
     X_feature_vectors = np.array([])
@@ -395,7 +396,7 @@ def make_feature_vectors_version_six(trackedObjects: list, labels: np.ndarray, m
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
 
-def make_feature_vectors_version_seven(trackedObjects: list, labels: np.ndarray, max_stride: int):
+def make_feature_vectors_version_seven(trackedObjects: List, labels: np.ndarray, max_stride: int):
     weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
     X_feature_vectors = np.array([])
     y_new_labels = np.array([])
@@ -2108,12 +2109,12 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     print()
     return basic_table, balanced_table, top_1_table, top_2_table, top_3_table, final_test_basic, final_test_balanced, final_test_top_k
 
-def calculate_metrics_exitpoints(dataset: str | list[str], 
+def calculate_metrics_exitpoints(dataset: str or List[str], 
                                  test_ratio: float, 
                                  output: str, threshold: float, 
                                  enter_exit_dist: float, 
                                  n_jobs: int, 
-                                 models_to_benchmark: list[str], 
+                                 models_to_benchmark: List[str], 
                                  mse_threshold: float = 0.5, 
                                  preprocessed: bool = False,
                                  test_trajectory_part: float = 1,
@@ -2183,6 +2184,8 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
     print("Exit points clusters: {}".format(np.unique(reduced_labels)))
     print("Exit point clustering done in %d s" % (time.time() - start))
 
+    cluster_centers = calc_cluster_centers(tracks_labeled, reduced_labels)
+
     # preprocess for train test split
     start = time.time()
     train_dict = []
@@ -2238,7 +2241,7 @@ def calculate_metrics_exitpoints(dataset: str | list[str],
     # train classifiers
     for m in models_to_benchmark:
         start = time.time()
-        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), n_jobs=n_jobs, centroids_labels=centroids_labels)
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), n_jobs=n_jobs, centroid_labels=centroids_labels, centroid_coordinates=cluster_centers)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
         y_pred = clf_ovr.predict(X_test)

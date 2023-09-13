@@ -160,7 +160,7 @@ def prediction2float(img0: numpy.ndarray, x: float, y: float):
     aspect_ratio = img0.shape[1] / img0.shape[0]
     return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0] 
 
-def init_db(outpath: str | Path):
+def init_db(outpath: str or Path):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
     DB_name will be the name of the database. If directory does not exists,
     then create one. Creates database from given schema.
