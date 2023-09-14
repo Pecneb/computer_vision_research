@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import cv2
 import numpy as np
 from icecream import ic
+import os
 
 ### Local ###
 from utility.dataset import load_dataset
@@ -11,6 +12,10 @@ from dataManagementClasses import TrackedObject, Detection
 from clustering import calc_cluster_centers, upscale_cluster_centers
 from visualizer import draw_prediction, draw_clusters, draw_prediction_line
 from classification import make_feature_vectors_version_one
+
+DEBUG = True if os.getenv("DEBUG") else False
+if not DEBUG:
+    ic.disable()
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.
@@ -210,8 +215,8 @@ def examine_tracks(args):
                         pred_proba = model.predict_proba(fv.reshape(1, -1), classes=model.centroid_labels)
                         pred = np.argsort(pred_proba)[:, -1:] # -args.top_k:]
                         pred = pred.reshape((-1))
-                        print(pred)
-                        print(pred_proba)
+                        ic(pred)
+                        ic(pred_proba)
                         fv_upscaled = tracks[i_track].upscale_feature(fv, frame_width, frame_height)
                         draw_prediction_line(frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
 

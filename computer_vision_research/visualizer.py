@@ -236,7 +236,6 @@ def draw_clusters(cluster_centroids_upscaled: np.ndarray, image: np.ndarray):
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
 
 def draw_prediction_line(image:np.ndarray, cluster_centroids_upscaled: np.ndarray, predicted_cluster: int, coordinates: Tuple[int, int]):
-    print(cluster_centroids_upscaled, coordinates)
     cv.line(image, (int(coordinates[0]), int(coordinates[1])), (int(cluster_centroids_upscaled[predicted_cluster, 0]), int(cluster_centroids_upscaled[predicted_cluster, 1])), (0,0,255), 3)
 
 def main():
