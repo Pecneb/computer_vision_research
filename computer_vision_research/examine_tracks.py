@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 import cv2
 import numpy as np
+from icecream import ic
 
 ### Local ###
 from utility.dataset import load_dataset
@@ -9,6 +10,7 @@ from utility.models import load_model
 from dataManagementClasses import TrackedObject, Detection
 from clustering import calc_cluster_centers, upscale_cluster_centers
 from visualizer import draw_prediction, draw_clusters, draw_prediction_line
+from classification import make_feature_vectors_version_one
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.
@@ -135,13 +137,28 @@ def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray):
         obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio, 
         obj.history_AY_calculated[i_det] * img.shape[0]))
 
+def make_feature_vectors(track: TrackedObject, max_history_len: int = 30) -> np.ndarray:
+    feature_vectors = []
+    frame_number = []
+    for i in range(2, len(track.history)-1):
+        first_idx = 0 if i < max_history_len else i - max_history_len
+        middle_idx = i // 2
+        ic(first_idx)
+        ic(middle_idx)
+        ic(i)
+        feature_vectors.append(np.array([track.history_X[first_idx], track.history_Y[first_idx],
+                                track.history_VX_calculated[first_idx], track.history_VY_calculated[first_idx],
+                                track.history_X[middle_idx], track.history_Y[middle_idx],
+                                track.history_X[i], track.history_Y[i],
+                                track.history_VX_calculated[i], track.history_VY_calculated[i]]))
+        frame_number.append(track.history[i].frameID)
+    return np.array(feature_vectors), np.array(frame_number)
+
 def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
     tracks = load_dataset(args.database)
     model = load_model(args.model)
-    print(model)
-    
     i_track = 0
     while i_track >= 0 and i_track < len(tracks):
         video = cv2.VideoCapture(args.video)
@@ -149,7 +166,6 @@ def examine_tracks(args):
             raise IOError("Can not open video.")
 
         start_frame = tracks[i_track].history[0].frameID
-        print(start_frame)
         video.set(cv2.CAP_PROP_POS_FRAMES, start_frame-1)
         act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)+1
         frame_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -162,6 +178,8 @@ def examine_tracks(args):
             i_det = 0
             i_frame = 0
             act_frame_num = video.get(cv2.CAP_PROP_FRAME_COUNT)
+            # feature_vs, _, metadata, _ = make_feature_vectors_version_one([tracks[i_track]], k=6)
+            feature_vs, frame_numbers = make_feature_vectors(tracks[i_track])
             while i_frame < tracks[i_track].history[-1].frameID-tracks[i_track].history[0].frameID and i_frame >= 0:
                 ret, frame = video.read()
                 if not ret:
@@ -174,6 +192,12 @@ def examine_tracks(args):
                 draw_clusters(centroids_upscaled, frame)
 
                 act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
+
+                fv = None
+                for i in range(len(feature_vs)):
+                    if act_frame_num == frame_numbers[i]:
+                        fv = feature_vs[i]
+
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
                     print_object_info(tracks[i_track], i_det, frame)
                     frame_traj = draw_trajectory(frame, tracks[i_track], actual_detection_id=i_det)
@@ -181,7 +205,6 @@ def examine_tracks(args):
                         tracks[i_track].history[i_det],
                         frame_traj
                     )
-                    fv = tracks[i_track].feature_()
                     if fv is not None:
                         #TODO actual feature vector, not last
                         pred_proba = model.predict_proba(fv.reshape(1, -1), classes=model.centroid_labels)

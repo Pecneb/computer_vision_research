@@ -107,7 +107,7 @@ def make_features_for_classification_velocity(trackedObjects: List, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.ndarray, reduced_labels: np.ndarray = None, up_until: float = 1):
+def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.ndarray = None, reduced_labels: np.ndarray = None, up_until: float = 1):
     """Make feature vectors for classification algorithm
 
     Args:
@@ -116,7 +116,9 @@ def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.nd
         labels (np.ndarray): Results of clustering.
 
     Returns:
-        np.ndarray, np.ndarray, np.ndarray: featureVectors, labels, timeOfFeatureVectors
+        Tuple[ndarray, ndarray, ndarray, ndarray]: Tuple of arrays. First array is the feature vector array,
+            second array is the labels array, third is the metadat array, and the last is the reduced labels
+            array.
     """
     featureVectors = []
     newLabels = []
@@ -133,8 +135,10 @@ def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.nd
                                             trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
                                             trackedObjects[j].history[i+step].X, trackedObjects[j].history[i+step].Y,
                                             trackedObjects[j].history[i+step].VX, trackedObjects[j].history[i+step].VY]))
-                newLabels.append(labels[j])
-                newReducedLabels.append(reduced_labels[j])
+                if labels is not None:
+                    newLabels.append(labels[j])
+                if reduced_labels is not None:
+                    newReducedLabels.append(reduced_labels[j])
                 track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j]])
     return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata), np.array(newReducedLabels)
