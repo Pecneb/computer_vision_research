@@ -186,7 +186,7 @@ class TrackedObject():
     
     def __hash__(self) -> int:
         retval = int(self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
-        print(retval, self.objID, self._dataset)
+        # print(retval, self.objID, self._dataset)
         return retval
     
     def __eq__(self, other) -> bool:

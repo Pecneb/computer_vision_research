@@ -7,7 +7,7 @@ from pathlib import Path
 from copy import deepcopy
 from typing import List
 
-import utility.databaseLoader as databaseLoader
+from . import databaseLoader
 from dataManagementClasses import trackedObjectFactory, detectionFactory, TrackedObject, Detection
 
 def findEnterAndExitPoints(path2db: str):
@@ -230,7 +230,7 @@ def loadDatasetsFromDirectory(path):
     for p in dirPath.glob("*.joblib"):
         tmpDataset = load_dataset(p)
         dataset = np.append(dataset, tmpDataset, axis=0)
-        print(len(tmpDataset))
+        # print(len(tmpDataset))
     return dataset
 
 def load_dataset_with_labels(path):

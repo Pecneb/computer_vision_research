@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import List
 
-import computer_vision_research.utility.databaseLoader as databaseLoader
+from . import databaseLoader
 from computer_vision_research.dataManagementClasses import (
     TrackedObject
 )
@@ -83,7 +83,6 @@ def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str 
     Y = np.ravel([f[Y_mask] for f in misclassifiedFV])
     fig, ax = plt.subplots(figsize=(7,7))
     if background is not None:
-        print(background)
         I = plt.imread(fname=background)
         # I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
         ax.imshow(I, alpha=0.4, extent=[0, 1280, 0, 720])

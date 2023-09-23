@@ -22,7 +22,7 @@ import time
 import os
 from datetime import date 
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 ### Third Party ###
 import pandas as pd
@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import icecream
 from tqdm import tqdm
 from icecream import ic
+from scipy.signal import savgol_filter
 icecream.install()
 
 np.seterr(divide='ignore', invalid='ignore')
@@ -57,7 +58,7 @@ from utility.training import (
     iter_minibatches
 )
 from clustering import make_4D_feature_vectors, make_6D_feature_vectors, calc_cluster_centers
-from dataManagementClasses import insert_weights_into_feature_vector
+from dataManagementClasses import insert_weights_into_feature_vector, TrackedObject
 
 import numpy as np
 import tqdm
@@ -81,7 +82,15 @@ def make_features_for_classification(trackedObjects: List, k: int, labels: np.nd
         if step > 0:
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
-                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y]))
+                featureVectors.append(
+                    np.array(
+                        [
+                            trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,
+                            trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,
+                            trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y
+                        ]
+                    )
+                )
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
@@ -103,7 +112,14 @@ def make_features_for_classification_velocity(trackedObjects: List, k: int, labe
         if step > 0:
             midstep = step//2
             for i in range(0, len(trackedObjects[j].history)-step, step):
-                featureVectors.append(np.array([trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
+                featureVectors.append(
+                    np.array(
+                        [
+                            trackedObjects[j].history[i].X,trackedObjects[j].history[i].Y,
+                            trackedObjects[j].history[i].VX,trackedObjects[j].history[i].VY,
+                            trackedObjects[j].history[i+midstep].X,trackedObjects[j].history[i+midstep].Y,
+                            trackedObjects[j].history[i+step].X,trackedObjects[j].history[i+step].Y,
+                            trackedObjects[j].history[i+step].VX,trackedObjects[j].history[i+step].VY]))
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
@@ -422,6 +438,67 @@ def make_feature_vectors_version_seven(trackedObjects: List, labels: np.ndarray,
                                         t.history[end_idx].frameID, t.history_X.shape[0], t.objID]))
             y_new_labels = np.append(y_new_labels, labels[i])
     return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(metadata)
+
+def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labels: np.ndarray, reduced_labels: np.ndarray, k: int = 6, window: int = 7, poly: int = 2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate feature vectors from the history of trackedObjects for training and evaluation.
+
+    Parameters
+    ----------
+        trackedObjects (List[TrackedObject]): List of trackedObjects. 
+        labels (np.ndarray): List of labels from clustering, 
+            with the same order as the trackedObjects
+        reduced_labels (np.ndarray): List of labels obtained
+            from cluster reduction.
+        k (int, optional): _description_. Defaults to 6.
+        window_size (int, optional): _description_. Defaults to 7.
+        poly_degree (int, optional): _description_. Defaults to 2.
+
+    Returns
+    -------
+        tuple: Tuple containing the feature vectors, the corresponding labels and some metadata
+    """
+    feature_vectors = []
+    new_labels = []
+    new_reduced_labels = []
+    metadata = []
+    for i, o in enumerate(trackedObjects):
+        stride = len(trackedObjects) // k
+        half_stride = stride // 2
+        if stride > 2:
+            for j in range(0, len(o.history)-stride, stride):
+                X_smooth = savgol_filter(
+                    o.history_X[j:j+stride+1], 
+                    window_length=window,
+                    polyorder=poly
+                )
+                Y_smooth = savgol_filter(
+                    o.history_Y[j:j+stride+1],
+                    window_length=window,
+                    polyorder=poly
+                )
+                # VX_smooth = savgol_filter(
+                #     trackedObjects[i].history_X[j:j+stride],
+                #     window_length=window,
+                #     polyorder=poly
+                #     deriv=1
+                # )
+                # VY_smooth = savgol_filter(
+                #     trackedObjects[i].history_Y[j:j+stride],
+                #     window_length=window,
+                #     polyorder=poly
+                #     deriv=1
+                # )
+                feature_vectors.append([X_smooth[0], Y_smooth[0],
+                                        X_smooth[half_stride], Y_smooth[half_stride],
+                                        X_smooth[stride], Y_smooth[stride]])
+                #TODO final_top_k.append(top_k_accuracy_score(y_test, y_pred_proba, k=i, labels=list(set(y_train))))
+                #TODO ValueError: 'y_true' contains labels not in parameter 'labels'.
+                new_labels.append(labels[i])
+                new_reduced_labels.append(reduced_labels[i])
+                metadata.append([o.history[j].frameID, o.history[j+half_stride].frameID, 
+                                 o.history[j+stride].frameID, len(o.history), o])
+    return np.array(feature_vectors), np.array(new_labels), np.array(new_reduced_labels), np.array(metadata)
+            
 
 def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     """Level out the nuber of features.
@@ -2214,8 +2291,10 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
 
     # Generate version one feature vectors for clustering
     start = time.time()
-    X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
+    # X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
+    # X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
+    X_train, y_train, y_reduced_train, metadata_train = make_feature_vectors_version_eight(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
+    X_test, y_test, y_reduced_test, metadata_test = make_feature_vectors_version_eight(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
     print("Feature vectors generated in %d s" % (time.time() - start))
 
     models = {
@@ -2282,7 +2361,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
                         _misclassified.append(misclassified[j])
                 _output = Path(output) / "misclassified"
                 _output.mkdir(parents=True, exist_ok=True)
-                print(save_trajectories(_misclassified, _output, f"{m}_{str(Path(p).stem)}"))
+                save_trajectories(_misclassified, _output, f"{m}_{str(Path(p).stem)}")
 
         
     ### Print out tables ###
