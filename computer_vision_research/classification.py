@@ -143,6 +143,7 @@ def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.nd
     #TODO remove time vector, use track_history_metadata instead
     for j in range(len(trackedObjects)):
         step = len(trackedObjects[j].history)//k
+        # step = k
         if step > 0:
             midstep = step//2
             for i in range(0, int(len(trackedObjects[j].history)*up_until)-step, step):
@@ -449,9 +450,9 @@ def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labe
             with the same order as the trackedObjects
         reduced_labels (np.ndarray): List of labels obtained
             from cluster reduction.
-        k (int, optional): _description_. Defaults to 6.
-        window_size (int, optional): _description_. Defaults to 7.
-        poly_degree (int, optional): _description_. Defaults to 2.
+        k (int, optional): Number of slices. Defaults to 6.
+        window_size (int, optional):  Size of savgol_filter. Defaults to 7.
+        poly_degree (int, optional):  Degree of polynom. Defaults to 2.
 
     Returns
     -------
@@ -462,9 +463,11 @@ def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labe
     new_reduced_labels = []
     metadata = []
     for i, o in enumerate(trackedObjects):
-        stride = len(trackedObjects) // k
-        half_stride = stride // 2
-        if stride > 2:
+        stride_calc = len(trackedObjects[i].history)//k
+        stride = stride_calc if stride_calc >= window else window
+        # stride = k
+        if len(o.history) >= stride:
+            half_stride = stride//2
             for j in range(0, len(o.history)-stride, stride):
                 X_smooth = savgol_filter(
                     o.history_X[j:j+stride+1], 
@@ -496,7 +499,7 @@ def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labe
                 new_labels.append(labels[i])
                 new_reduced_labels.append(reduced_labels[i])
                 metadata.append([o.history[j].frameID, o.history[j+half_stride].frameID, 
-                                 o.history[j+stride].frameID, len(o.history), o])
+                                    o.history[j+stride].frameID, len(o.history), o])
     return np.array(feature_vectors), np.array(new_labels), np.array(new_reduced_labels), np.array(metadata)
             
 
@@ -2200,6 +2203,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
                                  preprocessed: bool = False,
                                  test_trajectory_part: float = 1,
                                  background: str = None,
+                                 feature_version: int = 1,
                                  **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
@@ -2291,11 +2295,16 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
 
     # Generate version one feature vectors for clustering
     start = time.time()
-    # X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    # X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
-    X_train, y_train, y_reduced_train, metadata_train = make_feature_vectors_version_eight(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-    X_test, y_test, y_reduced_test, metadata_test = make_feature_vectors_version_eight(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test)
+    if feature_version == 1:
+        X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
+        X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
+    elif feature_version == 8:
+        X_train, y_train, y_reduced_train, metadata_train = make_feature_vectors_version_eight(trackedObjects=tracks_train, k=12, labels=labels_train, reduced_labels=reduced_labels_train)
+        X_test, y_test, y_reduced_test, metadata_test = make_feature_vectors_version_eight(trackedObjects=tracks_test, k=12, labels=labels_test, reduced_labels=reduced_labels_test)
     print("Feature vectors generated in %d s" % (time.time() - start))
+
+    print(f"Number of feature vectors in training set: {len(X_train)}")
+    print(f"Number of feature vectors in testing set: {len(X_test)}")
 
     models = {
         "SVM" : SVC,
@@ -2337,7 +2346,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
         balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
         final_top_k = []
         for i in range(1,4):
-            final_top_k.append(top_k_accuracy_score(y_test, y_pred_proba, k=i, labels=list(set(y_train))))
+            final_top_k.append(top_k_accuracy_score(y_test, y_pred_proba, k=i))#, labels=list(set(y_train))))
         # add results to table
         original_results.loc[m] = {'Top-1': final_top_k[0], 'Top-2': final_top_k[1], 'Top-3': final_top_k[2], 'Balanced Accuracy': balanced_accuracy}
         print("Classifier %s evaluation based on original clusters: balanced accuracy: %f, top-1: %f, top-2: %f, top-3: %f" % (m, balanced_accuracy, final_top_k[0], final_top_k[1], final_top_k[2]))
@@ -2447,6 +2456,7 @@ def exitpoint_metric_module(args):
         mse_threshold=args.mse,
         test_trajectory_part=args.test_part,
         background=args.background,
+        feature_version=args.feature_version,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
         xi=args.xi,
@@ -2579,6 +2589,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
+    exitpoint_metrics_parser.add_argument("--feature-version", type=int, default=1, help="Feature Vectors version number. Default: 1")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
