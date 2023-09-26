@@ -143,11 +143,7 @@ class TrackedObject():
     # featureVector: np.ndarray = field(init=False)
     _dataset: str = field(init=False)
 
-<<<<<<< HEAD:dataManagementClasses.py
-    def __init__(self, id, first, max_age=30):
-=======
     def __init__(self, id: int, first: Detection, max_age: int =30):
->>>>>>> gui_app:computer_vision_research/dataManagementClasses.py
         """Constructor method for TrackedObject class.
 
         Args:
