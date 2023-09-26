@@ -18,6 +18,7 @@
 6. [Classification](#classification)
    - [Feature vectors](#featvect)
    - [Save Scikit model](#savescikitmodel)
+   - [Neural Networks](#nn)
 7. [Documentation](#document)
 8. [Classification Results](#classresfeatv1)
 9.  [Testing for decision tree depth](#testdectree)
@@ -34,18 +35,7 @@
 
 **TODO**: Abstract
 
-**Notice:** linear regression implemented, very primitive, but working  
-
-<a name="darknet"/>
-
-# Darknet
-
-YOLOV4 neural net implementation in C. [[1]](#1)
-In order to be able to use the darknet api, build from source with the LIB flag on. Then copy libdarknet.so to root dir of the project. (My Makefile to build darknet can be found in the darknet_config_files directory)  
-
-**Notice:** Using the yolov4-csp-x-swish.cfg and weights with RTX 3070 TI is doing 26 FPS with 69.9% precision, this is the most stable detection so far, good base for tracking and predicting  
-
-For Darknet, I wrote an API hldnapi.py, that makes object detection more easier. cvimg2detections(img) it takes only an opencv img and returns the detections in format [label, confidence, xywh]
+**Notice:** linear regression implemented, very primitive, but working
 
 <a name="yolov7"/>
 
@@ -65,58 +55,35 @@ https://drive.google.com/drive/folders/1IN6kwywddO3B3uHyC5S18vqf0KEWToJ_
 https://drive.google.com/drive/folders/17bn7l7Qm5s-r5DYoFQPhviFZ0jWY9qk5
 https://drive.google.com/drive/folders/16coOR8PlNzvmUm1vsaYJVF_bAOQGySa8
 
-Best OPTICS clustering parameters:
-- 0001_2 : 
-  - min_samples 10
-  - max_eps 0.2
-  - xi 0.15
-  - min_cluster_size 10 
-- 0002_2 : 
-  - min_samples 10
-  - max_eps 0.1 
-  - xi 0.15
-  - min_cluster_size 10 
-- Bellevue_150th_Newport__2017-09-11_07-08-31: 
-  - min_samples 20 
-  - max_eps 0.1 
-  - xi 0.15
-  - min_cluster_size 20 
-
 <a id="inst"/>
 
 ## Installation
 
 The program was implemented and tested in a linux environment. The usage of anaconda is recommended, download it from here [Anaconda](https://www.anaconda.com/)  
 
-All the dependecies can be found in the **requirements.txt** file.
-
 To be able to run yolov7, download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
 
-Create conda environment and add yolov7 to **PYTHONPATH**.
+### Conda environment setup
 
-```shell
-conda create -n <insert name here> python=3.9
-conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
-export PYTHONPATH="${PYTHONPATH}:$PWD/yolov7/"
 ```
-
-The setup of **PYTHONPATH** variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
-
-If someone only want to use the dataAnalyzer.py script or just fetch data from database, then the gathered data can be donwloaded through [ipfs](https://ipfs.io/ipfs/Qmdyq5N7qstpCSuebBK55CHdiKgSTwf7zHt5m681NbNEAd)
+conda create -n <environment-name-here> --file=computer_vision_environment.yaml
+```
 
 <a id="trackobj"/>
 
-# Tracking of detected objects
+# Object tracking
 
-**Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
-
-**Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results.  
+## Deep-SORT
 
 **Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. Pretty much based on Kalmanfilter. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[3]](#3)  
 
+I integrated Deep-SORT into my own code, and modified the original Deep-SORT src code, to fit my needs.
+
 ### Determining wheter an object moving or not
 
-**Temporary solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
+The main problem is to filter out the non moving objects when running detection in real time. This is needed, due to yolo's inaccuracy, due to floating bounding boxes on non moving boxes.
+
+**Solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
 
 ```python
 self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
@@ -126,15 +93,17 @@ self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-
 
 This can save read, write time and memory.  
 
-**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.  
+A threshold should be used to prevent (OOM) - Out Of Memory - effect. And also to speed up the runtime of the detection and visualizer program.
 
-**Bug**: If the main.py script is running for a long time, the number of tracks are piling up. This seems to slow down the program gradually.  
-**Bug**: The above mentioned bug is in correlation with another problem, few tracks from the piled up tracks, are logged out to the terminal output, although only moving objects should be logged. The velocity and acceleration of these objects are stuck and not changing, sometimes these values are way high to be real.
-**Fixes**: To filter out the bugged tracks, a bugged counter field is being added to the dataManagementClasses.TrackedObject() class. The counter is incremented, when the velocities are the same as the velocities from the earlier detection. Then the track is removed from the history, when the counter reaches the given maxAge value.
+**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.  
 
 <a id="predictobj"/>
 
 # Predicting trajectories of moving objects
+
+## Regression (Dead End)
+
+The trajectory prediction with Linear and Polinomyal Regression algorithm were a dead-end, this technique did not give accurate prediction of the vechicles trajectory, only for the short term, which means for the next few frames.
 
 <a id="linearreg"/>
 
@@ -175,6 +144,10 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 #### Regression with coordinate depending weigths
 
 Kalman filter calculates velocities, these velocities can be used as weight in the regression.
+
+## Classification Models
+
+The training of Classification models e.g. Support Vector Machine, KNN and Decision Tree models seems to give an accurate prediction, where the vechicles will exit the traffic conjunctions.
 
 <a id="cluster"/>
 
@@ -311,20 +284,30 @@ Scikit-FeatureSelection
 
 https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
-## 8 | Threshold 4-6 Bence | Done 
-## 8 | Balanced accuracy Bence | Done
-## 21 | Monitor time in trajectory... Bence | Done
+<a id="nn"/>
 
-```python
-def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
-    #TODO add time vector
-    return featureVectors, labels, timeVector
-```
+## Neural Networks
 
-## 21 | Build feature vectors from second half of trajectories. Bence | Done
-## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron 
+For trajectory prediction tasks, several types of neural network architectures can be effective, depending on the specific characteristics of your data and the complexity of the problem. Here are a few neural network types commonly used for trajectory prediction:  
 
-Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
+    - Recurrent Neural Networks (RNNs): RNNs are a natural choice for sequential data like trajectories. Long Short-Term Memory (LSTM) and Gated Recurrent Unit (GRU) are popular variants of RNNs that are designed to handle long-range dependencies and mitigate the vanishing gradient problem. They can capture temporal patterns and relationships in trajectory data.
+
+    - Convolutional Neural Networks (CNNs): While CNNs are commonly associated with image data, they can also be applied to trajectory prediction tasks. You can treat trajectory data as a sequence of spatial positions and use 1D or 2D convolutions to capture spatial patterns and features.
+
+    - Transformer-based Models: Transformers, originally designed for natural language processing, have been adapted for sequence-to-sequence tasks. They can model long-range dependencies and have shown promise in trajectory prediction tasks by attending to relevant context in the input sequence.
+
+    - Graph Neural Networks (GNNs): If your trajectory data can be represented as a graph (where each point is a node and edges represent relationships), GNNs can be used to capture interactions and dependencies between different trajectory points.
+
+    - Hybrid Models: Depending on the characteristics of your data, you might find that a combination of different neural network types works well. For instance, you could use an RNN to capture temporal patterns and a CNN to capture spatial features.
+
+    - Encoder-Decoder Architectures: These architectures are often used for sequence-to-sequence tasks. An encoder processes the input trajectory, and a decoder generates the predicted trajectory. Variants like Seq2Seq models, as well as attention mechanisms, can enhance the accuracy of trajectory prediction.
+
+    - Variational Autoencoders (VAEs): VAEs can learn a latent representation of trajectory data, which can be useful for generating diverse predictions. They can also handle uncertainty estimation.
+
+    - Ensemble Models: Combining predictions from multiple neural networks or models can lead to improved accuracy and robustness in trajectory prediction.
+
+When deciding on a neural network type, consider factors such as the length of trajectories, the presence of noise or missing data, the availability of historical context, and the computational resources available. Experimenting with different architectures and tuning hyperparameters is often necessary to find the best approach for your specific trajectory prediction problem.
+
 
 VIDEO:0001_1_37min
 Top picks
@@ -418,42 +401,6 @@ Threshold
 | SVM | 0.663792 |
 | DT  | 0.821262 |
 
-### 8 | 2 diff: top 1 acc, top 3 acc
-### 21 | features from second half, check for history lenght aswell
-### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat ** Bence
-
-## 21 | Count predictions under threshold probability value. Bence
-
-## Write predict_proba() output to Excel file with Pandas...
-
-### 8 | ** list to excel Bence
-
-### 8 | True class value to excel Bence
-
-## Renitent detection
-
-### 34 | Close probability values??? / Investigate cases when there is no solid prediction, e.g. probability vector has 2 or more identical or close values. 
-
-### 34 | Test for single class binary probability under threshold
-
-### 34 | Test for all class probability under threshold
-
-## Visualisation of predictions.
-
-### 55 | V_0.1
-
-### 89 | V_1.0
-
-## 55 | Save all data to joblib file with trained classifier.
-
-## Draw Decision Tree results
-
-## Experiment with Decision Tree parameters, mainly with the tree depth. Bence
-
-## More test videos
-
-### At least 8 more videos from different scenes to gather.
-
 ## GPU Accelarated pandas and scikit-learn.
 
 [cuML](https://github.com/rapidsai/cuml)
@@ -461,7 +408,7 @@ Threshold
 
 <a id="document"/>
 
-# Documentation
+# Source Code Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
 

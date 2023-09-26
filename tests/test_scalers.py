@@ -1,5 +1,4 @@
-from dataManagementClasses import TrackedObject
-from dataManagementClasses import Detection
+from computer_vision_research.dataManagementClasses import TrackedObject
 import numpy as np
 
 def downscaler_10D_features(featureVector, framewidth=1920, frameheight=1080):
