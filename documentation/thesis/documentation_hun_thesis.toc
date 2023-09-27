@@ -1,0 +1,48 @@
+\select@language {magyar} \contentsline {section}{\numberline {1}Bevezetés}{4}{}%
+\select@language {magyar} \contentsline {paragraph}{Az ITS (intelligent transportation system)}{4}{}%
+\select@language {magyar} \contentsline {paragraph}{Machine Learning}{4}{}%
+\select@language {magyar} \contentsline {paragraph}{A tanító adatok}{5}{}%
+\select@language {magyar} \contentsline {section}{\numberline {2}Kapcsolódó kutatások}{8}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {2.1}YOLO}{9}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {2.2}DeepSORT}{11}{}%
+\select@language {magyar} \contentsline {section}{\numberline {3}Adathalmazok kialakítása}{13}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.1}Adatstruktúra}{14}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.2}Objektumdetektálás}{16}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {3.2.1}YOLOv4}{16}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {3.2.2}YOLOv7}{16}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.3}Objektumkövetés}{16}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {3.3.1}DeepSORT}{16}{}%
+\select@language {magyar} \contentsline {section}{\numberline {4}Klaszterezés}{17}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {4.1}Adattisztítás}{17}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {4.1.1}DeepSORT pontatlanság}{17}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {4.2}Feature vektorok}{20}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {4.3}Klaszterezési algoritmusok}{21}{}%
+\select@language {magyar} \contentsline {paragraph}{KMeans}{21}{}%
+\select@language {magyar} \contentsline {paragraph}{A BIRCH (Balanced Iterative Reducing and Clustering using Hierarchies)}{22}{}%
+\select@language {magyar} \contentsline {paragraph}{DBSCAN (Density-Based Spatial Clustering of Applications with Noise)}{25}{}%
+\select@language {magyar} \contentsline {paragraph}{Az OPTICS (Ordering Points To Identify the Clustering Structure)}{25}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {4.4}Paraméterek kiválasztása}{26}{}%
+\select@language {magyar} \contentsline {section}{\numberline {5}Klasszifikáció}{27}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.1}Multiclass}{27}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.2}Binary}{27}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.3}OneVsRest}{27}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.4}Machine Learning modellek}{28}{}%
+\select@language {magyar} \contentsline {paragraph}{A K-Nearest Neighbors (KNN)}{30}{}%
+\select@language {magyar} \contentsline {paragraph}{Az SVM (Support Vector Machine)}{31}{}%
+\select@language {magyar} \contentsline {paragraph}{SVM Paraméterek}{31}{}%
+\select@language {magyar} \contentsline {paragraph}{A Decision Tree (döntési fa)}{32}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.5}Feature vektorok}{32}{}%
+\select@language {magyar} \contentsline {paragraph}{Az első verzió}{34}{}%
+\select@language {magyar} \contentsline {paragraph}{A hetedik verzió}{34}{}%
+\select@language {magyar} \contentsline {paragraph}{Teszt eredmények}{34}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {5.5.1}Adatdúsítás}{34}{}%
+\select@language {magyar} \contentsline {subsection}{\numberline {5.6}Pontosság mérése}{35}{}%
+\select@language {magyar} \contentsline {paragraph}{Accuracy Score}{35}{}%
+\select@language {magyar} \contentsline {paragraph}{Balanced Accuracy}{35}{}%
+\select@language {magyar} \contentsline {paragraph}{Top-K Accuracy}{35}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {5.6.1}Adathalmaz szétválasztás}{36}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {5.6.2}Cross Validation}{36}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {5.6.3}Teszthalmazos validáció}{36}{}%
+\select@language {magyar} \contentsline {subsubsection}{\numberline {5.6.4}Modellek tárolása}{36}{}%
+\select@language {magyar} \contentsline {section}{\numberline {6}Valós idejű alkalmazás}{37}{}%
+\select@language {magyar} \contentsline {section}{\numberline {7}Konklúzió}{39}{}%

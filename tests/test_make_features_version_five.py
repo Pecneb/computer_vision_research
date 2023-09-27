@@ -1,6 +1,7 @@
 import numpy as np
-from processing_utils import make_feature_vectors_version_five, detectionFactory, trackedObjectFactory
-from dataManagementClasses import TrackedObject, Detection
+from utils.dataset import trackedObjectFactory, detectionFactory
+from computer_vision_research.classification import make_feature_vectors_version_five
+from computer_vision_research.dataManagementClasses import TrackedObject, Detection
 
 class TestFeatureVectorV5:
     trackedObjects = np.array([

@@ -19,6 +19,7 @@
 6. [Classification](#classification)
    - [Feature vectors](#featvect)
    - [Save Scikit model](#savescikitmodel)
+   - [Neural Networks](#nn)
 7. [Documentation](#document)
 8. [Classification Results](#classresfeatv1)
 9.  [Testing for decision tree depth](#testdectree)
@@ -98,45 +99,20 @@ https://drive.google.com/drive/folders/1IN6kwywddO3B3uHyC5S18vqf0KEWToJ_
 https://drive.google.com/drive/folders/17bn7l7Qm5s-r5DYoFQPhviFZ0jWY9qk5
 https://drive.google.com/drive/folders/16coOR8PlNzvmUm1vsaYJVF_bAOQGySa8
 
-Best OPTICS clustering parameters:
-- 0001_2 : 
-  - min_samples 10
-  - max_eps 0.2
-  - xi 0.15
-  - min_cluster_size 10 
-- 0002_2 : 
-  - min_samples 10
-  - max_eps 0.1 
-  - xi 0.15
-  - min_cluster_size 10 
-- Bellevue_150th_Newport__2017-09-11_07-08-31: 
-  - min_samples 20 
-  - max_eps 0.1 
-  - xi 0.15
-  - min_cluster_size 20 
-
 <a id="inst"/>
 
 ## Installation
 
 The program was implemented and tested in a linux environment. The usage of anaconda is recommended, download it from here [Anaconda](https://www.anaconda.com/)  
 
-All the dependecies can be found in the **requirements.txt** file.
-
 To be able to run yolov7, download yolov7 weights file from [yolov7.pt](https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt), then copy or move it to yolov7 directory.
 
-Create conda environment and add yolov7 to **PYTHONPATH**.
+### Conda environment setup
 
-```shell
-conda create -n <insert name here> python=3.9
-conda install pytorch torchvision torchaudio cudatoolkit=11.6 opencv matplotlib pandas tqdm pyyaml seaborn -c conda-forge -c pytorch
-export PYTHONPATH="${PYTHONPATH}:$PWD/yolov7/"
+```
+conda create -n <environment-name-here> --file=computer_vision_environment.yaml
 ```
 
-The setup of **PYTHONPATH** variable is very important, because python will throw a module error. To not have to set this environment variable every time use `conda env config vars set PYTHONPATH=${PYTHONPATH}:<PATH to YOLOV7 directory>"` command.  
-
-If someone only want to use the dataAnalyzer.py script or just fetch data from database, then the gathered data can be donwloaded through [ipfs](https://ipfs.io/ipfs/Qmdyq5N7qstpCSuebBK55CHdiKgSTwf7zHt5m681NbNEAd)
-
 <a id="trackobj"/>
 
 # Tracking of detected objects
@@ -144,15 +120,17 @@ If someone only want to use the dataAnalyzer.py script or just fetch data from d
 
 # Tracking of detected objects
 
-**Base idea**: track objects from one frame to the other, based on x and y center coordinates. This solution require very minimal resources.  
-
-**Euclidean distances**: This should be more precise, but require a lot more computation. Have to examine this technique further to get better results.  
+## Deep-SORT
 
 **Deep-SORT**: Simple Online and Realtime Tracking with convolutonal neural network. Pretty much based on Kalmanfilter. See the [arXiv preprint](https://arxiv.org/abs/1703.07402) for more information. [[3]](#3)  
 
+I integrated Deep-SORT into my own code, and modified the original Deep-SORT src code, to fit my needs.
+
 ### Determining wheter an object moving or not
 
-**Temporary solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
+The main problem is to filter out the non moving objects when running detection in real time. This is needed, due to yolo's inaccuracy, due to floating bounding boxes on non moving boxes.
+
+**Solution**: Calculating the tracking history's last and the first detection's euclidean distance.  
 
 ```python
 self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-self.history[-1].Y)**2)**(1/2) > 7.0  
@@ -162,16 +140,18 @@ self.isMoving = ((self.history[0].X-self.history[-1].X)**2 + (self.history[0].Y-
 
 This can save read, write time and memory.  
 
-**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.  
+A threshold should be used to prevent (OOM) - Out Of Memory - effect. And also to speed up the runtime of the detection and visualizer program.
 
-**Bug**: If the main.py script is running for a long time, the number of tracks are piling up. This seems to slow down the program gradually.  
-**Bug**: The above mentioned bug is in correlation with another problem, few tracks from the piled up tracks, are logged out to the terminal output, although only moving objects should be logged. The velocity and acceleration of these objects are stuck and not changing, sometimes these values are way high to be real.
-**Fixes**: To filter out the bugged tracks, a bugged counter field is being added to the dataManagementClasses.TrackedObject() class. The counter is incremented, when the velocities are the same as the velocities from the earlier detection. Then the track is removed from the history, when the counter reaches the given maxAge value.
+**HistoryDepth**: Implemented a historyDepth variable, that determines how long back in time should we track an objects detection data. With this, we can throw away old trackings if they are not on screen any more.  
 
 <a id="predictobj"/>
 <a id="predictobj"/>
 
 # Predicting trajectories of moving objects
+
+## Regression (Dead End)
+
+The trajectory prediction with Linear and Polinomyal Regression algorithm were a dead-end, this technique did not give accurate prediction of the vechicles trajectory, only for the short term, which means for the next few frames.
 
 <a id="linearreg"/>
 
@@ -222,6 +202,10 @@ y_pred = polyModel.predict(X_test.reshape(-1, 1))
 #### Regression with coordinate depending weigths
 
 Kalman filter calculates velocities, these velocities can be used as weight in the regression.
+
+## Classification Models
+
+The training of Classification models e.g. Support Vector Machine, KNN and Decision Tree models seems to give an accurate prediction, where the vechicles will exit the traffic conjunctions.
 
 <a id="cluster"/>
 
@@ -377,20 +361,30 @@ Scikit-FeatureSelection
 
 https://medium.com/analytics-vidhya/save-and-load-your-scikit-learn-models-in-a-minute-21c91a961e9b
 
-## 8 | Threshold 4-6 Bence | Done 
-## 8 | Balanced accuracy Bence | Done
-## 21 | Monitor time in trajectory... Bence | Done
+<a id="nn"/>
 
-```python
-def make_features_for_classification_velocity(trackedObjects: list, k: int, labels: np.ndarray):
-    #TODO add time vector
-    return featureVectors, labels, timeVector
-```
+## Neural Networks
 
-## 21 | Build feature vectors from second half of trajectories. Bence | Done
-## 34 | Unite binary classifiers, return only the most probable. + Calc balanced addcuracy. Aron 
+For trajectory prediction tasks, several types of neural network architectures can be effective, depending on the specific characteristics of your data and the complexity of the problem. Here are a few neural network types commonly used for trajectory prediction:  
 
-Implement predict() method for BinaryClassifier class with np.max() and implement validate() method.
+    - Recurrent Neural Networks (RNNs): RNNs are a natural choice for sequential data like trajectories. Long Short-Term Memory (LSTM) and Gated Recurrent Unit (GRU) are popular variants of RNNs that are designed to handle long-range dependencies and mitigate the vanishing gradient problem. They can capture temporal patterns and relationships in trajectory data.
+
+    - Convolutional Neural Networks (CNNs): While CNNs are commonly associated with image data, they can also be applied to trajectory prediction tasks. You can treat trajectory data as a sequence of spatial positions and use 1D or 2D convolutions to capture spatial patterns and features.
+
+    - Transformer-based Models: Transformers, originally designed for natural language processing, have been adapted for sequence-to-sequence tasks. They can model long-range dependencies and have shown promise in trajectory prediction tasks by attending to relevant context in the input sequence.
+
+    - Graph Neural Networks (GNNs): If your trajectory data can be represented as a graph (where each point is a node and edges represent relationships), GNNs can be used to capture interactions and dependencies between different trajectory points.
+
+    - Hybrid Models: Depending on the characteristics of your data, you might find that a combination of different neural network types works well. For instance, you could use an RNN to capture temporal patterns and a CNN to capture spatial features.
+
+    - Encoder-Decoder Architectures: These architectures are often used for sequence-to-sequence tasks. An encoder processes the input trajectory, and a decoder generates the predicted trajectory. Variants like Seq2Seq models, as well as attention mechanisms, can enhance the accuracy of trajectory prediction.
+
+    - Variational Autoencoders (VAEs): VAEs can learn a latent representation of trajectory data, which can be useful for generating diverse predictions. They can also handle uncertainty estimation.
+
+    - Ensemble Models: Combining predictions from multiple neural networks or models can lead to improved accuracy and robustness in trajectory prediction.
+
+When deciding on a neural network type, consider factors such as the length of trajectories, the presence of noise or missing data, the availability of historical context, and the computational resources available. Experimenting with different architectures and tuning hyperparameters is often necessary to find the best approach for your specific trajectory prediction problem.
+
 
 VIDEO:0001_1_37min
 Top picks
@@ -484,110 +478,6 @@ Threshold
 | SVM | 0.663792 |
 | DT  | 0.821262 |
 
-VIDEO:0001_2_608min
-Top picks
-|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
-|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
-|  1 | 0.778547 | 0.622837 | 0.702422 | 0.558824 | 0.638408 | 0.743945 | 0.66955  |
-|  2 | 0.910035 | 0.82526  | 0.818339 | 0.610727 | 0.756055 | 0.875433 | 0.737024 |
-|  3 | 0.944637 | 0.901384 | 0.866782 | 0.709343 | 0.802768 | 0.934256 | 0.747405 |
-Threshold
-|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
-|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
-|  0 | 0.5      | 0.5      | 0.890451 | 0.5      | 0.498227 | 0.641971 | 0.745567 |
-|  1 | 0.628427 | 0.5      | 0.920154 | 0.5      | 0.499118 | 0.540164 | 0.631954 |
-|  2 | 0.53125  | 0.53125  | 0.56528  | 0.5      | 0.53125  | 0.591971 | 0.578625 |
-|  3 | 0.907442 | 0.830566 | 0.932503 | 0.5      | 0.816677 | 0.803711 | 0.880586 |
-|  4 | 0.57484  | 0.5      | 0.595051 | 0.5      | 0.529386 | 0.573923 | 0.73097  |
-|  5 | 0.958674 | 0.5      | 0.964476 | 0.5      | 0.5      | 0.861338 | 0.896448 |
-|  6 | 0.887581 | 0.499106 | 0.879531 | 0.5      | 0.59453  | 0.704265 | 0.78679  |
-|  7 | 0.929265 | 0.870969 | 0.842197 | 0.832051 | 0.857261 | 0.880325 | 0.883913 |
-|  8 | 0.897288 | 0.5      | 0.691971 | 0.5      | 0.578192 | 0.871863 | 0.916383 |
-|  9 | 0.95991  | 0.881049 | 0.948938 | 0.74675  | 0.962098 | 0.931049 | 0.910875 |
-| 10 | 0.891087 | 0.5      | 0.71591  | 0.5      | 0.799416 | 0.80488  | 0.821211 |
-| 11 | 0.558824 | 0.496435 | 0.923351 | 0.5      | 0.52852  | 0.586453 | 0.672906 |
-| 12 | 0.607143 | 0.517857 | 0.661623 | 0.5      | 0.534805 | 0.535714 | 0.605    |
-| 13 | 0.990958 | 0.5      | 0.790054 | 0.5      | 0.498192 | 0.614575 | 0.938192 |
-| 14 | 0.7      | 0.5      | 0.786796 | 0.5      | 0.5      | 0.75     | 0.793838 |
-|     |        0 |
-|:----|---------:|
-| KNN | 0.768179 |
-| GP  | 0.575149 |
-| GNB | 0.807219 |
-| MLP | 0.538587 |
-| SGD | 0.615178 |
-| SVM | 0.712813 |
-| DT  | 0.786217 |
-
-VIDEO:0002_2_308min
-Top picks
-|    |      KNN |       GP |      GNB |      MLP |      SGD |      SVM |       DT |
-|---:|---------:|---------:|---------:|---------:|---------:|---------:|---------:|
-|  1 | 0.708791 | 0.43956  | 0.403846 | 0.313187 | 0.222527 | 0.664835 | 0.607143 |
-|  2 | 0.884615 | 0.651099 | 0.68956  | 0.409341 | 0.453297 | 0.865385 | 0.692308 |
-|  3 | 0.936813 | 0.804945 | 0.763736 | 0.483516 | 0.554945 | 0.934066 | 0.706044 |
-Threshold
-|    |      KNN |       GP |      GNB |   MLP |      SGD |      SVM |       DT |
-|---:|---------:|---------:|---------:|------:|---------:|---------:|---------:|
-|  0 | 0.616132 | 0.5      | 0.597182 |   0.5 | 0.5      | 0.71137  | 0.684645 |
-|  1 | 0.656463 | 0.5      | 0.620991 |   0.5 | 0.5      | 0.683188 | 0.754616 |
-|  2 | 0.798499 | 0.528792 | 0.815481 |   0.5 | 0.648494 | 0.748512 | 0.842488 |
-|  3 | 0.60666  | 0.5      | 0.586603 |   0.5 | 0.5      | 0.494065 | 0.752555 |
-|  4 | 0.913961 | 0.633117 | 0.827922 |   0.5 | 0.712662 | 0.709416 | 0.879058 |
-|  5 | 0.909314 | 0.5      | 0.889461 |   0.5 | 0.711765 | 0.599755 | 0.857353 |
-|  6 | 0.935243 | 0.5      | 0.74564  |   0.5 | 0.952847 | 0.926316 | 0.911274 |
-|  7 | 0.837985 | 0.5      | 0.772461 |   0.5 | 0.5      | 0.60925  | 0.763955 |
-|  8 | 0.867692 | 0.498462 | 0.703077 |   0.5 | 0.496923 | 0.654359 | 0.766667 |
-|  9 | 0.848024 | 0.5      | 0.723708 |   0.5 | 0.49848  | 0.695441 | 0.830699 |
-| 10 | 0.879574 | 0.5      | 0.780314 |   0.5 | 0.498534 | 0.5      | 0.876642 |
-| 11 | 0.666667 | 0.5      | 0.973011 |   0.5 | 0.497159 | 0.583333 | 0.870739 |
-| 12 | 0.71     | 0.5      | 0.904286 |   0.5 | 0.782857 | 0.714286 | 0.885714 |
-|     |        0 |
-|:----|---------:|
-| KNN | 0.78817  |
-| GP  | 0.512336 |
-| GNB | 0.764626 |
-| MLP | 0.5      |
-| SGD | 0.599979 |
-| SVM | 0.663792 |
-| DT  | 0.821262 |
-
-### 8 | 2 diff: top 1 acc, top 3 acc
-### 21 | features from second half, check for history lenght aswell
-### 34 | letrehozni meg egy listat ami minden feature vectorhoz hozzaparositja a history elso es utolso elemenek frame id jat ** Bence
-
-## 21 | Count predictions under threshold probability value. Bence
-
-## Write predict_proba() output to Excel file with Pandas...
-
-### 8 | ** list to excel Bence
-
-### 8 | True class value to excel Bence
-
-## Renitent detection
-
-### 34 | Close probability values??? / Investigate cases when there is no solid prediction, e.g. probability vector has 2 or more identical or close values. 
-
-### 34 | Test for single class binary probability under threshold
-
-### 34 | Test for all class probability under threshold
-
-## Visualisation of predictions.
-
-### 55 | V_0.1
-
-### 89 | V_1.0
-
-## 55 | Save all data to joblib file with trained classifier.
-
-## Draw Decision Tree results
-
-## Experiment with Decision Tree parameters, mainly with the tree depth. Bence
-
-## More test videos
-
-### At least 8 more videos from different scenes to gather.
-
 ## GPU Accelarated pandas and scikit-learn.
 
 [cuML](https://github.com/rapidsai/cuml)
@@ -596,7 +486,7 @@ Threshold
 <a id="document"/>
 <a id="document"/>
 
-# Documentation
+# Source Code Documentation
 
 1. Building main loop of the program to be able to input video sources, using OpenCV VideoCapture. From VideoCapture object frames can be read. `cv.imshow("FRAME", frame)` imshow function opens GUI window to show actual frame.
 

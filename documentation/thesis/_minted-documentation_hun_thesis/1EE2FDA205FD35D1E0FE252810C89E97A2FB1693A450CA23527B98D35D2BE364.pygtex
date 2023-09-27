@@ -1,0 +1,35 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{CREATE}\PYG{+w}{ }\PYG{k}{TABLE}\PYG{+w}{ }\PYG{k}{IF}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{EXISTS}\PYG{+w}{ }\PYG{n}{objects}\PYG{+w}{ }\PYG{p}{(}
+\PYG{+w}{            }\PYG{n}{objID}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{PRIMARY}\PYG{+w}{ }\PYG{k}{KEY}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{label}\PYG{+w}{ }\PYG{n+nb}{TEXT}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}
+\PYG{+w}{        }\PYG{p}{);}
+\PYG{k}{CREATE}\PYG{+w}{ }\PYG{k}{TABLE}\PYG{+w}{ }\PYG{k}{IF}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{EXISTS}\PYG{+w}{ }\PYG{n}{detections}\PYG{+w}{ }\PYG{p}{(}
+\PYG{+w}{            }\PYG{n}{objID}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{frameNum}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{confidence}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{x}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{y}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{width}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{height}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{vx}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{vy}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{ax}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{ay}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{vx\PYGZus{}c}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{vy\PYGZus{}c}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{ax\PYGZus{}c}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{ay\PYGZus{}c}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{k}{FOREIGN}\PYG{+w}{ }\PYG{k}{KEY}\PYG{p}{(}\PYG{n}{objID}\PYG{p}{)}\PYG{+w}{ }\PYG{k}{REFERENCES}\PYG{+w}{ }\PYG{n}{objects}\PYG{p}{(}\PYG{n}{objID}\PYG{p}{)}
+\PYG{+w}{        }\PYG{p}{);}
+\PYG{k}{CREATE}\PYG{+w}{ }\PYG{k}{TABLE}\PYG{+w}{ }\PYG{k}{IF}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{EXISTS}\PYG{+w}{ }\PYG{n}{metadata}\PYG{+w}{ }\PYG{p}{(}
+\PYG{+w}{            }\PYG{n}{historyDepth}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{yoloVersion}\PYG{+w}{ }\PYG{n+nb}{TEXT}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{device}\PYG{+w}{ }\PYG{n+nb}{TEXT}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{imgsize}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{stride}\PYG{+w}{ }\PYG{n+nb}{INTEGER}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{confidence\PYGZus{}threshold}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{iou\PYGZus{}threshold}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{k\PYGZus{}velocity}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}\PYG{p}{,}
+\PYG{+w}{            }\PYG{n}{k\PYGZus{}acceleration}\PYG{+w}{ }\PYG{n+nb}{REAL}\PYG{+w}{ }\PYG{k}{NOT}\PYG{+w}{ }\PYG{k}{NULL}
+\PYG{+w}{        }\PYG{p}{);}
+\end{Verbatim}

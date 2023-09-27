@@ -1,0 +1,227 @@
+\documentclass[12pt,english,magyar]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin9,latin2]{inputenc}
+\usepackage[a4paper]{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=3cm,rmargin=2.5cm}
+\usepackage{graphicx}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+\providecommand{\LyX}{L\kern-.1667em\lower.25em\hbox{Y}\kern-.125emX\@}
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage{multirow}
+\usepackage{graphicx}
+\newcommand{\nev}[1]{\def\dname{#1}}
+\newcommand{\szak}[1]{\def\dcourse{#1}}
+\newcommand{\szint}[1]{\def\dlevel{#1}}
+\newcommand{\cim}[1]{\def\dtitle{#1}}
+\newcommand{\evszam}[1]{\def\dyear{#1}}
+\newcommand{\speci}[1]{\def\dspeci{#1}}
+\newcommand{\neptun}[1]{\def\dneptun{#1}}
+\newcommand{\nyelv}[1]{\def\dlang{#1}}
+\newcommand{\kezdoev}[1]{\def\dbegyr{#1}}
+\newcommand{\belkonz}[1]{\def\dsupi{#1}}
+\newcommand{\kulkonz}[1]{\def\dsupe{#1}}
+\newcommand{\tanszek}[1]{\def\ddepi{#1}}
+\newcommand{\munkah}[1]{\def\dworke{#1}}
+\newcommand{\beosztbel}[1]{\def\dposi{#1}}
+\newcommand{\beosztkul}[1]{\def\dpose{#1}}
+\newcommand{\nappali}{\def\dtime{nappali}}
+\newcommand{\levelezo}{\def\dtime{levelező}}
+\newcommand{\osz}{\def\dsem{ősz}}
+\newcommand{\tavasz}{\def\dsem{tavasz}}
+\newcommand{\titkos}{\def\dsecret{(Titkosított)}
+                        \def\dtype{titkosított}}
+\def\dtype{nyilvános}
+\def\dfeladatd{}
+\newcommand{\feladata}[1]{\def\dfeladata{\item #1}}
+\newcommand{\feladatb}[1]{\def\dfeladatb{\item #1}}
+\newcommand{\feladatc}[1]{\def\dfeladatc{\item #1}}
+\newcommand{\feladatd}[1]{\def\dfeladatd{\item #1}}
+
+\newcommand{\firstpage}{
+\thispagestyle{empty}
+\vspace*{22mm}
+\begin{center}
+   {\Large Sz�chenyi Istv�n Egyetem\\}
+   {\Large G�p�szm�rn�ki, Informatikai �s Villamosm�rn�ki Kar}
+\end{center}
+\vspace{39mm}
+\begin{center}
+   {\huge \bf DIPLOAMUNKA}
+\end{center}
+\vspace{45mm}
+\begin{center}
+   {\huge \dname}
+\end{center}
+\vspace{3mm}
+\begin{center}
+   {\LARGE \dcourse~\dlevel~szak}
+\end{center}
+\vspace{40mm}
+\begin{center}
+   {\LARGE \dyear}
+\end{center}
+{\small A gerincen:}\newline
+\noindent\framebox[16cm]{\dname,\ \dyear\ \dsecret \hfill}
+\newpage
+}
+
+\newcommand{\secondpage}{
+\clearpage
+\setcounter{page}{1}
+\thispagestyle{empty}
+\vspace*{22mm}
+\begin{tabular}{cc}
+\multirow{4}{*}{\includegraphics[width=22mm]{szelogoalloRGBwhitebg.png}} & \tabularnewline
+ & {\huge{}Sz�chenyi Istv�n Egyetem}\tabularnewline
+ & {\huge{}G�p�szm�rn�ki, Informatikai}\tabularnewline
+ & {\huge{}�s Villamosm�rn�ki Kar}\tabularnewline
+\end{tabular}
+%
+%\begin{center}
+%   {\huge Sz�chenyi Istv�n Egyetem\\}
+%   {\huge G�p�szm�rn�ki, Informatikai \\�s Villamosm�rn�ki Kar}
+%\end{center}
+\vspace{19mm}
+\begin{center}
+   {\huge \bf DIPLOAMUNKA}
+\end{center}
+\vspace{15mm}
+\begin{center}
+   {\huge \dtitle}
+\end{center}
+\vspace{15mm}
+\begin{center}
+   {\huge \dname}
+\end{center}
+\vspace{2mm}
+\begin{center}
+   {\LARGE \dcourse~\dlevel~szak}
+\end{center}
+\vspace{2mm}
+\begin{center}
+   {\LARGE \dspeci~specializ�ci�}
+\end{center}
+\vspace{2mm}
+\begin{center}
+   {\LARGE \dsecret}
+\end{center}
+\vspace{20mm}
+\begin{center}
+   {\LARGE Gy�r,~\dyear}
+\end{center}
+\newpage
+}
+
+\newcommand{\feladat}{
+%\thispagestyle{empty}
+\begin{center}
+   {\Large \bf Feladat-ki�r� lap diplomamunk�hoz}
+\end{center}
+\vspace{5mm}
+\large
+\begin{tabular}{p{9cm}p{6cm}}
+   \underline{Hallgat� adatai}& \\[2mm]
+   N�v:~\dname & Neptun k�d: \dneptun\\[2mm]
+   Szak:~\dcourse~\dlevel & \\[2mm]
+   Specializ�ci�:~\dspeci & Tagozat:~\dtime
+\end{tabular}\\[4mm]
+\begin{tabular}{p{8cm}p{6cm}}
+   \underline{A szakdolgozat adatai}& \\[2mm]
+   Kezd� tan�v �s f�l�v:~\dbegyr~\dsem & \\[2mm]
+   Nyelv:~\dlang & \\[2mm]
+   T�pus:~\dtype & 
+\end{tabular}\\[1mm]
+\begin{center}
+   {\bf \dtitle}
+\end{center}
+\vspace{2mm}
+Feladatok r�szletez�se:
+\begin{enumerate}
+   \dfeladata
+   \dfeladatb
+   \dfeladatc
+   \dfeladatd
+\end{enumerate}
+\vfill{}
+\begin{tabular}{p{8cm}p{8cm}}
+   \underline{bels� konzulens adatai} & \underline{k�ls� konzulens adatai}\\[2mm]
+   N�v:~\dsupi & N�v:~\dsupe \\[2mm]
+   Tansz�k:~\ddepi & Munkahely:~\dworke \\[2mm]
+   Beoszt�s:~\dposi & Beoszt�s:~\dpose
+\end{tabular}\\[5mm]
+Gy�r,~\today\\[1mm]
+\begin{center}
+%\begin{tabular}{>{\centering}p{6cm}c>{\centering}p{7cm}}
+\begin{tabular}{p{6cm}cp{7cm}}
+\dotfill{} &  & \dotfill{}\tabularnewline
+\hfill{}bels� konzulens\hfill{} &  & \hfill{}k�ls� konzulens\hfill{}~\tabularnewline
+ & \vspace{1mm}
+ & \tabularnewline
+\multicolumn{3}{c}{%
+\begin{minipage}[t]{7cm}%
+\dotfill{}%
+\end{minipage}}\tabularnewline
+\multicolumn{3}{c}{Alkalmazott Mechanika Tansz�k}\tabularnewline
+\multicolumn{3}{c}{Dr.~Pere Bal�zs tansz�kvezet� egyetemi docens}\tabularnewline
+\end{tabular}
+\par\end{center}
+\normalsize
+\newpage
+}
+
+\newcommand{\nyilatkozat}{
+%\thispagestyle{empty}
+\begin{center}
+{\bf Nyilatkozat}\\[15mm]
+\end{center}
+Alul�rott,\ \dname\ \dcourse\ \dlevel\ szakos hallgat� kijelentem, hogy %
+a\ \dtitle\ c�m� diplomamunka feladat kidolgoz�sa a saj�t munk�m, abban %
+csak a megjel�lt forr�sokat, �s a megjel�lt m�rt�kben haszn�ltam fel, %
+az id�z�s szab�lyainak megfelel�en, a hivatkoz�sok pontos megjel�l�s�vel.\\[3mm]
+
+Eredm�nyeim saj�t munk�n, sz�m�t�sokon, kutat�son, val�s m�r�seken %
+alapulnak, �s a legjobb tud�som szerint hitelesek.\\[10mm]
+\begin{center}
+\begin{tabular}{p{6cm}cp{7cm}}
+\dotfill{} &  & \dotfill{}\tabularnewline
+\hfill{}a bead�s d�tuma\hfill{} &  & \hfill{}hallgat� al��r�sa\hfill{}~\tabularnewline
+ \end{tabular}
+\par\end{center}
+\newpage
+}
+
+\newcommand{\kivonat}[1]{
+%\thispagestyle{empty}
+\begin{center}
+{\bf Kivonat}\\[10mm]
+\end{center}
+#1
+\newpage
+}
+
+\newcommand{\abstrct}[1]{
+%\thispagestyle{empty}
+\begin{center}
+{\bf Abstract}\\[15mm]
+\end{center}
+#1
+\newpage
+}
+
+\begin{document}
+    \nev{Péter Bence Gabor}
+    \szak{Mérnökinformatika}
+    \szint{BSc}
+    \nyelv{magyar}
+    \neptun{X89O8X}
+    \nappali{}
+    \kezdoev{2020}\osz
+    \cim{Járművek trajektóriáinak el˝orejelzése machine
+    learning modellekkel}
+\end{document}

@@ -1,0 +1,1141 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global}
+    \entry{Anguita2012TheI}{inproceedings}{}
+      \name{author}{5}{}{%
+        {{hash=77ca7ed143598b206e5b32934524f4c0}{%
+           family={Anguita},
+           familyi={A\bibinitperiod},
+           given={D.},
+           giveni={D\bibinitperiod}}}%
+        {{hash=1dc8626e046d8ec439a6f6d16e8817c9}{%
+           family={Ghelardoni},
+           familyi={G\bibinitperiod},
+           given={Luca},
+           giveni={L\bibinitperiod}}}%
+        {{hash=d26364963945a0f006868adbc63c86db}{%
+           family={Ghio},
+           familyi={G\bibinitperiod},
+           given={Alessandro},
+           giveni={A\bibinitperiod}}}%
+        {{hash=e6d59caae1021191f06adf767fe36fb2}{%
+           family={Oneto},
+           familyi={O\bibinitperiod},
+           given={L.},
+           giveni={L\bibinitperiod}}}%
+        {{hash=aaf02e1372e88e2a5a9f76c6fbde5303}{%
+           family={Ridella},
+           familyi={R\bibinitperiod},
+           given={Sandro},
+           giveni={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{52cac697199eeea32c81795d6dd35dc8}
+      \strng{fullhash}{fa9fdfd3bf9255ee31ef20d7db82075f}
+      \strng{bibnamehash}{52cac697199eeea32c81795d6dd35dc8}
+      \strng{authorbibnamehash}{52cac697199eeea32c81795d6dd35dc8}
+      \strng{authornamehash}{52cac697199eeea32c81795d6dd35dc8}
+      \strng{authorfullhash}{fa9fdfd3bf9255ee31ef20d7db82075f}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{The European Symposium on Artificial Neural Networks}
+      \field{title}{The 'K' in K-fold Cross Validation}
+      \field{year}{2012}
+    \endentry
+    \entry{10.1145/304181.304187}{article}{}
+      \name{author}{4}{}{%
+        {{hash=30218301c8db6744d898cf2fbef485e7}{%
+           family={Ankerst},
+           familyi={A\bibinitperiod},
+           given={Mihael},
+           giveni={M\bibinitperiod}}}%
+        {{hash=346772f472393316fd22dd8a300d2e7d}{%
+           family={Breunig},
+           familyi={B\bibinitperiod},
+           given={Markus\bibnamedelima M.},
+           giveni={M\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=9559fe65ed2c0877cf14a66fe1f8e9b3}{%
+           family={Kriegel},
+           familyi={K\bibinitperiod},
+           given={Hans-Peter},
+           giveni={H\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=802157026f850823b2027c2100cb359a}{%
+           family={Sander},
+           familyi={S\bibinitperiod},
+           given={Jörg},
+           giveni={J\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York, NY, USA}%
+      }
+      \list{publisher}{1}{%
+        {Association for Computing Machinery}%
+      }
+      \strng{namehash}{353216c878e06e428094c446e94c76c7}
+      \strng{fullhash}{290606bde793f0e777a1762cbed5719f}
+      \strng{bibnamehash}{353216c878e06e428094c446e94c76c7}
+      \strng{authorbibnamehash}{353216c878e06e428094c446e94c76c7}
+      \strng{authornamehash}{353216c878e06e428094c446e94c76c7}
+      \strng{authorfullhash}{290606bde793f0e777a1762cbed5719f}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Cluster analysis is a primary method for database mining. It is either used as a stand-alone tool to get insight into the distribution of a data set, e.g. to focus further analysis and data processing, or as a preprocessing step for other algorithms operating on the detected clusters. Almost all of the well-known clustering algorithms require input parameters which are hard to determine but have a significant influence on the clustering result. Furthermore, for many real-data sets there does not even exist a global parameter setting for which the result of the clustering algorithm describes the intrinsic clustering structure accurately. We introduce a new algorithm for the purpose of cluster analysis which does not produce a clustering of a data set explicitly; but instead creates an augmented ordering of the database representing its density-based clustering structure. This cluster-ordering contains information which is equivalent to the density-based clusterings corresponding to a broad range of parameter settings. It is a versatile basis for both automatic and interactive cluster analysis. We show how to automatically and efficiently extract not only 'traditional' clustering information (e.g. representative points, arbitrary shaped clusters), but also the intrinsic clustering structure. For medium sized data sets, the cluster-ordering can be represented graphically and for very large data sets, we introduce an appropriate visualization technique. Both are suitable for interactive exploration of the intrinsic clustering structure offering additional insights into the distribution and correlation of the data.}
+      \field{issn}{0163-5808}
+      \field{journaltitle}{SIGMOD Rec.}
+      \field{month}{6}
+      \field{number}{2}
+      \field{title}{OPTICS: Ordering Points to Identify the Clustering Structure}
+      \field{volume}{28}
+      \field{year}{1999}
+      \field{pages}{49\bibrangedash 60}
+      \range{pages}{12}
+      \verb{doi}
+      \verb 10.1145/304181.304187
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1145/304181.304187
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1145/304181.304187
+      \endverb
+      \keyw{visualization,database mining,cluster analysis}
+    \endentry
+    \entry{opencv_library}{article}{}
+      \name{author}{1}{}{%
+        {{hash=7cb92723a011baf2e0abeeb403d03960}{%
+           family={Bradski},
+           familyi={B\bibinitperiod},
+           given={G.},
+           giveni={G\bibinitperiod}}}%
+      }
+      \strng{namehash}{7cb92723a011baf2e0abeeb403d03960}
+      \strng{fullhash}{7cb92723a011baf2e0abeeb403d03960}
+      \strng{bibnamehash}{7cb92723a011baf2e0abeeb403d03960}
+      \strng{authorbibnamehash}{7cb92723a011baf2e0abeeb403d03960}
+      \strng{authornamehash}{7cb92723a011baf2e0abeeb403d03960}
+      \strng{authorfullhash}{7cb92723a011baf2e0abeeb403d03960}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Dr. Dobb's Journal of Software Tools}
+      \field{title}{{The OpenCV Library}}
+      \field{year}{2000}
+      \keyw{bibtex-import}
+    \endentry
+    \entry{Breiman1984ClassificationAR}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{hash=c4de625aef3b09e83edf76c200750fc6}{%
+           family={Breiman},
+           familyi={B\bibinitperiod},
+           given={L.},
+           giveni={L\bibinitperiod}}}%
+        {{hash=ce884cc144616c39e723a8fe2eb3c879}{%
+           family={Friedman},
+           familyi={F\bibinitperiod},
+           given={Jerome\bibnamedelima H.},
+           giveni={J\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+        {{hash=6b962e9920d22ad7331cdca41a388e9d}{%
+           family={Olshen},
+           familyi={O\bibinitperiod},
+           given={Richard\bibnamedelima A.},
+           giveni={R\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=6975a7415cc4f4f88ab5d9d06a96c6bf}{%
+           family={Stone},
+           familyi={S\bibinitperiod},
+           given={C.\bibnamedelimi J.},
+           giveni={C\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{58ec1ad070541f3e5e484164d6b0b1f5}
+      \strng{fullhash}{d66b4204ee5915025a6f5813c66a8649}
+      \strng{bibnamehash}{58ec1ad070541f3e5e484164d6b0b1f5}
+      \strng{authorbibnamehash}{58ec1ad070541f3e5e484164d6b0b1f5}
+      \strng{authornamehash}{58ec1ad070541f3e5e484164d6b0b1f5}
+      \strng{authorfullhash}{d66b4204ee5915025a6f5813c66a8649}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Classification and Regression Trees}
+      \field{year}{1984}
+    \endentry
+    \entry{10.1109/ICPR.2010.764}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{hash=6d7047e68d730c3b13d4b6fdffc50d8a}{%
+           family={Brodersen},
+           familyi={B\bibinitperiod},
+           given={Kay\bibnamedelima Henning},
+           giveni={K\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+        {{hash=25aead4b15ea1d822aac07a7de816978}{%
+           family={Ong},
+           familyi={O\bibinitperiod},
+           given={Cheng\bibnamedelima Soon},
+           giveni={C\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=0e0676e6d5237c94d30b708851df1f27}{%
+           family={Stephan},
+           familyi={S\bibinitperiod},
+           given={Klaas\bibnamedelima Enno},
+           giveni={K\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+        {{hash=335c89d2252c8ad41635e8f3315696d1}{%
+           family={Buhmann},
+           familyi={B\bibinitperiod},
+           given={Joachim\bibnamedelima M.},
+           giveni={J\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {USA}%
+      }
+      \list{publisher}{1}{%
+        {IEEE Computer Society}%
+      }
+      \strng{namehash}{ee54ed6ef029cfcac600b0223ca17d09}
+      \strng{fullhash}{e2e29f1238ac2d1d46f0db5e9dad4b47}
+      \strng{bibnamehash}{ee54ed6ef029cfcac600b0223ca17d09}
+      \strng{authorbibnamehash}{ee54ed6ef029cfcac600b0223ca17d09}
+      \strng{authornamehash}{ee54ed6ef029cfcac600b0223ca17d09}
+      \strng{authorfullhash}{e2e29f1238ac2d1d46f0db5e9dad4b47}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Evaluating the performance of a classification algorithm critically requires a measure of the degree to which unseen examples have been identified with their correct class labels. In practice, generalizability is frequently estimated by averaging the accuracies obtained on individual cross-validation folds. This procedure, however, is problematic in two ways. First, it does not allow for the derivation of meaningful confidence intervals. Second, it leads to an optimistic estimate when a biased classifier is tested on an imbalanced dataset. We show that both problems can be overcome by replacing the conventional point estimate of accuracy by an estimate of the posterior distribution of the balanced accuracy.}
+      \field{booktitle}{Proceedings of the 2010 20th International Conference on Pattern Recognition}
+      \field{isbn}{9780769541099}
+      \field{series}{ICPR '10}
+      \field{title}{The Balanced Accuracy and Its Posterior Distribution}
+      \field{year}{2010}
+      \field{pages}{3121\bibrangedash 3124}
+      \range{pages}{4}
+      \verb{doi}
+      \verb 10.1109/ICPR.2010.764
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1109/ICPR.2010.764
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1109/ICPR.2010.764
+      \endverb
+      \keyw{bias,generalizability,class imbalance,classification performance}
+    \endentry
+    \entry{article}{article}{}
+      \name{author}{2}{}{%
+        {{hash=74b28f30912e45b424de18f111b69b81}{%
+           family={Caliński},
+           familyi={C\bibinitperiod},
+           given={Tadeusz},
+           giveni={T\bibinitperiod}}}%
+        {{hash=1cf2025c111a14c25a5710b8191d3409}{%
+           family={JA},
+           familyi={J\bibinitperiod},
+           given={Harabasz},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \strng{fullhash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \strng{bibnamehash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \strng{authorbibnamehash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \strng{authornamehash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \strng{authorfullhash}{dd87803cd47dd22bf6cf5904c61ae4a9}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Communications in Statistics - Theory and Methods}
+      \field{month}{01}
+      \field{title}{A Dendrite Method for Cluster Analysis}
+      \field{volume}{3}
+      \field{year}{1974}
+      \field{pages}{1\bibrangedash 27}
+      \range{pages}{27}
+      \verb{doi}
+      \verb 10.1080/03610927408827101
+      \endverb
+    \endentry
+    \entry{CC01a}{article}{}
+      \name{author}{2}{}{%
+        {{hash=90dbdcacecdffc9ea33bf0a0d370c416}{%
+           family={Chang},
+           familyi={C\bibinitperiod},
+           given={Chih-Chung},
+           giveni={C\bibinithyphendelim C\bibinitperiod}}}%
+        {{hash=bb8c32ec740b902c4f066796b083badc}{%
+           family={Lin},
+           familyi={L\bibinitperiod},
+           given={Chih-Jen},
+           giveni={C\bibinithyphendelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{1224d323be40e9eaf84c63498a939f53}
+      \strng{fullhash}{1224d323be40e9eaf84c63498a939f53}
+      \strng{bibnamehash}{1224d323be40e9eaf84c63498a939f53}
+      \strng{authorbibnamehash}{1224d323be40e9eaf84c63498a939f53}
+      \strng{authornamehash}{1224d323be40e9eaf84c63498a939f53}
+      \strng{authorfullhash}{1224d323be40e9eaf84c63498a939f53}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issue}{3}
+      \field{journaltitle}{ACM Transactions on Intelligent Systems and Technology}
+      \field{note}{Software available at \url{http://www.csie.ntu.edu.tw/~cjlin/libsvm}}
+      \field{title}{{LIBSVM}: A library for support vector machines}
+      \field{volume}{2}
+      \field{year}{2011}
+      \field{pages}{27:1\bibrangedash 27:27}
+      \range{pages}{-1}
+    \endentry
+    \entry{4766909}{article}{}
+      \name{author}{2}{}{%
+        {{hash=3e635d77b8d72bf4b91799a7c67b1c17}{%
+           family={Davies},
+           familyi={D\bibinitperiod},
+           given={David\bibnamedelima L.},
+           giveni={D\bibinitperiod\bibinitdelim L\bibinitperiod}}}%
+        {{hash=95a088363005642e50919b1753b85c9e}{%
+           family={Bouldin},
+           familyi={B\bibinitperiod},
+           given={Donald\bibnamedelima W.},
+           giveni={D\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+      }
+      \strng{namehash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \strng{fullhash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \strng{bibnamehash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \strng{authorbibnamehash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \strng{authornamehash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \strng{authorfullhash}{4ce4c2976c5cf0d48fca53858a43efda}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{A measure is presented which indicates the similarity of clusters which are assumed to have a data density which is a decreasing function of distance from a vector characteristic of the cluster. The measure can be used to infer the appropriateness of data partitions and can therefore be used to compare relative appropriateness of various divisions of the data. The measure does not depend on either the number of clusters analyzed nor the method of partitioning of the data and can be used to guide a cluster seeking algorithm.}
+      \field{issn}{1939-3539}
+      \field{journaltitle}{IEEE Transactions on Pattern Analysis and Machine Intelligence}
+      \field{month}{4}
+      \field{number}{2}
+      \field{title}{A Cluster Separation Measure}
+      \field{volume}{PAMI-1}
+      \field{year}{1979}
+      \field{pages}{224\bibrangedash 227}
+      \range{pages}{4}
+      \verb{doi}
+      \verb 10.1109/TPAMI.1979.4766909
+      \endverb
+    \endentry
+    \entry{10.5555/3001460.3001507}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{hash=2c062e64ed26aacc08a62155e7944f04}{%
+           family={Ester},
+           familyi={E\bibinitperiod},
+           given={Martin},
+           giveni={M\bibinitperiod}}}%
+        {{hash=9559fe65ed2c0877cf14a66fe1f8e9b3}{%
+           family={Kriegel},
+           familyi={K\bibinitperiod},
+           given={Hans-Peter},
+           giveni={H\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=802157026f850823b2027c2100cb359a}{%
+           family={Sander},
+           familyi={S\bibinitperiod},
+           given={Jörg},
+           giveni={J\bibinitperiod}}}%
+        {{hash=2dda16c0a5d50fc830d0d4a3787937fa}{%
+           family={Xu},
+           familyi={X\bibinitperiod},
+           given={Xiaowei},
+           giveni={X\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Portland, Oregon}%
+      }
+      \list{publisher}{1}{%
+        {AAAI Press}%
+      }
+      \strng{namehash}{9158a41d23cb4e154e78366d59c05728}
+      \strng{fullhash}{3270dfaa31e8210b3bd04b1bcf4a29a3}
+      \strng{bibnamehash}{9158a41d23cb4e154e78366d59c05728}
+      \strng{authorbibnamehash}{9158a41d23cb4e154e78366d59c05728}
+      \strng{authornamehash}{9158a41d23cb4e154e78366d59c05728}
+      \strng{authorfullhash}{3270dfaa31e8210b3bd04b1bcf4a29a3}
+      \field{sortinit}{E}
+      \field{sortinithash}{8da8a182d344d5b9047633dfc0cc9131}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Clustering algorithms are attractive for the task of class identification in spatial databases. However, the application to large spatial databases rises the following requirements for clustering algorithms: minimal requirements of domain knowledge to determine the input parameters, discovery of clusters with arbitrary shape and good efficiency on large databases. The well-known clustering algorithms offer no solution to the combination of these requirements. In this paper, we present the new clustering algorithm DBSCAN relying on a density-based notion of clusters which is designed to discover clusters of arbitrary shape. DBSCAN requires only one input parameter and supports the user in determining an appropriate value for it. We performed an experimental evaluation of the effectiveness and efficiency of DBSCAN using synthetic data and real data of the SEQUOIA 2000 benchmark. The results of our experiments demonstrate that (1) DBSCAN is significantly more effective in discovering clusters of arbitrary shape than the well-known algorithm CLAR-ANS, and that (2) DBSCAN outperforms CLARANS by a factor of more than 100 in terms of efficiency.}
+      \field{booktitle}{Proceedings of the Second International Conference on Knowledge Discovery and Data Mining}
+      \field{series}{KDD'96}
+      \field{title}{A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise}
+      \field{year}{1996}
+      \field{pages}{226\bibrangedash 231}
+      \range{pages}{6}
+      \keyw{clustering algorithms,arbitrary shape of clusters,handling nlj4-275oise,efficiency on large spatial databases}
+    \endentry
+    \entry{harris2020array}{article}{}
+      \name{author}{26}{}{%
+        {{hash=db2b4761cc46be347b418e68660c9554}{%
+           family={Harris},
+           familyi={H\bibinitperiod},
+           given={Charles\bibnamedelima R.},
+           giveni={C\bibinitperiod\bibinitdelim R\bibinitperiod}}}%
+        {{hash=b053969d2c6a9ec8689980fb6463cd56}{%
+           family={Millman},
+           familyi={M\bibinitperiod},
+           given={K.\bibnamedelimi Jarrod},
+           giveni={K\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=9a5a65a789013a8d1e8035ec28df9b6e}{%
+           family={Walt},
+           familyi={W\bibinitperiod},
+           given={Stéfan\bibnamedelima J.},
+           giveni={S\bibinitperiod\bibinitdelim J\bibinitperiod},
+           prefix={van\bibnamedelima der},
+           prefixi={v\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+        {{hash=646fbfe08374cc41c2f9bd971d8c4725}{%
+           family={Gommers},
+           familyi={G\bibinitperiod},
+           given={Ralf},
+           giveni={R\bibinitperiod}}}%
+        {{hash=18703a2bb6a62484483c193a212da2f8}{%
+           family={Virtanen},
+           familyi={V\bibinitperiod},
+           given={Pauli},
+           giveni={P\bibinitperiod}}}%
+        {{hash=9fd9ed8466bbb96364ae008f2a665e6e}{%
+           family={Cournapeau},
+           familyi={C\bibinitperiod},
+           given={David},
+           giveni={D\bibinitperiod}}}%
+        {{hash=4321feefe3d5715c6fe12639d2a1f7f1}{%
+           family={Wieser},
+           familyi={W\bibinitperiod},
+           given={Eric},
+           giveni={E\bibinitperiod}}}%
+        {{hash=e8d1b0c2bff88b6bf54e2e934e2853f6}{%
+           family={Taylor},
+           familyi={T\bibinitperiod},
+           given={Julian},
+           giveni={J\bibinitperiod}}}%
+        {{hash=265437a4424f0b845118651d7d04ab93}{%
+           family={Berg},
+           familyi={B\bibinitperiod},
+           given={Sebastian},
+           giveni={S\bibinitperiod}}}%
+        {{hash=e4d23819637a961e0e598e1c82a8f10d}{%
+           family={Smith},
+           familyi={S\bibinitperiod},
+           given={Nathaniel\bibnamedelima J.},
+           giveni={N\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=9ad1d38817acd2f00cb7f324ec7d37ea}{%
+           family={Kern},
+           familyi={K\bibinitperiod},
+           given={Robert},
+           giveni={R\bibinitperiod}}}%
+        {{hash=8ae844f84614690134ff5d8252fdc430}{%
+           family={Picus},
+           familyi={P\bibinitperiod},
+           given={Matti},
+           giveni={M\bibinitperiod}}}%
+        {{hash=4a22828b76006f42d747b699d2ef5167}{%
+           family={Hoyer},
+           familyi={H\bibinitperiod},
+           given={Stephan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=10aba85d08ce22d724b21878b93f590a}{%
+           family={Kerkwijk},
+           familyi={K\bibinitperiod},
+           given={Marten\bibnamedelima H.},
+           giveni={M\bibinitperiod\bibinitdelim H\bibinitperiod},
+           prefix={van},
+           prefixi={v\bibinitperiod}}}%
+        {{hash=626cc151613864abeb653c0d8172d98c}{%
+           family={Brett},
+           familyi={B\bibinitperiod},
+           given={Matthew},
+           giveni={M\bibinitperiod}}}%
+        {{hash=a989405517bbf67ae7b16be1d03c0081}{%
+           family={Haldane},
+           familyi={H\bibinitperiod},
+           given={Allan},
+           giveni={A\bibinitperiod}}}%
+        {{hash=9517b38a3050d34c03ac479ee122f64a}{%
+           family={Río},
+           familyi={R\bibinitperiod},
+           given={Jaime\bibnamedelima Fernández},
+           giveni={J\bibinitperiod\bibinitdelim F\bibinitperiod},
+           prefix={del},
+           prefixi={d\bibinitperiod}}}%
+        {{hash=76256cb9e4c31e0a4744b1b49a6199f4}{%
+           family={Wiebe},
+           familyi={W\bibinitperiod},
+           given={Mark},
+           giveni={M\bibinitperiod}}}%
+        {{hash=3d6efaaa3d9682e20787eb06ff70a3d7}{%
+           family={Peterson},
+           familyi={P\bibinitperiod},
+           given={Pearu},
+           giveni={P\bibinitperiod}}}%
+        {{hash=aac4486f60accb8b7db22ef300423e11}{%
+           family={Gérard-Marchant},
+           familyi={G\bibinithyphendelim M\bibinitperiod},
+           given={Pierre},
+           giveni={P\bibinitperiod}}}%
+        {{hash=22fcbc93c38819e962968aad3e3cba7f}{%
+           family={Sheppard},
+           familyi={S\bibinitperiod},
+           given={Kevin},
+           giveni={K\bibinitperiod}}}%
+        {{hash=fbb0c40f5d70be8ce47ce9daafdf5749}{%
+           family={Reddy},
+           familyi={R\bibinitperiod},
+           given={Tyler},
+           giveni={T\bibinitperiod}}}%
+        {{hash=4c7e4c94b846fa41e2fc0a88e0dc656d}{%
+           family={Weckesser},
+           familyi={W\bibinitperiod},
+           given={Warren},
+           giveni={W\bibinitperiod}}}%
+        {{hash=c588b2e35e75bba896fc5677afb52fa9}{%
+           family={Abbasi},
+           familyi={A\bibinitperiod},
+           given={Hameer},
+           giveni={H\bibinitperiod}}}%
+        {{hash=52e2684c111b194e1f15fa06b0ce4544}{%
+           family={Gohlke},
+           familyi={G\bibinitperiod},
+           given={Christoph},
+           giveni={C\bibinitperiod}}}%
+        {{hash=d500f4849030f34359cdb3e1513acf83}{%
+           family={Oliphant},
+           familyi={O\bibinitperiod},
+           given={Travis\bibnamedelima E.},
+           giveni={T\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+      }
+      \list{publisher}{2}{%
+        {Springer Science}%
+        {Business Media {LLC}}%
+      }
+      \strng{namehash}{754b3dec5e203c19b9a5798bbb902222}
+      \strng{fullhash}{bba1ae456b2655ba67cf6cee2d142dfc}
+      \strng{bibnamehash}{754b3dec5e203c19b9a5798bbb902222}
+      \strng{authorbibnamehash}{754b3dec5e203c19b9a5798bbb902222}
+      \strng{authornamehash}{754b3dec5e203c19b9a5798bbb902222}
+      \strng{authorfullhash}{bba1ae456b2655ba67cf6cee2d142dfc}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Nature}
+      \field{month}{9}
+      \field{number}{7825}
+      \field{title}{Array programming with {NumPy}}
+      \field{volume}{585}
+      \field{year}{2020}
+      \field{pages}{357\bibrangedash 362}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.1038/s41586-020-2649-2
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1038/s41586-020-2649-2
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1038/s41586-020-2649-2
+      \endverb
+    \endentry
+    \entry{sqlite2020hipp}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=7bae769a1fcc34dd145b0911269fb334}{%
+           family={Hipp},
+           familyi={H\bibinitperiod},
+           given={Richard\bibnamedelima D},
+           giveni={R\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+      }
+      \strng{namehash}{7bae769a1fcc34dd145b0911269fb334}
+      \strng{fullhash}{7bae769a1fcc34dd145b0911269fb334}
+      \strng{bibnamehash}{7bae769a1fcc34dd145b0911269fb334}
+      \strng{authorbibnamehash}{7bae769a1fcc34dd145b0911269fb334}
+      \strng{authornamehash}{7bae769a1fcc34dd145b0911269fb334}
+      \strng{authorfullhash}{7bae769a1fcc34dd145b0911269fb334}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{{SQLite}}
+      \field{version}{3.31.1}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.sqlite.org/index.html
+      \endverb
+      \verb{url}
+      \verb https://www.sqlite.org/index.html
+      \endverb
+    \endentry
+    \entry{Hunter:2007}{article}{}
+      \name{author}{1}{}{%
+        {{hash=a27d092a3c70c59360ac990a48514314}{%
+           family={Hunter},
+           familyi={H\bibinitperiod},
+           given={J.\bibnamedelimi D.},
+           giveni={J\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {IEEE COMPUTER SOC}%
+      }
+      \strng{namehash}{a27d092a3c70c59360ac990a48514314}
+      \strng{fullhash}{a27d092a3c70c59360ac990a48514314}
+      \strng{bibnamehash}{a27d092a3c70c59360ac990a48514314}
+      \strng{authorbibnamehash}{a27d092a3c70c59360ac990a48514314}
+      \strng{authornamehash}{a27d092a3c70c59360ac990a48514314}
+      \strng{authorfullhash}{a27d092a3c70c59360ac990a48514314}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Matplotlib is a 2D graphics package used for Python for application development, interactive scripting, and publication-quality image generation across user interfaces and operating systems.}
+      \field{journaltitle}{Computing in Science \& Engineering}
+      \field{number}{3}
+      \field{title}{Matplotlib: A 2D graphics environment}
+      \field{volume}{9}
+      \field{year}{2007}
+      \field{pages}{90\bibrangedash 95}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.1109/MCSE.2007.55
+      \endverb
+    \endentry
+    \entry{joblib_library}{software}{}
+      \name{author}{1}{}{%
+        {{hash=d2a7c7d59957a8b30ffe12c5e4b00a88}{%
+           family={{Joblib Development Team}},
+           familyi={J\bibinitperiod}}}%
+      }
+      \strng{namehash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \strng{fullhash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \strng{bibnamehash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \strng{authorbibnamehash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \strng{authornamehash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \strng{authorfullhash}{d2a7c7d59957a8b30ffe12c5e4b00a88}
+      \field{sortinit}{J}
+      \field{sortinithash}{b2f54a9081ace9966a7cb9413811edb4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Joblib: running Python functions as pipeline jobs}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://joblib.readthedocs.io/
+      \endverb
+      \verb{url}
+      \verb https://joblib.readthedocs.io/
+      \endverb
+    \endentry
+    \entry{PAUL2017177}{incollection}{}
+      \name{author}{4}{}{%
+        {{hash=ceef3925d1f1c212e8b5c828bbabe53a}{%
+           family={Paul},
+           familyi={P\bibinitperiod},
+           given={Anand},
+           giveni={A\bibinitperiod}}}%
+        {{hash=ec9ad8b92552727daac65d614934fd7e}{%
+           family={Chilamkurti},
+           familyi={C\bibinitperiod},
+           given={Naveen},
+           giveni={N\bibinitperiod}}}%
+        {{hash=edf2de538045f873826e7a69559db95c}{%
+           family={Daniel},
+           familyi={D\bibinitperiod},
+           given={Alfred},
+           giveni={A\bibinitperiod}}}%
+        {{hash=2c6c977e05fdb44676cf0d328f67a6f9}{%
+           family={Rho},
+           familyi={R\bibinitperiod},
+           given={Seungmin},
+           giveni={S\bibinitperiod}}}%
+      }
+      \name{editor}{4}{}{%
+        {{hash=ceef3925d1f1c212e8b5c828bbabe53a}{%
+           family={Paul},
+           familyi={P\bibinitperiod},
+           given={Anand},
+           giveni={A\bibinitperiod}}}%
+        {{hash=ec9ad8b92552727daac65d614934fd7e}{%
+           family={Chilamkurti},
+           familyi={C\bibinitperiod},
+           given={Naveen},
+           giveni={N\bibinitperiod}}}%
+        {{hash=edf2de538045f873826e7a69559db95c}{%
+           family={Daniel},
+           familyi={D\bibinitperiod},
+           given={Alfred},
+           giveni={A\bibinitperiod}}}%
+        {{hash=2c6c977e05fdb44676cf0d328f67a6f9}{%
+           family={Rho},
+           familyi={R\bibinitperiod},
+           given={Seungmin},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Elsevier}%
+      }
+      \strng{namehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{fullhash}{dcc5c2c5de5ed59d93443f1bc3355d50}
+      \strng{bibnamehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{authorbibnamehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{authornamehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{authorfullhash}{dcc5c2c5de5ed59d93443f1bc3355d50}
+      \strng{editorbibnamehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{editornamehash}{2855502ed5d138734b040e88085ac7dc}
+      \strng{editorfullhash}{dcc5c2c5de5ed59d93443f1bc3355d50}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Intelligent Vehicular Networks and Communications}
+      \field{isbn}{978-0-12-809266-8}
+      \field{title}{Chapter 8 - Big Data collision analysis framework}
+      \field{year}{2017}
+      \field{pages}{177\bibrangedash 184}
+      \range{pages}{8}
+      \verb{doi}
+      \verb https://doi.org/10.1016/B978-0-12-809266-8.00008-9
+      \endverb
+      \verb{urlraw}
+      \verb https://www.sciencedirect.com/science/article/pii/B9780128092668000089
+      \endverb
+      \verb{url}
+      \verb https://www.sciencedirect.com/science/article/pii/B9780128092668000089
+      \endverb
+      \keyw{data analytics,Big Data,privacy in vehicles,ITS,data acquisition}
+    \endentry
+    \entry{scikit-learn}{article}{}
+      \name{author}{16}{}{%
+        {{hash=6e96fec0d63277626bb324bd28cdecb7}{%
+           family={Pedregosa},
+           familyi={P\bibinitperiod},
+           given={F.},
+           giveni={F\bibinitperiod}}}%
+        {{hash=b99c2df2144dc5ee09317a7833dea42d}{%
+           family={Varoquaux},
+           familyi={V\bibinitperiod},
+           given={G.},
+           giveni={G\bibinitperiod}}}%
+        {{hash=955f19cea89ae97bb7936078898e6255}{%
+           family={Gramfort},
+           familyi={G\bibinitperiod},
+           given={A.},
+           giveni={A\bibinitperiod}}}%
+        {{hash=2787869c9954c1d4e9891098995feb75}{%
+           family={Michel},
+           familyi={M\bibinitperiod},
+           given={V.},
+           giveni={V\bibinitperiod}}}%
+        {{hash=86d47ab9ca1a9dae108b4d4a0418c679}{%
+           family={Thirion},
+           familyi={T\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+        {{hash=d42f9e9cec95da1dad2232eac74982ab}{%
+           family={Grisel},
+           familyi={G\bibinitperiod},
+           given={O.},
+           giveni={O\bibinitperiod}}}%
+        {{hash=8bd8ef25258dd2311f92df23fe71ecf7}{%
+           family={Blondel},
+           familyi={B\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+        {{hash=a5ee41fa92b9e425806e1773853f1932}{%
+           family={Prettenhofer},
+           familyi={P\bibinitperiod},
+           given={P.},
+           giveni={P\bibinitperiod}}}%
+        {{hash=0c808557734e8929976d1f06f99c4ff2}{%
+           family={Weiss},
+           familyi={W\bibinitperiod},
+           given={R.},
+           giveni={R\bibinitperiod}}}%
+        {{hash=9662a6ea01596c6dd450817ccac81c4a}{%
+           family={Dubourg},
+           familyi={D\bibinitperiod},
+           given={V.},
+           giveni={V\bibinitperiod}}}%
+        {{hash=39e81a3e2193b954680a0ab847a0bb55}{%
+           family={Vanderplas},
+           familyi={V\bibinitperiod},
+           given={J.},
+           giveni={J\bibinitperiod}}}%
+        {{hash=14c4a498c032f77d0b83f86c710dd50e}{%
+           family={Passos},
+           familyi={P\bibinitperiod},
+           given={A.},
+           giveni={A\bibinitperiod}}}%
+        {{hash=dc075b18fb4710a1a37b258804c57efe}{%
+           family={Cournapeau},
+           familyi={C\bibinitperiod},
+           given={D.},
+           giveni={D\bibinitperiod}}}%
+        {{hash=67ec0e8add781665a43010c9559111e9}{%
+           family={Brucher},
+           familyi={B\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+        {{hash=dcb3918f09eb8785e6b212a907cc37cf}{%
+           family={Perrot},
+           familyi={P\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+        {{hash=ab20fcf381cd45daa82417c6fc595051}{%
+           family={Duchesnay},
+           familyi={D\bibinitperiod},
+           given={E.},
+           giveni={E\bibinitperiod}}}%
+      }
+      \strng{namehash}{3a097aa3ebf2b8c2acf988341dde9710}
+      \strng{fullhash}{7a67607c66e4af944b5f16461d6d0a87}
+      \strng{bibnamehash}{3a097aa3ebf2b8c2acf988341dde9710}
+      \strng{authorbibnamehash}{3a097aa3ebf2b8c2acf988341dde9710}
+      \strng{authornamehash}{3a097aa3ebf2b8c2acf988341dde9710}
+      \strng{authorfullhash}{7a67607c66e4af944b5f16461d6d0a87}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Machine Learning Research}
+      \field{title}{Scikit-learn: Machine Learning in {P}ython}
+      \field{volume}{12}
+      \field{year}{2011}
+      \field{pages}{2825\bibrangedash 2830}
+      \range{pages}{6}
+    \endentry
+    \entry{10.1371/journal.pone.0253868}{article}{}
+      \name{author}{4}{}{%
+        {{hash=d1c3d318e9e1f80f90b5f52bfe7c2186}{%
+           family={Rossi},
+           familyi={R\bibinitperiod},
+           given={Luca},
+           giveni={L\bibinitperiod}}}%
+        {{hash=8ab3620c63c2059e18e75441b3a250fe}{%
+           family={Ajmar},
+           familyi={A\bibinitperiod},
+           given={Andrea},
+           giveni={A\bibinitperiod}}}%
+        {{hash=cf2adde73ad495381be360f7ba3f9ed4}{%
+           family={Paolanti},
+           familyi={P\bibinitperiod},
+           given={Marina},
+           giveni={M\bibinitperiod}}}%
+        {{hash=1296549c66962f39051094fbbeb6820e}{%
+           family={Pierdicca},
+           familyi={P\bibinitperiod},
+           given={Roberto},
+           giveni={R\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Public Library of Science}%
+      }
+      \strng{namehash}{3f22a7ef701694c69459e564ecac49f3}
+      \strng{fullhash}{0cf4082f70e2aef7e6cc3c899f06abd2}
+      \strng{bibnamehash}{3f22a7ef701694c69459e564ecac49f3}
+      \strng{authorbibnamehash}{3f22a7ef701694c69459e564ecac49f3}
+      \strng{authornamehash}{3f22a7ef701694c69459e564ecac49f3}
+      \strng{authorfullhash}{0cf4082f70e2aef7e6cc3c899f06abd2}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Vehicles’ trajectory prediction is a topic with growing interest in recent years, as there are applications in several domains ranging from autonomous driving to traffic congestion prediction and urban planning. Predicting trajectories starting from Floating Car Data (FCD) is a complex task that comes with different challenges, namely Vehicle to Infrastructure (V2I) interaction, Vehicle to Vehicle (V2V) interaction, multimodality, and generalizability. These challenges, especially, have not been completely explored by state-of-the-art works. In particular, multimodality and generalizability have been neglected the most, and this work attempts to fill this gap by proposing and defining new datasets, metrics, and methods to help understand and predict vehicle trajectories. We propose and compare Deep Learning models based on Long Short-Term Memory and Generative Adversarial Network architectures; in particular, our GAN-3 model can be used to generate multiple predictions in multimodal scenarios. These approaches are evaluated with our newly proposed error metrics N-ADE and N-FDE, which normalize some biases in the standard Average Displacement Error (ADE) and Final Displacement Error (FDE) metrics. Experiments have been conducted using newly collected datasets in four large Italian cities (Rome, Milan, Naples, and Turin), considering different trajectory lengths to analyze error growth over a larger number of time-steps. The results prove that, although LSTM-based models are superior in unimodal scenarios, generative models perform best in those where the effects of multimodality are higher. Space-time and geographical analysis are performed, to prove the suitability of the proposed methodology for real cases and management services.}
+      \field{journaltitle}{PLOS ONE}
+      \field{month}{07}
+      \field{number}{7}
+      \field{title}{Vehicle trajectory prediction and generation using LSTM models and GANs}
+      \field{volume}{16}
+      \field{year}{2021}
+      \field{pages}{1\bibrangedash 28}
+      \range{pages}{28}
+      \verb{doi}
+      \verb 10.1371/journal.pone.0253868
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1371/journal.pone.0253868
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1371/journal.pone.0253868
+      \endverb
+    \endentry
+    \entry{ROUSSEEUW198753}{article}{}
+      \name{author}{1}{}{%
+        {{hash=72d8129c9f4e6afddacb834fb2d8226f}{%
+           family={Rousseeuw},
+           familyi={R\bibinitperiod},
+           given={Peter\bibnamedelima J.},
+           giveni={P\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+      }
+      \strng{namehash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \strng{fullhash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \strng{bibnamehash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \strng{authorbibnamehash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \strng{authornamehash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \strng{authorfullhash}{72d8129c9f4e6afddacb834fb2d8226f}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{A new graphical display is proposed for partitioning techniques. Each cluster is represented by a so-called silhouette, which is based on the comparison of its tightness and separation. This silhouette shows which objects lie well within their cluster, and which ones are merely somewhere in between clusters. The entire clustering is displayed by combining the silhouettes into a single plot, allowing an appreciation of the relative quality of the clusters and an overview of the data configuration. The average silhouette width provides an evaluation of clustering validity, and might be used to select an ‘appropriate’ number of clusters.}
+      \field{issn}{0377-0427}
+      \field{journaltitle}{Journal of Computational and Applied Mathematics}
+      \field{title}{Silhouettes: A graphical aid to the interpretation and validation of cluster analysis}
+      \field{volume}{20}
+      \field{year}{1987}
+      \field{pages}{53\bibrangedash 65}
+      \range{pages}{13}
+      \verb{doi}
+      \verb https://doi.org/10.1016/0377-0427(87)90125-7
+      \endverb
+      \verb{urlraw}
+      \verb https://www.sciencedirect.com/science/article/pii/0377042787901257
+      \endverb
+      \verb{url}
+      \verb https://www.sciencedirect.com/science/article/pii/0377042787901257
+      \endverb
+      \keyw{Graphical display,cluster analysis,clustering validity,classification}
+    \endentry
+    \entry{10.1145/3068335}{article}{}
+      \name{author}{5}{}{%
+        {{hash=d5aa8a82c7032184011fd502a43e205a}{%
+           family={Schubert},
+           familyi={S\bibinitperiod},
+           given={Erich},
+           giveni={E\bibinitperiod}}}%
+        {{hash=802157026f850823b2027c2100cb359a}{%
+           family={Sander},
+           familyi={S\bibinitperiod},
+           given={Jörg},
+           giveni={J\bibinitperiod}}}%
+        {{hash=2c062e64ed26aacc08a62155e7944f04}{%
+           family={Ester},
+           familyi={E\bibinitperiod},
+           given={Martin},
+           giveni={M\bibinitperiod}}}%
+        {{hash=68ec73c25c1ba143d4500012f60e9182}{%
+           family={Kriegel},
+           familyi={K\bibinitperiod},
+           given={Hans\bibnamedelima Peter},
+           giveni={H\bibinitperiod\bibinitdelim P\bibinitperiod}}}%
+        {{hash=2dda16c0a5d50fc830d0d4a3787937fa}{%
+           family={Xu},
+           familyi={X\bibinitperiod},
+           given={Xiaowei},
+           giveni={X\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York, NY, USA}%
+      }
+      \list{publisher}{1}{%
+        {Association for Computing Machinery}%
+      }
+      \strng{namehash}{390a9769bb15f206cbe2b167642fb6cc}
+      \strng{fullhash}{4ca8d17723f44bf8dce996accb92cc3d}
+      \strng{bibnamehash}{390a9769bb15f206cbe2b167642fb6cc}
+      \strng{authorbibnamehash}{390a9769bb15f206cbe2b167642fb6cc}
+      \strng{authornamehash}{390a9769bb15f206cbe2b167642fb6cc}
+      \strng{authorfullhash}{4ca8d17723f44bf8dce996accb92cc3d}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{At SIGMOD 2015, an article was presented with the title “DBSCAN Revisited: Mis-Claim, Un-Fixability, and Approximation” that won the conference’s best paper award. In this technical correspondence, we want to point out some inaccuracies in the way DBSCAN was represented, and why the criticism should have been directed at the assumption about the performance of spatial index structures such as R-trees and not at an algorithm that can use such indexes. We will also discuss the relationship of DBSCAN performance and the indexability of the dataset, and discuss some heuristics for choosing appropriate DBSCAN parameters. Some indicators of bad parameters will be proposed to help guide future users of this algorithm in choosing parameters such as to obtain both meaningful results and good performance. In new experiments, we show that the new SIGMOD 2015 methods do not appear to offer practical benefits if the DBSCAN parameters are well chosen and thus they are primarily of theoretical interest. In conclusion, the original DBSCAN algorithm with effective indexes and reasonably chosen parameter values performs competitively compared to the method proposed by Gan and Tao.}
+      \field{issn}{0362-5915}
+      \field{journaltitle}{ACM Trans. Database Syst.}
+      \field{month}{7}
+      \field{number}{3}
+      \field{title}{DBSCAN Revisited, Revisited: Why and How You Should (Still) Use DBSCAN}
+      \field{volume}{42}
+      \field{year}{2017}
+      \verb{doi}
+      \verb 10.1145/3068335
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1145/3068335
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1145/3068335
+      \endverb
+      \keyw{density-based clustering,range-search complexity,DBSCAN}
+    \endentry
+    \entry{reback2020pandas}{software}{}
+      \name{author}{1}{}{%
+        {{hash=9a1f9219d00cef023c61c6fd71576d04}{%
+           family={team},
+           familyi={t\bibinitperiod},
+           given={The},
+           giveni={T\bibinitperiod},
+           prefix={pandas\bibnamedelima development},
+           prefixi={p\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Zenodo}%
+      }
+      \strng{namehash}{9a1f9219d00cef023c61c6fd71576d04}
+      \strng{fullhash}{9a1f9219d00cef023c61c6fd71576d04}
+      \strng{bibnamehash}{9a1f9219d00cef023c61c6fd71576d04}
+      \strng{authorbibnamehash}{9a1f9219d00cef023c61c6fd71576d04}
+      \strng{authornamehash}{9a1f9219d00cef023c61c6fd71576d04}
+      \strng{authorfullhash}{9a1f9219d00cef023c61c6fd71576d04}
+      \field{sortinit}{t}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{2}
+      \field{title}{pandas-dev/pandas: Pandas}
+      \field{version}{latest}
+      \field{year}{2020}
+      \verb{doi}
+      \verb 10.5281/zenodo.3509134
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.5281/zenodo.3509134
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.5281/zenodo.3509134
+      \endverb
+    \endentry
+    \entry{wang2022yolov7}{article}{}
+      \name{author}{3}{}{%
+        {{hash=053d491932411950eccf2bb9a1025d11}{%
+           family={Wang},
+           familyi={W\bibinitperiod},
+           given={Chien-Yao},
+           giveni={C\bibinithyphendelim Y\bibinitperiod}}}%
+        {{hash=c0b2fdc20c37a4bd8d817822d374f809}{%
+           family={Bochkovskiy},
+           familyi={B\bibinitperiod},
+           given={Alexey},
+           giveni={A\bibinitperiod}}}%
+        {{hash=c81478c691c1bc1cc01404c44b5bd5bf}{%
+           family={Liao},
+           familyi={L\bibinitperiod},
+           given={Hong-Yuan\bibnamedelima Mark},
+           giveni={H\bibinithyphendelim Y\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+      }
+      \strng{namehash}{9278ecb881789e377b71403c2cf54d74}
+      \strng{fullhash}{9278ecb881789e377b71403c2cf54d74}
+      \strng{bibnamehash}{9278ecb881789e377b71403c2cf54d74}
+      \strng{authorbibnamehash}{9278ecb881789e377b71403c2cf54d74}
+      \strng{authornamehash}{9278ecb881789e377b71403c2cf54d74}
+      \strng{authorfullhash}{9278ecb881789e377b71403c2cf54d74}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2207.02696}
+      \field{title}{{YOLOv7}: Trainable bag-of-freebies sets new state-of-the-art for real-time object detectors}
+      \field{year}{2022}
+    \endentry
+    \entry{Wojke2018deep}{inproceedings}{}
+      \name{author}{2}{}{%
+        {{hash=b926658d6906979bd0ae465c48154351}{%
+           family={Wojke},
+           familyi={W\bibinitperiod},
+           given={Nicolai},
+           giveni={N\bibinitperiod}}}%
+        {{hash=bcbacb46da933474a6ca4e4a69b7bfdc}{%
+           family={Bewley},
+           familyi={B\bibinitperiod},
+           given={Alex},
+           giveni={A\bibinitperiod}}}%
+      }
+      \list{organization}{1}{%
+        {IEEE}%
+      }
+      \strng{namehash}{95f8f86c28718f0193a76fd7995182aa}
+      \strng{fullhash}{95f8f86c28718f0193a76fd7995182aa}
+      \strng{bibnamehash}{95f8f86c28718f0193a76fd7995182aa}
+      \strng{authorbibnamehash}{95f8f86c28718f0193a76fd7995182aa}
+      \strng{authornamehash}{95f8f86c28718f0193a76fd7995182aa}
+      \strng{authorfullhash}{95f8f86c28718f0193a76fd7995182aa}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2018 IEEE Winter Conference on Applications of Computer Vision (WACV)}
+      \field{title}{Deep Cosine Metric Learning for Person Re-identification}
+      \field{year}{2018}
+      \field{pages}{748\bibrangedash 756}
+      \range{pages}{9}
+      \verb{doi}
+      \verb 10.1109/WACV.2018.00087
+      \endverb
+    \endentry
+    \entry{10.1145/233269.233324}{inproceedings}{}
+      \name{author}{3}{}{%
+        {{hash=a396bb653c90348af9896c11064ba9eb}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Tian},
+           giveni={T\bibinitperiod}}}%
+        {{hash=5fd2a1e92f74585d94de45092d5794a5}{%
+           family={Ramakrishnan},
+           familyi={R\bibinitperiod},
+           given={Raghu},
+           giveni={R\bibinitperiod}}}%
+        {{hash=0c16ef0a6540590d7fc1664e0bb92c16}{%
+           family={Livny},
+           familyi={L\bibinitperiod},
+           given={Miron},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Montreal, Quebec, Canada}%
+      }
+      \list{publisher}{1}{%
+        {Association for Computing Machinery}%
+      }
+      \strng{namehash}{94457dee9c8a2d2f88257e68b8170731}
+      \strng{fullhash}{94457dee9c8a2d2f88257e68b8170731}
+      \strng{bibnamehash}{94457dee9c8a2d2f88257e68b8170731}
+      \strng{authorbibnamehash}{94457dee9c8a2d2f88257e68b8170731}
+      \strng{authornamehash}{94457dee9c8a2d2f88257e68b8170731}
+      \strng{authorfullhash}{94457dee9c8a2d2f88257e68b8170731}
+      \field{sortinit}{Z}
+      \field{sortinithash}{96892c0b0a36bb8557c40c49813d48b3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Finding useful patterns in large datasets has attracted considerable interest recently, and one of the most widely studied problems in this area is the identification of clusters, or densely populated regions, in a multi-dimensional dataset. Prior work does not adequately address the problem of large datasets and minimization of I/O costs.This paper presents a data clustering method named BIRCH (Balanced Iterative Reducing and Clustering using Hierarchies), and demonstrates that it is especially suitable for very large databases. BIRCH incrementally and dynamically clusters incoming multi-dimensional metric data points to try to produce the best quality clustering with the available resources (i.e., available memory and time constraints). BIRCH can typically find a good clustering with a single scan of the data, and improve the quality further with a few additional scans. BIRCH is also the first clustering algorithm proposed in the database area to handle "noise" (data points that are not part of the underlying pattern) effectively.We evaluate BIRCH's time/space efficiency, data input order sensitivity, and clustering quality through several experiments. We also present a performance comparisons of BIRCH versus CLARANS, a clustering method proposed recently for large datasets, and show that BIRCH is consistently superior.}
+      \field{booktitle}{Proceedings of the 1996 ACM SIGMOD International Conference on Management of Data}
+      \field{isbn}{0897917944}
+      \field{series}{SIGMOD '96}
+      \field{title}{BIRCH: An Efficient Data Clustering Method for Very Large Databases}
+      \field{year}{1996}
+      \field{pages}{103\bibrangedash 114}
+      \range{pages}{12}
+      \verb{doi}
+      \verb 10.1145/233269.233324
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1145/233269.233324
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1145/233269.233324
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
