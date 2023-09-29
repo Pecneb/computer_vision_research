@@ -1,5 +1,7 @@
 # Version 8 Feature Vector Evaluation Summary
 
+The training set is always 0.8 and the testing set is always 0.2 of the dataset.
+
 ## Bellevue 116th NE12th
 
 - Dataset size: 3826 
@@ -177,3 +179,52 @@
 | SVM | 0.895682 | 0.989091 | 0.99781  |            0.879704 |
 | KNN | 0.943348 | 0.992714 | 0.992796 |            0.939998 |
 | DT  | 0.896132 | 0.910806 | 0.910806 |            0.885561 |
+
+## Bellevue NE8th
+
+- Dataset size: 33580
+- Dataset size (after OPTICS clustering): 32023
+- OPTICS parameters:
+    - min-samples: 400 
+    - max-eps: 0.15
+- K-Means MSE threshold: 0.2
+- Number of Clusters: 11 
+- Number of reduced clusters: 4
+- Training set size: 25620
+- Testing set size: 6406
+
+### Version 1
+
+#### Clusters (OPTICS)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.925671 | 0.986668 | 0.998578 |            0.807467 |
+| KNN | 0.958798 | 0.990799 | 0.997157 |            0.922475 |
+| DT  | 0.95971  | 0.969903 | 0.971701 |            0.92991  |
+
+#### Pooled clusters (K-Means MSE Search)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.973283 | 0.999732 | 0.999839 |            0.972602 |
+| KNN | 0.987983 | 0.998203 | 0.998203 |            0.987715 |
+| DT  | 0.971513 | 0.974759 | 0.974759 |            0.973044 |
+
+#### Version 8
+
+#### Clusters (OPTICS)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.902323 | 0.973617 | 0.990782 |            0.787438 |
+| KNN | 0.949089 | 0.988411 | 0.996252 |            0.909999 |
+| DT  | 0.921408 | 0.937659 | 0.941963 |            0.874402 |
+
+#### Pooled clusters (K-Means MSE Search)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.956665 | 0.98955  | 0.999775 |            0.953411 |
+| KNN | 0.986663 | 0.997801 | 0.997815 |            0.986421 |
+| DT  | 0.95481  | 0.958664 | 0.958664 |            0.956196 |
