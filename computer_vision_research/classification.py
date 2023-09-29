@@ -502,6 +502,18 @@ def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labe
                                     o.history[j+stride].frameID, len(o.history), o])
     return np.array(feature_vectors), np.array(new_labels), np.array(new_reduced_labels), np.array(metadata)
             
+def feature_vectors_version_1_SG(trackedObjects: List[TrackedObject], labels: np.ndarray, pooled_labels: np.ndarray, k: int=6, window: int=7, poly_degree: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    feature_vectors = []
+    new_labels = []
+    new_pooled_labels = []
+    metadata = []
+    for i, o in enumerate(trackedObjects):
+        for j, d in enumerate(o.history):
+            #TODO implement v1SG
+
+def feature_vectors(trackedObjects: List):
+    #TODO universal feature vector creator function
+    pass
 
 def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     """Level out the nuber of features.
