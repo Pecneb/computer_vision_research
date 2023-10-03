@@ -59,6 +59,7 @@ from utility.training import (
 )
 from clustering import make_4D_feature_vectors, make_6D_feature_vectors, calc_cluster_centers
 from dataManagementClasses import insert_weights_into_feature_vector, TrackedObject
+from featurevector import FeatureVector
 
 import numpy as np
 import tqdm
@@ -123,7 +124,7 @@ def make_features_for_classification_velocity(trackedObjects: List, k: int, labe
                 newLabels.append(labels[j])
     return np.array(featureVectors), np.array(newLabels)
 
-def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.ndarray = None, reduced_labels: np.ndarray = None, up_until: float = 1):
+def make_feature_vectors_version_one(trackedObjects: List, labels: np.ndarray=None, pooled_labels: np.ndarray=None, k: int=6, up_until: float=1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Make feature vectors for classification algorithm
 
     Args:
@@ -158,7 +159,8 @@ def make_feature_vectors_version_one(trackedObjects: List, k: int, labels: np.nd
                     newReducedLabels.append(reduced_labels[j])
                 track_history_metadata.append([trackedObjects[j].history[i].frameID, trackedObjects[j].history[i+midstep].frameID, 
                 trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j]])
-    return np.array(featureVectors), np.array(newLabels), np.array(track_history_metadata), np.array(newReducedLabels)
+    return np.array(featureVectors), np.array(newLabels), np.array(newReducedLabels), np.array(track_history_metadata) 
+
 
 def make_feature_vectors_version_one_half(trackedObjects: List, k: int, labels: np.ndarray):
     """Make feature vectors for classification algorithm
@@ -502,19 +504,6 @@ def make_feature_vectors_version_eight(trackedObjects: List[TrackedObject], labe
                                     o.history[j+stride].frameID, len(o.history), o])
     return np.array(feature_vectors), np.array(new_labels), np.array(new_reduced_labels), np.array(metadata)
             
-def feature_vectors_version_1_SG(trackedObjects: List[TrackedObject], labels: np.ndarray, pooled_labels: np.ndarray, k: int=6, window: int=7, poly_degree: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    feature_vectors = []
-    new_labels = []
-    new_pooled_labels = []
-    metadata = []
-    for i, o in enumerate(trackedObjects):
-        for j, d in enumerate(o.history):
-            #TODO implement v1SG
-
-def feature_vectors(trackedObjects: List):
-    #TODO universal feature vector creator function
-    pass
-
 def level_features(X: np.ndarray, y: np.ndarray, ratio_to_min: float = 2.0):
     """Level out the nuber of features.
 
@@ -2215,7 +2204,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
                                  preprocessed: bool = False,
                                  test_trajectory_part: float = 1,
                                  background: str = None,
-                                 feature_version: int = 1,
+                                 feature_version: str="1",
                                  **estkwargs):
     """Evaluate several one-vs-rest classifiers on the given dataset. 
     Recluster clusters based on exitpoint centroids and evaluate classifiers on the new clusters.
@@ -2306,13 +2295,30 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     print("Size of testing set: %d" % len(tracks_test))
 
     # Generate version one feature vectors for clustering
+    fv = FeatureVector()
     start = time.time()
-    if feature_version == 1:
-        X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
-        X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
-    elif feature_version == 8:
-        X_train, y_train, y_reduced_train, metadata_train = make_feature_vectors_version_eight(trackedObjects=tracks_train, k=12, labels=labels_train, reduced_labels=reduced_labels_train)
-        X_test, y_test, y_reduced_test, metadata_test = make_feature_vectors_version_eight(trackedObjects=tracks_test, k=12, labels=labels_test, reduced_labels=reduced_labels_test)
+    X_train, y_train, y_reduced_test, metadata_train = fv(version=feature_version, 
+                                                           trackedObjects=tracks_train,
+                                                           labels=labels_train,
+                                                           k=6,
+                                                           up_until=1,
+                                                           pooled_labels=reduced_labels_train,
+                                                           window=7,
+                                                           polyorder=2)
+    X_test, y_test, y_reduced_test, metadata_test = fv(version=feature_version, 
+                                                           trackedObjects=tracks_test,
+                                                           labels=labels_test,
+                                                           k=6,
+                                                           up_until=test_trajectory_part,
+                                                           pooled_labels=reduced_labels_test,
+                                                           window=7,
+                                                           polyorder=2)
+    # if feature_version == 1:
+    #     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
+    #     X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
+    # elif feature_version == 8:
+    #     X_train, y_train, y_reduced_train, metadata_train = make_feature_vectors_version_eight(trackedObjects=tracks_train, k=12, labels=labels_train, reduced_labels=reduced_labels_train)
+    #     X_test, y_test, y_reduced_test, metadata_test = make_feature_vectors_version_eight(trackedObjects=tracks_test, k=12, labels=labels_test, reduced_labels=reduced_labels_test)
     print("Feature vectors generated in %d s" % (time.time() - start))
 
     print(f"Number of feature vectors in training set: {len(X_train)}")
@@ -2601,7 +2607,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
-    exitpoint_metrics_parser.add_argument("--feature-version", type=int, default=1, help="Feature Vectors version number. Default: 1")
+    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", help="Feature Vectors version number. Default: 1")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
