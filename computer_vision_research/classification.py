@@ -33,7 +33,9 @@ import icecream
 from tqdm import tqdm
 from icecream import ic
 from scipy.signal import savgol_filter
+from dotenv import load_dotenv
 icecream.install()
+load_dotenv()
 
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -2295,24 +2297,73 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     print("Size of testing set: %d" % len(tracks_test))
 
     # Generate version one feature vectors for clustering
-    fv = FeatureVector()
     start = time.time()
-    X_train, y_train, y_reduced_test, metadata_train = fv(version=feature_version, 
-                                                           trackedObjects=tracks_train,
-                                                           labels=labels_train,
-                                                           k=6,
-                                                           up_until=1,
-                                                           pooled_labels=reduced_labels_train,
-                                                           window=7,
-                                                           polyorder=2)
-    X_test, y_test, y_reduced_test, metadata_test = fv(version=feature_version, 
-                                                           trackedObjects=tracks_test,
-                                                           labels=labels_test,
-                                                           k=6,
-                                                           up_until=test_trajectory_part,
-                                                           pooled_labels=reduced_labels_test,
-                                                           window=7,
-                                                           polyorder=2)
+    if feature_version == "1":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_1(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            k=6,
+            up_until=1,
+            pooled_labels=reduced_labels_train
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_1(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            k=6,
+            up_until=test_trajectory_part,
+            pooled_labels=reduced_labels_test
+        )
+    elif feature_version == "1SG":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_1SG(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            k=6,
+            up_until=1,
+            pooled_labels=reduced_labels_train,
+            window=7,
+            polyorder=2
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_1SG(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            k=6,
+            up_until=test_trajectory_part,
+            pooled_labels=reduced_labels_test,
+            window=7,
+            polyorder=2
+        )
+    elif feature_version == "7":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            pooled_labels=reduced_labels_train,
+            max_stride=30
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            pooled_labels=reduced_labels_test,
+            max_stride=30
+        )
+    elif feature_version == "7SG":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7SG(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            k=6,
+            up_until=1,
+            pooled_labels=reduced_labels_train,
+            window=7,
+            polyorder=2
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7SG(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            k=6,
+            up_until=test_trajectory_part,
+            pooled_labels=reduced_labels_test,
+            window=7,
+            polyorder=2
+        )
     # if feature_version == 1:
     #     X_train, y_train, metadata_train, y_reduced_train = make_feature_vectors_version_one(trackedObjects=tracks_train, k=6, labels=labels_train, reduced_labels=reduced_labels_train)
     #     X_test, y_test, metadata_test, y_reduced_test = make_feature_vectors_version_one(trackedObjects=tracks_test, k=6, labels=labels_test, reduced_labels=reduced_labels_test, up_until=test_trajectory_part)
@@ -2607,7 +2658,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
-    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", help="Feature Vectors version number. Default: 1")
+    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", choices=["1", "1SG", "7", "7SG"], help="Feature Vectors version number. Default: 1")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
