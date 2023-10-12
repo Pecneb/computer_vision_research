@@ -127,3 +127,85 @@ Number of feature vectors in testing set: 43755
 Classifier SVM trained in 414 s
 Classifier SVM evaluation based on original clusters: balanced accuracy: 0.814029, top-1: 0.858439, top-2: 0.985282, top-3: 0.993921
 Classifier SVM evaluation based on exit point centroids: balanced accuracy: 0.884147, top-1: 0.868861, top-2: 0.990995, top-3: 0.998492
+Intel(R) Extension for Scikit-learn* enabled (https://github.com/intel/scikit-learn-intelex)
+Dataset loaded in 214 s
+Number of tracks: 21921
+Feature vectors.: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 21921/21921 [00:00<00:00, 529359.18it/s]
+Shape of feature vectors: (21921, 4)
+Classes: [-1  0  1  2  3  4  5  6  7  8  9 10 11 12]
+Number of labeled trajectories after clustering: 21469
+Clustering done in 360 s
+Reduce labels: 21469it [00:00, 4308905.76it/s]
+Clustered exit centroids: [1 2 1 0 4 3 3 2 3 4 0 4 2]
+Exit points clusters: [0 1 2 3 4]
+Exit point clustering done in 0 s
+Train test split done in 0 s
+Size of training set: 10734
+Size of testing set: 10735
+Features for classification.: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10734/10734 [01:11<00:00, 149.33it/s]
+Features for classification.: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10735/10735 [01:13<00:00, 145.50it/s]
+Feature vectors generated in 145 s
+Number of feature vectors in training set: 106417
+Number of feature vectors in testing set: 107886
+Classifier SVM trained in 164 s
+Classifier SVM evaluation based on original clusters: balanced accuracy: 0.792782, top-1: 0.843511, top-2: 0.983816, top-3: 0.995078
+Classifier SVM evaluation based on exit point centroids: balanced accuracy: 0.859268, top-1: 0.853030, top-2: 0.988034, top-3: 0.998285
+Classifier KNN trained in 9 s
+Classifier KNN evaluation based on original clusters: balanced accuracy: 0.868552, top-1: 0.889216, top-2: 0.976920, top-3: 0.978023
+Classifier KNN evaluation based on exit point centroids: balanced accuracy: 0.907846, top-1: 0.896400, top-2: 0.978792, top-3: 0.979701
+Classifier DT trained in 1 s
+Classifier DT evaluation based on original clusters: balanced accuracy: 0.832278, top-1: 0.828161, top-2: 0.856487, top-3: 0.856905
+Classifier DT evaluation based on exit point centroids: balanced accuracy: 0.845651, top-1: 0.829830, top-2: 0.861437, top-3: 0.861530
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.843511 | 0.983816 | 0.995078 |            0.792782 |
+| KNN | 0.889216 | 0.97692  | 0.978023 |            0.868552 |
+| DT  | 0.828161 | 0.856487 | 0.856905 |            0.832278 |
+
+|     |   Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|--------:|---------:|---------:|--------------------:|
+| SVM | 0.85303 | 0.988034 | 0.998285 |            0.859268 |
+| KNN | 0.8964  | 0.978792 | 0.979701 |            0.907846 |
+| DT  | 0.82983 | 0.861437 | 0.86153  |            0.845651 |
+Intel(R) Extension for Scikit-learn* enabled (https://github.com/intel/scikit-learn-intelex)
+Dataset loaded in 81 s
+Number of tracks: 33580
+Feature vectors.: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 33580/33580 [00:00<00:00, 522768.19it/s]
+Shape of feature vectors: (33580, 4)
+Classes: [-1  0  1  2  3  4  5  6  7  8  9 10]
+Number of labeled trajectories after clustering: 32023
+Clustering done in 526 s
+Reduce labels: 32023it [00:00, 4156404.05it/s]
+Clustered exit centroids: [0 3 1 0 1 3 2 1 2 0 2]
+Exit points clusters: [0 1 2 3]
+Exit point clustering done in 0 s
+Train test split done in 0 s
+Size of training set: 9606
+Size of testing set: 22417
+Features for classification.: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 9606/9606 [01:32<00:00, 104.12it/s]
+Features for classification.: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 22417/22417 [05:32<00:00, 67.42it/s]
+Feature vectors generated in 425 s
+Number of feature vectors in training set: 124912
+Number of feature vectors in testing set: 287420
+Classifier SVM trained in 146 s
+Classifier SVM evaluation based on original clusters: balanced accuracy: 0.834882, top-1: 0.951092, top-2: 0.991914, top-3: 0.997471
+Classifier SVM evaluation based on exit point centroids: balanced accuracy: 0.957314, top-1: 0.964240, top-2: 0.998476, top-3: 0.999551
+Classifier KNN trained in 21 s
+Classifier KNN evaluation based on original clusters: balanced accuracy: 0.890607, top-1: 0.957355, top-2: 0.986817, top-3: 0.993042
+Classifier KNN evaluation based on exit point centroids: balanced accuracy: 0.967680, top-1: 0.970980, top-2: 0.990126, top-3: 0.990147
+Classifier DT trained in 2 s
+Classifier DT evaluation based on original clusters: balanced accuracy: 0.878864, top-1: 0.929650, top-2: 0.949193, top-3: 0.957766
+Classifier DT evaluation based on exit point centroids: balanced accuracy: 0.943925, top-1: 0.945428, top-2: 0.950358, top-3: 0.950369
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.951092 | 0.991914 | 0.997471 |            0.834882 |
+| KNN | 0.957355 | 0.986817 | 0.993042 |            0.890607 |
+| DT  | 0.92965  | 0.949193 | 0.957766 |            0.878864 |
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.96424  | 0.998476 | 0.999551 |            0.957314 |
+| KNN | 0.97098  | 0.990126 | 0.990147 |            0.96768  |
+| DT  | 0.945428 | 0.950358 | 0.950369 |            0.943925 |
