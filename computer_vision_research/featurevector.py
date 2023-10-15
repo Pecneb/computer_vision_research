@@ -143,20 +143,66 @@ class FeatureVector(object):
             _weights = weights
         x_s = savgol_filter(x, window_length=window_length, polyorder=polyorder)
         y_s = savgol_filter(y, window_length=window_length, polyorder=polyorder)
-        vx_s = savgol_filter(vx, window_length=window_length, polyorder=polyorder)
-        vy_s = savgol_filter(vy, window_length=window_length, polyorder=polyorder)
+        vx_s = savgol_filter(x, window_length=window_length, polyorder=polyorder, deriv=1)
+        vy_s = savgol_filter(y, window_length=window_length, polyorder=polyorder, deriv=1)
         return np.array([x_s[0], y_s[0], 
                          vx_s[0], vy_s[0],
                          x_s[-1], y_s[-1], 
                          vx_s[-1], vy_s[-1],]) * _weights
 
     @staticmethod
-    def _8():
-        raise NotImplementedError
+    def _8(x: np.ndarray, y: np.ndarray, weight: float=0.8) -> np.ndarray:
+        """Feature vector version 7
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        weight : float
+            This weight determines the middle coordinates distance from the first coordinate.
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        size = x.shape[0]
+        middle_idx = int(size*weight)
+        return np.array([x[0], y[0], 
+                         x[middle_idx], y[middle_idx],
+                         x[-1], y[-1]])
 
     @staticmethod
-    def _8_SG():
-        raise NotImplementedError
+    def _8_SG(x: np.ndarray, y: np.ndarray, weight: float=0.8, window_length: int=7, polyorder: int=2) -> np.ndarray:
+        """Feature vector version 7
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        weight : float
+            This weight determines the middle coordinates distance from the first coordinate.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        x_s = savgol_filter(x, window_length=window_length, polyorder=polyorder)
+        y_s = savgol_filter(y, window_length=window_length, polyorder=polyorder)
+        size = x.shape[0]
+        middle_idx = int(size*weight)
+        return np.array([x_s[0], y_s[0], 
+                         x_s[middle_idx], y_s[middle_idx],
+                         x_s[-1], y_s[-1]])
             
     @staticmethod
     def factory_1(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, k: int=6, up_until: float=1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -205,7 +251,7 @@ class FeatureVector(object):
         return np.array(featureVectors), np.array(new_labels), np.array(new_pooled_labels), np.array(track_history_metadata) 
 
     @staticmethod
-    def factory_1_SG(self, trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, k: int=6, up_until: float=1, window: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def factory_1_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, k: int=6, up_until: float=1, window_length: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate feature vectors from the histories of trajectories.
         Divide the trajectory into k parts, then make k number of feature vectors.
         Apply savgol filter on the coordinates and velocities of the trajectory part.
@@ -220,7 +266,7 @@ class FeatureVector(object):
             List of corresponding pooled labels.
         k : int, optional
             Number of subtrajectories, by default 6
-        window : int, optional
+        window_length : int, optional
             Window of savgol filter, by default 7
         polyorder : int, optional
             Degree of polynom used in savgol filter, by default 2
@@ -247,7 +293,7 @@ class FeatureVector(object):
                     #                             trackedObjects[j].history[i+midstep].X, trackedObjects[j].history[i+midstep].Y,
                     #                             trackedObjects[j].history[i+step].X, trackedObjects[j].history[i+step].Y,
                     #                             trackedObjects[j].history[i+step].VX, trackedObjects[j].history[i+step].VY]))
-                    featureVectors.append(FeatureVector._1_SG(trackedObjects[j].history[i:i+step+1], window_length=window, polyorder=polyorder))
+                    featureVectors.append(FeatureVector._1_SG(trackedObjects[j].history[i:i+step+1], window_length=window_length, polyorder=polyorder))
                     if labels is not None:
                         new_labels.append(labels[j])
                     if pooled_labels is not None:
@@ -289,7 +335,7 @@ class FeatureVector(object):
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
     @staticmethod
-    def factory_7_SG():
+    def factory_7_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, window_length: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
         X_feature_vectors = np.array([])
         y_new_labels = np.array([])
@@ -302,7 +348,7 @@ class FeatureVector(object):
             for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
                 #midx = j + (3*stride // 4) - 1
                 end_idx = j + stride - 1
-                feature_vector = FeatureVector._7(
+                feature_vector = FeatureVector._7_SG(
                     x=t.history_X[j:j+max_stride], 
                     y=t.history_Y[j:j+max_stride],
                     vx=t.history_VX_calculated[j:j+max_stride], 
@@ -321,9 +367,63 @@ class FeatureVector(object):
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
     @staticmethod
-    def factory_8():
-        raise NotImplementedError
+    def factory_8(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weight: float=0.8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        X_feature_vectors = np.array([])
+        y_new_labels = np.array([])
+        y_new_pooled_labels = np.array([])
+        metadata = []
+        for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+            stride = max_stride
+            if stride > t.history_X.shape[0]:
+                continue
+            for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
+                #midx = j + (3*stride // 4) - 1
+                end_idx = j + stride - 1
+                feature_vector = FeatureVector._8(
+                    x=t.history_X[j:j+max_stride], 
+                    y=t.history_Y[j:j+max_stride],
+                    weight=0.8
+                )
+                if X_feature_vectors.shape == (0,):
+                    X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))
+                else:
+                    X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+                y_new_labels = np.append(y_new_labels, labels[i])
+                y_new_pooled_labels = np.append(y_new_pooled_labels, pooled_labels[i])
+                # ic(j,len(trackedObjects[i].history), t.history_X.shape)
+                # metadata.append([trackedObjects[i].history[j].frameID, None, 
+                #     trackedObjects[i].history[end_idx].frameID, len(trackedObjects[i].history), trackedObjects[i]])
+                metadata.append([None, None, None, None, trackedObjects[i]])
+        return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
     @staticmethod
-    def factory_8_SG():
-        raise NotImplementedError
+    def factory_8_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weight: float=0.8, window_length: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        X_feature_vectors = np.array([])
+        y_new_labels = np.array([])
+        y_new_pooled_labels = np.array([])
+        metadata = []
+        for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+            stride = max_stride
+            if stride > t.history_X.shape[0]:
+                continue
+            for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
+                #midx = j + (3*stride // 4) - 1
+                end_idx = j + stride - 1
+                feature_vector = FeatureVector._8_SG(
+                    x=t.history_X[j:j+max_stride], 
+                    y=t.history_Y[j:j+max_stride],
+                    weight=weight,
+                    window_length=window_length,
+                    polyorder=polyorder
+                )
+                if X_feature_vectors.shape == (0,):
+                    X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))
+                else:
+                    X_feature_vectors = np.append(X_feature_vectors, np.array([feature_vector]), axis=0)
+                y_new_labels = np.append(y_new_labels, labels[i])
+                y_new_pooled_labels = np.append(y_new_pooled_labels, pooled_labels[i])
+                # ic(j,len(trackedObjects[i].history), t.history_X.shape)
+                # metadata.append([trackedObjects[i].history[j].frameID, None, 
+                #     trackedObjects[i].history[end_idx].frameID, len(trackedObjects[i].history), trackedObjects[i]])
+                metadata.append([None, None, None, None, trackedObjects[i]])
+        return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)

@@ -2320,7 +2320,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
             k=6,
             up_until=1,
             pooled_labels=reduced_labels_train,
-            window=7,
+            window_lenght=7,
             polyorder=2
         )
         X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_1SG(
@@ -2329,7 +2329,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
             k=6,
             up_until=test_trajectory_part,
             pooled_labels=reduced_labels_test,
-            window=7,
+            window_length=7,
             polyorder=2
         )
     elif feature_version == "7":
@@ -2346,22 +2346,51 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
             max_stride=30
         )
     elif feature_version == "7SG":
-        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7SG(
+        print(feature_version)
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7_SG(
             trackedObjects=tracks_train,
             labels=labels_train,
-            k=6,
-            up_until=1,
             pooled_labels=reduced_labels_train,
-            window=7,
+            max_stride=30,
+            window_length=7,
             polyorder=2
         )
-        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7SG(
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7_SG(
             trackedObjects=tracks_test,
             labels=labels_test,
-            k=6,
-            up_until=test_trajectory_part,
             pooled_labels=reduced_labels_test,
-            window=7,
+            max_stride=30,
+            window_length=7,
+            polyorder=2
+        )
+    elif feature_version == "8":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_8(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            pooled_labels=reduced_labels_train,
+            max_stride=30
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_8(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            pooled_labels=reduced_labels_test,
+            max_stride=30
+        )
+    elif feature_version == "8SG":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_8_SG(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            pooled_labels=reduced_labels_train,
+            max_stride=30,
+            window_length=7,
+            polyorder=2
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_8_SG(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            pooled_labels=reduced_labels_test,
+            max_stride=30,
+            window_length=7,
             polyorder=2
         )
     # if feature_version == 1:
@@ -2658,7 +2687,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
-    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", choices=["1", "1SG", "7", "7SG"], help="Feature Vectors version number. Default: 1")
+    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", choices=["1", "1SG", "7", "7SG", "8", "8SG"], help="Feature Vectors version number. Default: 1")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
