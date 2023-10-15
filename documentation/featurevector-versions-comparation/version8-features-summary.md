@@ -213,8 +213,26 @@ The training set is always 0.8 and the testing set is always 0.2 of the dataset.
 - K-Means MSE threshold: 0.2
 - Number of Clusters: 13
 - Number of reduced clusters: 5
-- Training set size: 17175
-- Testing set size: 4294
+- Training set size: 10734
+- Testing set size: 10734
+
+### Version 1
+
+#### Clusters (OPTICS)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.858534 | 0.968529 | 0.990564 |            0.781077 |
+| KNN | 0.942312 | 0.992128 | 0.993007 |            0.921674 |
+| DT  | 0.90982  | 0.928804 | 0.92906  |            0.906772 |
+
+#### Pooled clusters (K-Means MSE Search)
+
+|     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
+|:----|---------:|---------:|---------:|--------------------:|
+| SVM | 0.874661 | 0.97383  | 0.993565 |            0.829656 |
+| KNN | 0.9517   | 0.993693 | 0.993869 |            0.948369 |
+| DT  | 0.918138 | 0.931199 | 0.931263 |            0.908699 |
 
 ### Version 8
 
@@ -262,8 +280,8 @@ The training set is always 0.8 and the testing set is always 0.2 of the dataset.
 - K-Means MSE threshold: 0.2
 - Number of Clusters: 11 
 - Number of reduced clusters: 4
-- Training set size: 25620
-- Testing set size: 6406
+- Training set size: 16011 
+- Testing set size: 16011 
 
 ### Version 1
 
@@ -271,17 +289,17 @@ The training set is always 0.8 and the testing set is always 0.2 of the dataset.
 
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
-| SVM | 0.925671 | 0.986668 | 0.998578 |            0.807467 |
-| KNN | 0.958798 | 0.990799 | 0.997157 |            0.922475 |
-| DT  | 0.95971  | 0.969903 | 0.971701 |            0.92991  |
+| SVM | 0.919237 | 0.985076 | 0.998167 |            0.800595 |
+| KNN | 0.95719  | 0.990008 | 0.997577 |            0.921439 |
+| DT  | 0.955132 | 0.969069 | 0.972682 |            0.926021 |
 
 #### Pooled clusters (K-Means MSE Search)
 
 |     |    Top-1 |    Top-2 |    Top-3 |   Balanced Accuracy |
 |:----|---------:|---------:|---------:|--------------------:|
-| SVM | 0.973283 | 0.999732 | 0.999839 |            0.972602 |
-| KNN | 0.987983 | 0.998203 | 0.998203 |            0.987715 |
-| DT  | 0.971513 | 0.974759 | 0.974759 |            0.973044 |
+| SVM | 0.969573 | 0.999496 | 0.999743 |            0.968668 |
+| KNN | 0.987456 | 0.997909 | 0.997952 |            0.987319 |
+| DT  | 0.968801 | 0.972264 | 0.972275 |            0.969947 |
 
 #### Version 8
 
