@@ -1,7 +1,7 @@
 #!/bin/sh
 
 python3 -m sklearnex computer_vision_research/classification.py \
-    --n-jobs 14 \
+    --n-jobs 7 \
     train \
     --dataset \
     ../../cv_research_video_dataset/Bellevue_116th_NE12th_24h/Preprocessed_threshold_0.7_enter-exit-distance_0.1/ \
@@ -11,7 +11,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --min-samples 100 --max-eps 0.15 \
     --mse 0.2 --feature-version 7SG
 python3 -m sklearnex computer_vision_research/classification.py \
-    --n-jobs 14 \
+    --n-jobs 7 \
     train \
     --dataset \
     ../../cv_research_video_dataset/Bellevue_Eastgate_24h/Preprocessed/ \
@@ -21,7 +21,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --min-samples 200 --max-eps 0.16 \
     --mse 0.2 --feature-version 7SG
 python3 -m sklearnex computer_vision_research/classification.py \
-    --n-jobs 14 \
+    --n-jobs 7 \
     train \
     --dataset \
     ../../cv_research_video_dataset/Bellevue_150th_Newport_24h_v2/Preprocessed/ \
@@ -31,7 +31,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --min-samples 200 --max-eps 0.1 \
     --mse 0.2 --feature-version 7SG
 python3 -m sklearnex computer_vision_research/classification.py \
-    --n-jobs 14 \
+    --n-jobs 7 \
     train \
     --dataset \
     ../../cv_research_video_dataset/Bellevue_150th_SE38th_24h/Preprocessed/ \
@@ -42,7 +42,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --min-samples 100 --max-eps 0.15 \
     --mse 0.2 --feature-version 7SG
 python3 -m sklearnex computer_vision_research/classification.py \
-    --n-jobs 14 \
+    --n-jobs 7 \
     train \
     --dataset \
     ../../cv_research_video_dataset/Bellevue_NE8th_24h_v2/Preprocessed_threshold_0.7_enter-exit-distance_1.0/ \

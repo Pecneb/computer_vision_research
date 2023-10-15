@@ -38,6 +38,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --output \
     ../../cv_research_video_dataset/Bellevue_150th_SE38th_24h/Preprocessed/ \
     --preprocessed \
+    --test 0.5 \
     --min-samples 100 --max-eps 0.15 \
     --mse 0.2 --feature-version 8
 python3 -m sklearnex computer_vision_research/classification.py \
@@ -48,5 +49,6 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --output \
     ../../cv_research_video_dataset/Bellevue_NE8th_24h_v2/Preprocessed_threshold_0.7_enter-exit-distance_1.0/ \
     --preprocessed \
+    --test 0.5 \
     --min-samples 400 --max-eps 0.15 \
     --mse 0.2 --feature-version 8
