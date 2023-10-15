@@ -52,7 +52,7 @@ def parseArgs():
     parser.add_argument("--max_iou_distance", type=float, default=0.7)
     parser.add_argument("--nn_budget", type=float, default=100,
                         help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.")
-    parser.add_argument("--feature_version", choices=['1', '2','3', '4', '7'], default='2', 
+    parser.add_argument("--feature_version", choices=['1', '1SG', '7', '7SG', '8', '8SG'], default='2', 
                         help="What version of feature vectors to use.")
     parser.add_argument("--top_k", type=int, default=1,
                         help="Number of highest confidence predictions to show.")
@@ -241,8 +241,6 @@ def draw_prediction_line(image:np.ndarray, cluster_centroids_upscaled: np.ndarra
 def main():
     args = parseArgs()
 
-    VERSION_3 = int(args.feature_version) == 3
-
     from yolov7api import detect, COLORS
 
     cap = cv.VideoCapture(args.video)
@@ -263,31 +261,12 @@ def main():
 
     model = load_model(args.model)
     model.n_jobs = 18
-    try:
-        dataset = model.tracks
-    except:
-        dataset = load_dataset(args.dataset)
+
     centroids_labels = model.centroid_labels
-    """
-    dataset = load_joblib_tracks(args.train_tracks) 
-    if type(dataset[0]) != dict:
-        raise TypeError("Bad type of dataset file. The train_tracks dataset should contain clustered data. List containing dicts with keys: track, class.")
-    if args.all_tracks:
-        all_tracks = load_joblib_tracks(args.all_tracks)
-
-    dataset_filtered = [d for d in dataset if d["class"] != -1]
-    """
-    tracks = [d["track"] for d in dataset]
-    classes = [d["class"] for d in dataset]
-    reduced_classes = [d["reduced_class"] for d in dataset if d["reduced_class"] != -1]
-
-    # extract cluster centroids from dataset of classes and tracks
-    if args.pool:
-        cluster_centroids = calc_cluster_centers(tracks, reduced_classes)
-    else:
-        cluster_centroids = calc_cluster_centers(tracks, classes)
+    centroids_coordinates = model.centroid_coordinates
+    
     # upscale the coordinates of the centroids to the video's scale
-    cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
+    cluster_centroids_upscaled = upscale_aoi(centroids_coordinates, framewidth, frameheight)
 
     dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
@@ -323,30 +302,19 @@ def main():
                             (int(cluster_centroids_upscaled[i][0]), int(cluster_centroids_upscaled[i][1])),
                             cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
             for t in history:
-                    if args.feature_version == '3':
-                        feature = t.feature_v3()
-                    if args.feature_version == '4':
-                        feature = t.feature_v4()
-                    if args.feature_version == '7':
-                        feature = t.feature_v7()
-                    else:
-                        feature = t.feature_()
-                    if t.isMoving:
-                        if feature is not None:
-                            if VERSION_3:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), args.top_k, centroids=cluster_centroids).reshape((-1))
-                            elif args.pool:
-                                predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)]), classes=centroids_labels)
-                                # print(predictions_proba)
-                                predictions = np.argsort(predictions_proba)[:, -args.top_k:]
-                                # print(predictions)
-                                predictions = predictions.reshape((-1))
-                                predictions_proba = predictions_proba.reshape((-1))
-                            else:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), args.top_k).reshape((-1))
-                                predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))
-                            centroids = np.array([cluster_centroids_upscaled[p] for p in predictions])
-                            draw_prediction(t, centroids, frame, frameNum, predictions, predictions_proba)
+                feature = t.feature_vector(version=args.feature_version, history_size=args.history, window_length=7, polyorder=2)
+                if t.isMoving:
+                    if feature is not None:
+                        if args.pool:
+                            predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)]), classes=centroids_labels)
+                            predictions = np.argsort(predictions_proba)[:, -args.top_k:]
+                            predictions = predictions.reshape((-1))
+                            predictions_proba = predictions_proba.reshape((-1))
+                        else:
+                            predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), args.top_k).reshape((-1))
+                            predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))
+                        centroids = np.array([cluster_centroids_upscaled[p] for p in predictions])
+                        draw_prediction(t, centroids, frame, frameNum, predictions, predictions_proba)
             
             cv.imshow("Video", frame)
             cv.setTrackbarPos("Frame", "Video", int(frameNum))

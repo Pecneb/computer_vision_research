@@ -1,23 +1,40 @@
 import os
 import joblib
+from typing import Optional
 from classifier import OneVSRestClassifierExtended
 
-def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended = None):
-    """Save model to research_data dir.
+def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended, version: Optional[str]=None) -> bool:
+    """Save ML Model.
 
-    Args:
-        path2db (str): Path to database file. 
-        classifier_type (str): Classifier name. 
-        model (Model): The model itself. 
+    Parameters
+    ----------
+    savedir : str
+        Path to directory where the model should be placed.
+    classifier_type : str
+        Type of classifier, eg. KNN, DT, SVM, etc...
+    model : OneVSRestClassifierExtended
+        The model object itself.
+    version : Optional[str], optional
+        Version string, eg. 1, 7, 8SG, etc..., by default None
+
+    Returns
+    -------
+    bool
+        Return True if saving was successful, False otherwise.
     """
     if not os.path.isdir(os.path.join(savedir, "models")):
         os.mkdir(os.path.join(savedir, "models"))
     savepath = os.path.join(savedir, "models")
-    filename = os.path.join(savepath, f"{classifier_type}.joblib")
-    if model is not None:
-        joblib.dump(model, filename)
+    if version is not None:
+        filename = os.path.join(savepath, f"{classifier_type}_{version}.joblib")
     else:
-        print("Error: model is None, model was not saved.")
+        filename = os.path.join(savepath, f"{classifier_type}.joblib")
+    try:
+        joblib.dump(model, filename)
+    except Exception:
+        return False
+    return True
+    
 
 def load_model(path2model: str) -> OneVSRestClassifierExtended:
     """Load classifier model.

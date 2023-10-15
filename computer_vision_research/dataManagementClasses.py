@@ -20,7 +20,9 @@
 
 import numpy as np
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Tuple, Optional, Union
+
+from featurevector import FeatureVector
 
 @dataclass
 class Detection:
@@ -196,7 +198,7 @@ class TrackedObject():
                     return False
         return self.objID == other.objID
 
-    def avgArea(self):
+    def avgArea(self) -> np.ndarray:
         """Calculate average area of the bounding boxes of the object.
 
         Returns:
@@ -205,7 +207,7 @@ class TrackedObject():
         areas = [(det.Width*det.Height) for det in self.history]
         return np.average(areas)
     
-    def updateAccel(self, new_vx, old_vx, new_vy, old_vy):
+    def updateAccel(self, new_vx, old_vx, new_vy, old_vy) -> None:
         """Calculate acceleration based on kalman filters velocity.
         Normal acceleration calculation (new_v - old_v) / (new_time - old_time).
         The time between the two detection is the (new_time-old_time).
@@ -220,7 +222,7 @@ class TrackedObject():
         self.AY = (new_vy - old_vy) / (self.time_since_update+1)
 
     @staticmethod
-    def upscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080):
+    def upscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080) -> np.ndarray:
         """Rescale normalized coordinates with the given frame sizes.
 
         Args:
@@ -256,7 +258,7 @@ class TrackedObject():
         """
 
     @staticmethod
-    def downscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080):
+    def downscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080) -> np.ndarray:
         """Rescale normalized coordinates with the given frame sizes.
 
         Args:
@@ -291,19 +293,31 @@ class TrackedObject():
 
         """
                         
-    def feature_(self):
-        """Return feature vector of track.
-        A simple feature vector consisting,
-        of the first, middle and last detection's X and Y coordinates.
-        The first and last detection's velocity is also included.
+    def feature_v1(self) -> Optional[np.ndarray]:
+        """Extract version 1 feature vector from history.
+
+        Returns
+        -------
+        ndarray
+            Feature vector
         """
         n = len(self.history)-1
         if n < 3:
             return None
-        return np.array([self.history[0].X, self.history[0].Y, self.history[0].VX, 
-                        self.history[0].VY, self.history[n//2].X, self.history[n//2].Y, 
-                        self.history[n].X, self.history[n].Y, self.history[n].VX, 
-                        self.history[n].VY])
+        return FeatureVector._1(self.history)
+
+    def feature_v1_SG(self, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+        """Extract version 1SG feature vector from history.
+
+        Returns
+        -------
+        ndarray
+            Feature vector
+        """
+        n = len(self.history)-1
+        if n < 3:
+            return None
+        return FeatureVector._1_SG(self.history, window_length=window_length, polyorder=polyorder)
     
     def feature_v3_v4(self):
         """Return feature vector of track.
@@ -327,20 +341,97 @@ class TrackedObject():
                         self.history[n].X, self.history[n].Y])
     """
     
-    def feature_v7(self):
-        """Return version 7 feature vector.
-        The first and last detection's X and Y coordinates.
-        Also the velocities of the first and last detection.
-        The feature vector is weighted by a hardcoded value.
-        [frist.X, first.Y, first.VX, first.VY, last.X, last.Y, last.VX, last.VY] * [1, 1, 100, 100, 2, 2, 200, 200]
+    def feature_v7(self, history_size: int=30) -> Optional[np.ndarray]:
+        """Extract feature version 7 from history.
+
+        Parameters
+        ----------
+        history_size : int, optional
+            Size of the history that should be used for feature vector creation, by default 30
+
+        Returns
+        -------
+        Optional[np.ndarray]
+            Feature vector or None, if history is not yet the size of history_size, then return None
         """
-        n = len(self.history_X)-1
-        if self.history_X.shape[0] < self.max_age:
+        if self.history_X.shape[0] < history_size:
             return None
-        return np.array([self.history_X[0], self.history_Y[0], 
-                        self.history_VX_calculated[0], self.history_VY_calculated[0], 
-                        self.history_X[n], self.history_Y[n],
-                        self.history_VX_calculated[n-1], self.history_VY_calculated[n-1]]) * np.array([1, 1, 100, 100, 2, 2, 200, 200])
+        return FeatureVector._7(
+            x=self.history_X[-history_size:], 
+            y=self.history_Y[-history_size:]
+        )
+    
+    def feature_v7_SG(self, history_size: int=30, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+        """Extract feature version 7SG from history.
+
+        Parameters
+        ----------
+        history_size : int, optional
+            Size of the history that should be used for feature vector creation, by default 30
+        window_length : int, optional
+            The size of the Savitzky Golay filter, by default 7
+        polyorder : int, optional
+            The polynomial order of the Savitzky Golay filter, by default 7
+
+        Returns
+        -------
+        Optional[np.ndarray]
+            Feature vector or None, if history is not yet the size of history_size, then return None
+        """
+        if self.history_X.shape[0] < history_size:
+            return None
+        return FeatureVector._7_SG(
+            x=self.history_X[-history_size:], 
+            y=self.history_Y[-history_size:],
+            window_length=window_length,
+            polyorder=polyorder
+        )
+
+    def feature_v8(self, history_size: int=30) -> Optional[np.ndarray]:
+        """Extract feature version 7 from history.
+
+        Parameters
+        ----------
+        history_size : int, optional
+            Size of the history that should be used for feature vector creation, by default 30
+
+        Returns
+        -------
+        Optional[np.ndarray]
+            Feature vector or None, if history is not yet the size of history_size, then return None
+        """
+        if self.history_X.shape[0] < history_size:
+            return None
+        return FeatureVector._8(
+            x=self.history_X[-history_size:], 
+            y=self.history_Y[-history_size:]
+        )
+    
+    def feature_v8_SG(self, history_size: int=30, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+        """Extract feature version 7SG from history.
+
+        Parameters
+        ----------
+        history_size : int, optional
+            Size of the history that should be used for feature vector creation, by default 30
+        window_length : int, optional
+            The size of the Savitzky Golay filter, by default 7
+        polyorder : int, optional
+            The polynomial order of the Savitzky Golay filter, by default 7
+
+        Returns
+        -------
+        Optional[np.ndarray]
+            Feature vector or None, if history is not yet the size of history_size, then return None
+        """
+        if self.history_X.shape[0] < history_size:
+            return None
+        return FeatureVector._8_SG(
+            x=self.history_X[-history_size:], 
+            y=self.history_Y[-history_size:], 
+            window_length=window_length, 
+            polyorder=polyorder
+        )
 
     def feature_v5(self, n_weights: int):
         """Return version 5 feature vector.
@@ -363,7 +454,27 @@ class TrackedObject():
                             self.history_X[-1], self.history_Y[-1]])
         feature = insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
         return feature
+    
+    def feature_vector(self, version: str='1', **kwargs) -> Optional[np.ndarray]:
+        """Return the corresponding feature vector version of the given version argument.
+        Pass additional keyword arguments.
 
+        Parameters
+        ----------
+        version : str, optional
+            Version string of the feature vector, by default '1'
+
+        Returns
+        -------
+        np.ndarray
+            Feature vector
+        """
+        if version == '1': return self.feature_v1()
+        elif version == '7': return self.feature_v7(history_size=kwargs["history_size"])
+        elif version == '7SG': return self.feature_v7_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
+        elif version == '8': return self.feature_v8(history_size=kwargs["history_size"])
+        elif version == '8SG': return self.feature_v8_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
+        return None
 
     def update_velocity(self, k: int = 10):
         """Calculate velocity from X,Y coordinates.
@@ -382,7 +493,6 @@ class TrackedObject():
             self.history_VX_calculated = np.append(self.history_VX_calculated, [dx]) 
             self.history_VY_calculated = np.append(self.history_VY_calculated, [dy])  
         self.history_VT = np.append(self.history_VT, [self.history[-1].frameID])
-
 
     def update_accel(self, k: int = 2):
         """Calculate velocity from X,Y coordinates.
