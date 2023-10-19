@@ -303,7 +303,7 @@ class FeatureVector(object):
         return np.array(featureVectors), np.array(new_labels), np.array(new_pooled_labels), np.array(track_history_metadata) 
 
     @staticmethod
-    def factory_7(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def factory_7(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray]=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
         X_feature_vectors = np.array([])
         y_new_labels = np.array([])
@@ -320,7 +320,8 @@ class FeatureVector(object):
                     x=t.history_X[j:j+max_stride], 
                     y=t.history_Y[j:j+max_stride],
                     vx=t.history_VX_calculated[j:j+max_stride], 
-                    vy=t.history_VY_calculated[j:j+max_stride]
+                    vy=t.history_VY_calculated[j:j+max_stride],
+                               weights=np.array([1,1,250,250,2,2,500,500])
                 )
                 if X_feature_vectors.shape == (0,):
                     X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))
@@ -335,7 +336,7 @@ class FeatureVector(object):
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
     @staticmethod
-    def factory_7_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, window_length: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def factory_7_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray]=None, window_length: int=7, polyorder: int=2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
         X_feature_vectors = np.array([])
         y_new_labels = np.array([])
@@ -352,7 +353,8 @@ class FeatureVector(object):
                     x=t.history_X[j:j+max_stride], 
                     y=t.history_Y[j:j+max_stride],
                     vx=t.history_VX_calculated[j:j+max_stride], 
-                    vy=t.history_VY_calculated[j:j+max_stride]
+                    vy=t.history_VY_calculated[j:j+max_stride],
+                    weights=weights
                 )
                 if X_feature_vectors.shape == (0,):
                     X_feature_vectors = np.array(feature_vector).reshape((-1,feature_vector.shape[0]))

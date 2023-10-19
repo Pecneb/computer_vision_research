@@ -2272,7 +2272,8 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     print("Exit points clusters: {}".format(np.unique(reduced_labels)))
     print("Exit point clustering done in %d s" % (time.time() - start))
 
-    cluster_centers = calc_cluster_centers(tracks_labeled, reduced_labels)
+    cluster_centers = calc_cluster_centers(tracks_labeled, cluster_labels)
+    pooled_cluster_centers = calc_cluster_centers(tracks_labeled, reduced_labels)
 
     # preprocess for train test split
     start = time.time()
@@ -2344,6 +2345,36 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
             labels=labels_test,
             pooled_labels=reduced_labels_test,
             max_stride=30
+        )
+    elif feature_version == "7x0.5":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            pooled_labels=reduced_labels_train,
+            max_stride=30,
+            weights=np.array([1,1,50,50,2,2,100,100])
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            pooled_labels=reduced_labels_test,
+            max_stride=30,
+            weights=np.array([1,1,50,50,2,2,100,100])
+        )
+    elif feature_version == "7x2":
+        X_train, y_train, y_reduced_test, metadata_train = FeatureVector.factory_7(
+            trackedObjects=tracks_train,
+            labels=labels_train,
+            pooled_labels=reduced_labels_train,
+            max_stride=30,
+            weights=np.array([1,1,250,250,2,2,500,500])
+        )
+        X_test, y_test, y_reduced_test, metadata_test = FeatureVector.factory_7(
+            trackedObjects=tracks_test,
+            labels=labels_test,
+            pooled_labels=reduced_labels_test,
+            max_stride=30,
+            weights=np.array([1,1,250,250,2,2,500,500])
         )
     elif feature_version == "7SG":
         print(feature_version)
@@ -2431,7 +2462,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     # train classifiers
     for m in models_to_benchmark:
         start = time.time()
-        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), n_jobs=n_jobs, centroid_labels=centroids_labels, centroid_coordinates=cluster_centers)
+        clf_ovr = OneVSRestClassifierExtended(estimator=models[m](**parameters[0][m]), n_jobs=n_jobs, centroid_labels=centroids_labels, centroid_coordinates=pooled_cluster_centers)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
         y_pred = clf_ovr.predict(X_test)
@@ -2459,7 +2490,7 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
         ### Save model if output path is given ###
         if output is not None:
             misclassified = list({metadata_test[i][-1] for i in range(len(X_test)) if y_test[i] != y_pred[i]})
-            save_model(outputModels, m, clf_ovr)
+            save_model(outputModels, m, clf_ovr, feature_version)
             paths = {o._dataset for o in misclassified}
             for p in paths:
                 _misclassified = []
@@ -2687,7 +2718,7 @@ def main():
     exitpoint_metrics_parser.add_argument("--mse", default=0.5, type=float, help="Mean squared error threshold for KMeans search. Default: 0.5")
     exitpoint_metrics_parser.add_argument("--models", nargs="+", default=["SVM", "KNN", "DT"], help="Models to use for classification. Default: SVM, KNN, DT")
     exitpoint_metrics_parser.add_argument("--background", help="Background image for plots.")
-    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", choices=["1", "1SG", "7", "7SG", "8", "8SG"], help="Feature Vectors version number. Default: 1")
+    exitpoint_metrics_parser.add_argument("--feature-version", type=str, default="1", choices=["1", "1SG", "7", "7x0.5", "7x2", "7SG", "8", "8SG"], help="Feature Vectors version number. Default: 1")
     exitpoint_metrics_parser.set_defaults(func=exitpoint_metric_module)
 
     args = argparser.parse_args()
