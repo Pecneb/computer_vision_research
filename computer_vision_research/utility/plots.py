@@ -4,9 +4,6 @@ from pathlib import Path
 from typing import List
 
 from . import databaseLoader
-from computer_vision_research.dataManagementClasses import (
-    TrackedObject
-)
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
@@ -46,7 +43,7 @@ def makeColormap(path2db):
                 colormap[j] = colors[i]
     return colormap
 
-def plot_misclassified(misclassifiedTracks: List[TrackedObject], output: str = None):
+def plot_misclassified(misclassifiedTracks: List, output: str = None):
     """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
 
     Args:
