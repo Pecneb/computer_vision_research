@@ -341,7 +341,7 @@ class TrackedObject():
                         self.history[n].X, self.history[n].Y])
     """
     
-    def feature_v7(self, history_size: int=30) -> Optional[np.ndarray]:
+    def feature_v7(self, history_size: int=30, weights: Optional[np.ndarray]=None) -> Optional[np.ndarray]:
         """Extract feature version 7 from history.
 
         Parameters
@@ -358,10 +358,13 @@ class TrackedObject():
             return None
         return FeatureVector._7(
             x=self.history_X[-history_size:], 
-            y=self.history_Y[-history_size:]
+            y=self.history_Y[-history_size:],
+            vx=self.history_VX_calculated[-history_size:],
+            vy=self.history_VY_calculated[-history_size:],
+            weights=weights,
         )
     
-    def feature_v7_SG(self, history_size: int=30, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+    def feature_v7_SG(self, history_size: int=30, weights: np.ndarray=None, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
         """Extract feature version 7SG from history.
 
         Parameters
@@ -383,6 +386,7 @@ class TrackedObject():
         return FeatureVector._7_SG(
             x=self.history_X[-history_size:], 
             y=self.history_Y[-history_size:],
+            weights=weights,
             window_length=window_length,
             polyorder=polyorder
         )
