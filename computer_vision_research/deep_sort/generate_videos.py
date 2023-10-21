@@ -1,6 +1,7 @@
 # vim: expandtab:ts=4:sw=4
-import os
 import argparse
+import os
+
 import show_results
 
 

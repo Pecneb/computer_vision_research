@@ -17,13 +17,13 @@
 
     Contact email: ecneb2000@gmail.com
 """
-import sqlite3
-from sqlite3 import Error
 import os
+import sqlite3
+from pathlib import Path
+from sqlite3 import Error
 from string import ascii_uppercase
+
 import numpy
-from pathlib import Path
-from pathlib import Path
 
 INSERT_METADATA = """INSERT INTO metadata (historyDepth, futureDepth, yoloVersion, device, imgsize, stride, confidence_threshold, iou_threshold, k_velocity, k_acceleration)
                     VALUES(?,?,?,?,?,?,?,?,?,?)"""

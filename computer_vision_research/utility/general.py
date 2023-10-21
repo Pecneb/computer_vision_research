@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 
 def checkDir(path2db):
     """Check for dir of given database, to be able to save plots.

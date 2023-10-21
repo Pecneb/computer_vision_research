@@ -27,7 +27,7 @@ from typing import List
 
 ### Local ###
 import databaseLoader as databaseLoader
-import dataManagementClasses as dataManagementClasses
+import computer_vision_research.utility.dataManagementClasses as dataManagementClasses
 import joblib
 ### Third Party ###
 import matplotlib.pyplot as plt

@@ -17,8 +17,9 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from .databaseLogger import getConnection, closeConnection
 from sqlite3 import Error
+
+from .databaseLogger import closeConnection, getConnection
 
 LOAD_OBJECTS_SCRIPT = """SELECT * FROM objects"""
 

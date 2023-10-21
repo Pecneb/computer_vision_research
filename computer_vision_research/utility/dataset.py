@@ -1,14 +1,17 @@
 import logging
 import time
-import numpy as np
-import tqdm
-import joblib
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
 from typing import List
 
+import joblib
+import numpy as np
+import tqdm
+from .dataManagementClasses import (Detection, TrackedObject, detectionFactory,
+                                   trackedObjectFactory)
+
 from . import databaseLoader
-from dataManagementClasses import trackedObjectFactory, detectionFactory, TrackedObject, Detection
+
 
 def findEnterAndExitPoints(path2db: str):
     """Extracting only the first and the last detections of tracked objects.
@@ -136,7 +139,7 @@ def tracks2joblib(path2db: str, n_jobs=18):
     print('Saving: ', savepath)
     joblib.dump(tracks, savepath)
 
-def load_dataset(path2dataset: str or Path or list[str]):
+def load_dataset(path2dataset: str or Path or List[str]):
     """Load dataset from either a joblib file or a database file.
     If dataset path is a directory load all joblib files from the directory.
     dict['track': TrackedObject, 'class': label].

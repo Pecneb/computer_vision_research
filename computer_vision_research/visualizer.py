@@ -27,7 +27,7 @@ import numpy as np
 import tqdm
 from classifier import OneVSRestClassifierExtended
 from clustering import calc_cluster_centers
-from dataManagementClasses import Detection, TrackedObject
+from computer_vision_research.utility.dataManagementClasses import Detection, TrackedObject
 from deepsortTracking import getTracker, initTrackerMetric, updateHistory
 ### Local ###
 from detector import getTargets

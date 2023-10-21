@@ -1,9 +1,11 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import List
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from . import databaseLoader
+
 
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)

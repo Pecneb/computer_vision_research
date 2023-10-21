@@ -1,7 +1,9 @@
 import os
-import joblib
 from typing import Optional
+
+import joblib
 from classifier import OneVSRestClassifierExtended
+
 
 def save_model(savedir: str, classifier_type: str, model: OneVSRestClassifierExtended, version: Optional[str]=None) -> bool:
     """Save ML Model.

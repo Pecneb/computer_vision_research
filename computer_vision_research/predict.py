@@ -19,7 +19,7 @@
 """
 import cv2 as cv
 import numpy as np
-from dataManagementClasses import TrackedObject
+from computer_vision_research.utility.dataManagementClasses import TrackedObject
 from sklearn import linear_model
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures, SplineTransformer

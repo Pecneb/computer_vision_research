@@ -1,6 +1,8 @@
 import logging
+
 import numpy as np
 import tqdm
+
 
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     """Calculate euclidean distance of 2D vectors.

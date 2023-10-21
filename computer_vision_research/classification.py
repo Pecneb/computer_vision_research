@@ -44,9 +44,9 @@ import numpy as np
 import tqdm
 from clustering import (calc_cluster_centers, make_4D_feature_vectors,
                         make_6D_feature_vectors)
-from dataManagementClasses import (TrackedObject,
+from computer_vision_research.utility.dataManagementClasses import (TrackedObject,
                                    insert_weights_into_feature_vector)
-from featurevector import FeatureVector
+from computer_vision_research.utility.featurevector import FeatureVector
 from utility.dataset import (load_dataset,
                              preprocess_database_data_multiprocessed,
                              save_trajectories)

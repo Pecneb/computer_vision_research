@@ -33,7 +33,7 @@ matplotlib.use('Agg')
 
 ### Local ###
 import utility.databaseLoader as databaseLoader
-from dataManagementClasses import Detection, TrackedObject
+from computer_vision_research.utility.dataManagementClasses import Detection, TrackedObject
 from utility.dataset import (detectionParser, load_dataset,
                              loadDatasetsFromDirectory,
                              preprocess_database_data_multiprocessed,

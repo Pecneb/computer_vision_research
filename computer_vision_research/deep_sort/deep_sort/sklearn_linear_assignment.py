@@ -10,9 +10,9 @@ Hungarian algorithm (also known as Munkres algorithm).
 # Author: Brian M. Clapper, Gael Varoquaux
 # LICENSE: BSD
 
-import numpy as np
 import warnings
 
+import numpy as np
 
 # Deprecation warning for module
 warnings.warn(

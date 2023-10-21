@@ -2,12 +2,10 @@
 import argparse
 
 import cv2
-import numpy as np
-
 import deep_sort_app
-from deep_sort.iou_matching import iou
+import numpy as np
 from application_util import visualization
-
+from deep_sort.iou_matching import iou
 
 DEFAULT_UPDATE_MS = 20
 

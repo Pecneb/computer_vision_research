@@ -17,7 +17,7 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from dataManagementClasses import TrackedObject
+from computer_vision_research.utility.dataManagementClasses import TrackedObject
 
 
 def calcDist(prev, act):
