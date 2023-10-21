@@ -18,34 +18,31 @@
     Contact email: ecneb2000@gmail.com
 """
 
+import os
+from pathlib import Path
+from typing import List, Tuple
+
 ### Third Party ###
 import matplotlib
 import numpy as np
-import os 
 import tqdm
 from matplotlib import pyplot as plt
-from pathlib import Path
 from sklearn.cluster import KMeans
-from typing import List, Tuple
+
 matplotlib.use('Agg')
 
 ### Local ###
 import utility.databaseLoader as databaseLoader
 from dataManagementClasses import Detection, TrackedObject
-from utility.dataset import (
-    detectionParser,
-    trackedObjectFactory,
-    load_dataset,
-    loadDatasetsFromDirectory,
-    preprocess_database_data_multiprocessed
-)
+from utility.dataset import (detectionParser, load_dataset,
+                             loadDatasetsFromDirectory,
+                             preprocess_database_data_multiprocessed,
+                             trackedObjectFactory)
 from utility.preprocessing import (
+    euclidean_distance, filter_by_class,
     filter_out_false_positive_detections_by_enter_exit_distance,
-    filter_trajectories,
-    filter_by_class,
-    shuffle_data,
-    euclidean_distance
-)
+    filter_trajectories, shuffle_data)
+
 
 def makeFeatureVectors_Nx2(trackedObjects: List) -> np.ndarray:
     """Create 2D feature vectors from tracks.
@@ -1408,8 +1405,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     Returns:
         tuple(classifier, int, float): Returns the classifier with the best number of clusters, the number of clusters and the mean squared error.
     """
-    from sklearn.cluster import KMeans
-    from sklearn.cluster import OPTICS
+    from sklearn.cluster import OPTICS, KMeans
     trackedObjects = load_dataset(database)
     if not preprocessed:
         trackedObjects = filter_trajectories(trackedObjects, threshold, detectionDistanceFiltering=False)
@@ -1528,8 +1524,8 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
         path2db (str): Path to database file. 
         threshold (float): Threshold value for filtering algorithm. 
     """
-    from yellowbrick.cluster.elbow import kelbow_visualizer 
     from sklearn.cluster import KMeans
+    from yellowbrick.cluster.elbow import kelbow_visualizer
     tracks = preprocess_database_data_multiprocessed(path2db, n_jobs=n_jobs)
     filteredTracks = filter_trajectories(tracks, threshold)
     X = make_4D_feature_vectors(filteredTracks)
@@ -1537,7 +1533,7 @@ def elbow_on_kmeans(path2db: str, threshold: float, n_jobs=None):
     kelbow_visualizer(KMeans(), X, k=(2,10), metric='calinski_harabasz')
 
 def aoi_clutsering_search_birch(tracks_path, outdir, threshold, n_jobs=18, dimensions="4D", **estkwargs):
-    from sklearn.cluster import Birch, OPTICS, KMeans
+    from sklearn.cluster import OPTICS, Birch, KMeans
     from visualizer import aoiextraction
     matplotlib.use('Agg')
     tracks = load_dataset(tracks_path)

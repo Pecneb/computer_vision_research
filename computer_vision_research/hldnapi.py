@@ -19,6 +19,7 @@
 """
 
 from ctypes import *
+
 import cv2 as cv
 import darknet
 

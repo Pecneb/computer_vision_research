@@ -1,9 +1,10 @@
-import numpy as np
-from typing import List, Tuple, Optional
-from scipy.signal import savgol_filter
-from icecream import ic
+from typing import List, Optional, Tuple
 
+import numpy as np
 import tqdm
+from icecream import ic
+from scipy.signal import savgol_filter
+
 
 class FeatureVector(object):
     """Class representing a feature vector.

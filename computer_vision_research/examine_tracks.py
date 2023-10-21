@@ -1,17 +1,17 @@
 ### Third Party ###
+import os
 from argparse import ArgumentParser
+
 import cv2
 import numpy as np
+from classification import make_feature_vectors_version_one
+from clustering import calc_cluster_centers, upscale_cluster_centers
+from dataManagementClasses import Detection, TrackedObject
 from icecream import ic
-import os
-
 ### Local ###
 from utility.dataset import load_dataset
 from utility.models import load_model
-from dataManagementClasses import TrackedObject, Detection
-from clustering import calc_cluster_centers, upscale_cluster_centers
-from visualizer import draw_prediction, draw_clusters, draw_prediction_line
-from classification import make_feature_vectors_version_one
+from visualizer import draw_clusters, draw_prediction, draw_prediction_line
 
 DEBUG = True if os.getenv("DEBUG") else False
 if not DEBUG:

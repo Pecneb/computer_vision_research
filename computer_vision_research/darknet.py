@@ -8,11 +8,13 @@ Directly viewing or returning bounding-boxed images requires scikit-image to be 
 Use pip3 instead of pip on some systems to be sure to install modules for python3
 """
 
-from ctypes import *
 import math
-import random
 import os
+import random
+from ctypes import *
+
 import numpy as np
+
 
 class BOX(Structure):
     _fields_ = [("x", c_float),

@@ -17,17 +17,16 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from deep_sort.deep_sort import nn_matching
-from deep_sort.deep_sort.tracker import Tracker
-from deep_sort.deep_sort.detection import Detection
 import sqlite3
 
-from dataManagementClasses import (
-    Detection as darknetDetection,
-    TrackedObject
-)
-import utility.databaseLogger as databaseLogger
 import utility.databaseLoader as databaseLoader
+import utility.databaseLogger as databaseLogger
+from dataManagementClasses import Detection as darknetDetection
+from dataManagementClasses import TrackedObject
+from deep_sort.deep_sort import nn_matching
+from deep_sort.deep_sort.detection import Detection
+from deep_sort.deep_sort.tracker import Tracker
+
 
 def initTrackerMetric(max_cosine_distance, nn_budget, metric="cosine"):
     """DeepSort metric factory

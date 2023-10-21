@@ -18,11 +18,12 @@
     Contact email: ecneb2000@gmail.com
 """
 
-import numpy as np
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Union
 
+import numpy as np
 from featurevector import FeatureVector
+
 
 @dataclass
 class Detection:
@@ -117,8 +118,6 @@ class TrackedObject():
     AY : float
         the acceleration of dimension Y calculated from the history_VY_calculated numpy array
 
-    Returns:
-        _type_: _description_
     """
     objID: int
     label: int = field(init=False)
@@ -146,13 +145,16 @@ class TrackedObject():
     _dataset: str = field(init=False)
 
     def __init__(self, id: int, first: Detection, max_age: int =30):
-        """Constructor method for TrackedObject class.
+        """Constructor of the TrackedObject class.
 
-        Args:
-            id (int): Unique identification number of the object. 
-            first (Detection): First detection of the object.
-            max_age (int, optional): The maximum frame number an object
-                can be tracked. Defaults to 30.
+        Parameters
+        ----------
+        id : int
+            Unique identification number of the object.
+        first : Detection
+            First detection of the object.
+        max_age : int, optional
+            Maximum number of frames without detection, by default 30
         """
         self.objID = id
         self.history = [first]
@@ -225,13 +227,19 @@ class TrackedObject():
     def upscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080) -> np.ndarray:
         """Rescale normalized coordinates with the given frame sizes.
 
-        Args:
-            featureVector (np.ndarray): Feature vector of the track.
-            framewidth/ratio (int): Width of the video frame. 
-            frameheight (int): Height of the video frame. 
+        Parameters
+        ----------
+        featureVector : ndarray
+            Feature vector of the track
+        framewidth : int, optional
+            Frame width, by default 1920
+        frameheight : int, optional
+            Frame height, by default 1080
 
-        Returns:
-            np.ndarray: upscaled feature vector
+        Returns
+        -------
+        ndarray
+            Upscaled feature vector
         """
         if featureVector is None:
             return None
@@ -245,30 +253,26 @@ class TrackedObject():
                 ret_featureVector = np.append(ret_featureVector, [frameheight*featureVector[i]])
         return ret_featureVector
 
-        """
-        if feature_v3:
-            return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], 
-                            framewidth/ratio*featureVector[2], frameheight*featureVector[3], 
-                            framewidth/ratio*featureVector[4], frameheight*featureVector[5]])
-        return np.array([framewidth/ratio*featureVector[0], frameheight*featureVector[1], framewidth/ratio*featureVector[2],
-                        frameheight*featureVector[3], framewidth/ratio*featureVector[4], frameheight*featureVector[5],
-                        framewidth/ratio*featureVector[6], frameheight*featureVector[7], framewidth/ratio*featureVector[8],
-                        frameheight*featureVector[9]])
-
-        """
-
     @staticmethod
     def downscale_feature(featureVector: np.ndarray, framewidth: int = 1920, frameheight: int = 1080) -> np.ndarray:
-        """Rescale normalized coordinates with the given frame sizes.
+        """Normalize coordinates with the given frame sizes.
+        Normalization is done by dividing the coordinates with the frame sizes,
+        but the X coordinates are divided with the ratio of the frame width and height.
 
-        Args:
-            featureVector (np.ndarray): Feature vector of the track.
-            framewidth/ratio (int): Width of the video frame. 
-            frameheight (int): Height of the video frame. 
+        Parameters
+        ----------
+        featureVector : ndarray
+            Feature vector of the track
+        framewidth : int, optional
+            Frame width, by default 1920
+        frameheight : int, optional
+            Frame height, by default 1080
 
-        Returns:
-            np.ndarray: upscaled feature vector
-        """
+        Returns
+        -------
+        ndarray
+            Normalized feature vector
+        """        
         if featureVector is None:
             return None
         ratio = framewidth / frameheight
@@ -319,11 +323,14 @@ class TrackedObject():
             return None
         return FeatureVector._1_SG(self.history, window_length=window_length, polyorder=polyorder)
     
-    def feature_v3_v4(self):
-        """Return feature vector of track.
-        A simple feature vector consisting,
-        if the first, middle and last detection's X and Y coordinates.
-        """
+    def feature_v3(self) -> np.ndarray:
+        """Return version 3 feature vector.
+
+        Returns
+        -------
+        ndarray 
+            Feature vector version 3
+        """         
         n = len(self.history)-1
         if n < 3:
             return None
@@ -331,15 +338,14 @@ class TrackedObject():
                         self.history[n//2].X, self.history[n//2].Y,
                         self.history[n].X, self.history[n].Y])
 
-    """This is the same as the v3 feature vector.
-    def feature_v4(self):
-        n = len(self.history)-1
-        if n < 3:
-            return None
-        return np.array([self.history[0].X, self.history[0].Y, 
-                        self.history[n//2].X, self.history[n//2].Y, 
-                        self.history[n].X, self.history[n].Y])
-    """
+    # This is the same as the v3 feature vector.
+    # def feature_v4(self):
+    #     n = len(self.history)-1
+    #     if n < 3:
+    #         return None
+    #     return np.array([self.history[0].X, self.history[0].Y, 
+    #                     self.history[n//2].X, self.history[n//2].Y, 
+    #                     self.history[n].X, self.history[n].Y])
     
     def feature_v7(self, history_size: int=30, weights: Optional[np.ndarray]=None) -> Optional[np.ndarray]:
         """Extract feature version 7 from history.
@@ -483,6 +489,7 @@ class TrackedObject():
     def update_velocity(self, k: int = 10):
         """Calculate velocity from X,Y coordinates.
         """
+        raise DeprecationWarning("This method is deprecated!")
         if self.history_X.shape[0] < k:
             self.history_VX_calculated = np.append(self.history_VX_calculated, [0]) 
             self.history_VY_calculated = np.append(self.history_VY_calculated, [0]) 
@@ -501,6 +508,7 @@ class TrackedObject():
     def update_accel(self, k: int = 2):
         """Calculate velocity from X,Y coordinates.
         """
+        raise DeprecationWarning("This method is deprecated!")
         if self.history_VX_calculated.shape[0] < k:
             self.history_AX_calculated = np.append(self.history_AX_calculated, [0]) 
             self.history_AY_calculated = np.append(self.history_AY_calculated, [0]) 
@@ -515,19 +523,22 @@ class TrackedObject():
             self.history_AX_calculated = np.append(self.history_AX_calculated, [dvx]) 
             self.history_AY_calculated = np.append(self.history_AY_calculated, [dvy])  
 
-    def update(self, detection=None, mean=None, k_velocity=10, k_acceleration=2, historyDepth = 30):
-        """Update tracking.
+    def update(self, detection: Detection=None, mean=None): #, k_velocity=10, k_acceleration=2):
+        """Update the tracked object state with new detection.
 
-        Args:
-            detection (Detection, optional): historyClass Detecton object. If none, increment time_since_update. Defaults to None.
-            features (list[int], optional): x, y, a, h, vx, vy, va, h --> coordinates, aspect ratio, height and their velocities. Defaults to None.
-        """
-        if detection is not None and mean is not None:
+        Parameters
+        ----------
+        detection : Detection, optional
+            New Detection from yolo, by default None
+        mean : List, optional
+            Object values calculated by Kalman filter, by default None
+        """         
+        if detection is not None:
             self.history.append(detection)
             self.history_X = np.append(self.history_X, [detection.X])
             self.history_Y = np.append(self.history_Y, [detection.Y])
-            self.update_velocity(k=k_velocity)
-            self.update_accel(k=k_acceleration)
+            # self.update_velocity(k=k_velocity)
+            # self.update_accel(k=k_acceleration)
             self.mean = mean 
             self.X = detection.X 
             self.Y = detection.Y

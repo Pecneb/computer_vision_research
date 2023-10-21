@@ -1,29 +1,22 @@
 ### System ###
+### Third Pary ###
+import argparse
 import logging
 from pathlib import Path
 
-### Third Pary ###
-import argparse
 import cv2
 import numpy as np
+from clustering import make_4D_feature_vectors, make_6D_feature_vectors
+from dataManagementClasses import TrackedObject
 from joblib import dump
 from tqdm import tqdm
-
 ### Local ###
-from utility.dataset import (
-    tracks2joblib,
-    mergeDatasets,
-    downscale_TrackedObjects,
-    load_dataset,
-    preprocess_database_data_multiprocessed
-)
+from utility.dataset import (downscale_TrackedObjects, load_dataset,
+                             mergeDatasets,
+                             preprocess_database_data_multiprocessed,
+                             tracks2joblib)
 from utility.general import diffmap
 from utility.preprocessing import filter_by_class, filter_trajectories
-from dataManagementClasses import TrackedObject
-from clustering import (
-    make_4D_feature_vectors,
-    make_6D_feature_vectors
-)
 
 logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
@@ -75,7 +68,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
     Returns:
         _type_: _description_
     """
-    from clustering import clustering_on_feature_vectors 
+    from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
     filext = path2tracks.split('/')[-1].split('.')[-1]
     

@@ -17,54 +17,44 @@
 
     Contact email: ecneb2000@gmail.com
 """
+import os
 ### System ###
 import time
-import os
-from datetime import date 
+from datetime import date
 from pathlib import Path
 from typing import List, Tuple
 
+import icecream
+import joblib
+import matplotlib.pyplot as plt
+import numpy as np
 ### Third Party ###
 import pandas as pd
-import joblib
-import numpy as np
-import matplotlib.pyplot as plt
-import icecream
-from tqdm import tqdm
+from dotenv import load_dotenv
 from icecream import ic
 from scipy.signal import savgol_filter
-from dotenv import load_dotenv
+from tqdm import tqdm
+
 icecream.install()
 load_dotenv()
 
 np.seterr(divide='ignore', invalid='ignore')
 
-### Local ###
-from utility.models import (
-   load_model,
-   save_model 
-)
-from utility.dataset import (
-    load_dataset,
-    save_trajectories,
-    preprocess_database_data_multiprocessed
-)
-from utility.general import (
-    strfy_dict_params
-)
-from utility.preprocessing import (
-    filter_trajectories,
-    filter_by_class,
-)
-from utility.training import (
-    iter_minibatches
-)
-from clustering import make_4D_feature_vectors, make_6D_feature_vectors, calc_cluster_centers
-from dataManagementClasses import insert_weights_into_feature_vector, TrackedObject
-from featurevector import FeatureVector
-
 import numpy as np
 import tqdm
+from clustering import (calc_cluster_centers, make_4D_feature_vectors,
+                        make_6D_feature_vectors)
+from dataManagementClasses import (TrackedObject,
+                                   insert_weights_into_feature_vector)
+from featurevector import FeatureVector
+from utility.dataset import (load_dataset,
+                             preprocess_database_data_multiprocessed,
+                             save_trajectories)
+from utility.general import strfy_dict_params
+### Local ###
+from utility.models import load_model, save_model
+from utility.preprocessing import filter_by_class, filter_trajectories
+from utility.training import iter_minibatches
 
 
 def make_features_for_classification(trackedObjects: List, k: int, labels: np.ndarray):
@@ -857,10 +847,10 @@ def VotingClassification(X: np.ndarray, y: np.ndarray):
         skelarn classifier: Voting model 
     """
     from sklearn.ensemble import VotingClassifier
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.linear_model import SGDClassifier
     from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neural_network import MLPClassifier
     clf1 = KNeighborsClassifier(n_neighbors=15, weights='distance')
     clf2 = SGDClassifier()
@@ -1100,10 +1090,10 @@ def CalibratedClassificationWorker(path2db: str, **argv):
         path2db (str): Path to database file. 
     """
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.linear_model import SGDClassifier
     from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
     X_train, y_train, _, X_valid, y_valid, _, _ = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
@@ -1125,13 +1115,13 @@ def CalibratedClassificationWorker(path2db: str, **argv):
         ValidateClassification(calibrated, X_valid, y_valid)
 
 def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
+    from classifier import OneVSRestClassifierExtended
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.linear_model import SGDClassifier
     from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid, tracks = [], [], [], [], [], [], []
@@ -1249,13 +1239,13 @@ def BinaryClassificationWorkerTrain(path2db: str, path2model = None, **argv):
     print(table2.aggregate(np.average).to_markdown())
 
 def train_binary_classifiers(path2dataset: str, outdir: str, **argv):
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
+    from classifier import OneVSRestClassifierExtended
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.linear_model import SGDClassifier
     from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
-    from classifier import OneVSRestClassifierExtended
     from sklearn.tree import DecisionTreeClassifier
     from visualizer import aoiextraction
 
@@ -1368,10 +1358,10 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
     print("Exiting...")
     exit(1)
     from classifier import BinaryClassifier
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.linear_model import SGDClassifier
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.linear_model import SGDClassifier
     from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.neural_network import MLPClassifier
     from sklearn.svm import SVC
     X_train, y_train, X_valid, y_valid, tracks = data_preprocessing_for_classifier(path2db, min_samples=argv['min_samples'], 
@@ -1401,8 +1391,8 @@ def BinaryClassificationTrain(classifier: str, path2db: str, **argv):
 
 def BinaryDecisionTreeClassification(path2dataset: str, min_samples: int, max_eps: float, xi: float, min_cluster_size: int, n_jobs: int, from_half=False):
     from classifier import BinaryClassifier
-    from sklearn.tree import DecisionTreeClassifier
     from sklearn import tree
+    from sklearn.tree import DecisionTreeClassifier
 
     X_train, y_train, metadata_train, X_valid, y_valid, metadata_valid = [], [], [], [] , [], [] 
 
@@ -1605,18 +1595,20 @@ def cross_validate(path2dataset: str, outputPath: str = None, train_ratio=0.75, 
     Returns:
         tuple: cross validation results in pandas datastructure 
     """
+    from classifier import OneVSRestClassifierExtended
     from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.svm import SVC
     from sklearn.gaussian_process import GaussianProcessClassifier
-    from sklearn.naive_bayes import GaussianNB
-    from sklearn.neural_network import MLPClassifier
     from sklearn.linear_model import SGDClassifier
+    from sklearn.metrics import (balanced_accuracy_score, make_scorer,
+                                 top_k_accuracy_score)
+    from sklearn.model_selection import (cross_val_score, cross_validate,
+                                         train_test_split)
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
     from sklearn.tree import DecisionTreeClassifier
-    from classifier import OneVSRestClassifierExtended
-    from sklearn.model_selection import cross_val_score, cross_validate, train_test_split
-    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
     tracks = load_dataset(path2dataset)
@@ -1918,18 +1910,20 @@ def cross_validate_multiclass(path2dataset: str, outputPath: str = None, train_r
     Returns:
         tuple: cross validation results in pandas datastructure 
     """
+    from classifier import OneVSRestClassifierExtended
     from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.svm import SVC
     from sklearn.gaussian_process import GaussianProcessClassifier
-    from sklearn.naive_bayes import GaussianNB
-    from sklearn.neural_network import MLPClassifier
     from sklearn.linear_model import SGDClassifier
+    from sklearn.metrics import (balanced_accuracy_score, make_scorer,
+                                 top_k_accuracy_score)
+    from sklearn.model_selection import (cross_val_score, cross_validate,
+                                         train_test_split)
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.svm import SVC
     from sklearn.tree import DecisionTreeClassifier
-    from classifier import OneVSRestClassifierExtended
-    from sklearn.model_selection import cross_val_score, cross_validate, train_test_split
-    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
     from visualizer import aoiextraction
 
     tracks = load_dataset(path2dataset)
@@ -2219,17 +2213,15 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
         n_jobs (int): Number of jobs to run in parallel. 
         mse_threshold (float, optional): MSE threshold for KMeans search. Defaults to 0.5.
     """
-    from sklearn.cluster import OPTICS, Birch
-    from sklearn.svm import SVC
-    from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.tree import DecisionTreeClassifier
-    from sklearn.model_selection import RandomizedSearchCV, train_test_split
-    from sklearn.metrics import top_k_accuracy_score, make_scorer, balanced_accuracy_score
-    from clustering import (
-        clustering_on_feature_vectors,
-        kmeans_mse_clustering
-    )
     from classifier import OneVSRestClassifierExtended
+    from clustering import clustering_on_feature_vectors, kmeans_mse_clustering
+    from sklearn.cluster import OPTICS, Birch
+    from sklearn.metrics import (balanced_accuracy_score, make_scorer,
+                                 top_k_accuracy_score)
+    from sklearn.model_selection import RandomizedSearchCV, train_test_split
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.svm import SVC
+    from sklearn.tree import DecisionTreeClassifier
 
     # create output directories if output is given
     if output is not None:

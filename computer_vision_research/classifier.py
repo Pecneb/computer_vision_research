@@ -17,18 +17,16 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from joblib import Parallel, delayed
 import numpy as np
-from sklearn.base import ClassifierMixin, BaseEstimator
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.utils import validation
+from joblib import Parallel, delayed
 from sklearn import multiclass
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.multiclass import check_is_fitted
-from sklearn.preprocessing import StandardScaler
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.multiclass import (OneVsRestClassifier, _partial_fit_binary,
+                                check_is_fitted)
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
+from sklearn.utils import validation
 from sklearn.utils.multiclass import _check_partial_fit_first_call
-from sklearn.multiclass import _partial_fit_binary
-from sklearn.base import clone
+
 
 class BinaryClassifier(ClassifierMixin, BaseEstimator):
     """Base Binary Classifier

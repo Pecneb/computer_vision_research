@@ -21,41 +21,25 @@
 def warn(*arg, **args):
     pass
 import os
+import warnings
+
 import tqdm
 from joblib import dump
-import warnings
+
 warnings.warn = warn
-import cv2 as cv
 import argparse
 import time
 from pathlib import Path
 
-
-from yolov7api import (
-    COLORS,
-    IMGSZ,
-    STRIDE,
-    CONF_THRES,
-    IOU_THRES,
-    detect
-)
-from masker import masker
-from deepsortTracking import (
-    initTrackerMetric, 
-    getTracker, 
-    updateHistory
-)
+import cv2 as cv
 from dataManagementClasses import Detection
+from deepsortTracking import getTracker, initTrackerMetric, updateHistory
+from masker import masker
+from utility.databaseLogger import (closeConnection, getConnection,
+                                    getLatestFrame, init_db, logBufferSpeedy,
+                                    logMetaData, logRegression)
 from utility.dataset import downscale_TrackedObjects, load_dataset
-from utility.databaseLogger import (
-    init_db,
-    getConnection,
-    logMetaData,
-    logRegression,
-    getLatestFrame,
-    logBufferSpeedy,
-    closeConnection
-)
+from yolov7api import COLORS, CONF_THRES, IMGSZ, IOU_THRES, STRIDE, detect
 
 VIDEO_EXTENSIONS = [".mp4", ".avi", ".mkv", ".webm"]
 
@@ -188,9 +172,6 @@ def generateOutputName(input, outdir):
 def getDirectoryEntries(dirpath):
     path = Path(dirpath)
     inputs = []
-    #for p in path.glob("*.mp4"):
-    #    inputs.append(str(p))
-    #    print(p)
     for i in path.iterdir():
         if i.suffix in VIDEO_EXTENSIONS:
             inputs.append(str(i))

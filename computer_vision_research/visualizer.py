@@ -18,22 +18,23 @@
     Contact email: ecneb2000@gmail.com
 """
 
-### Third Party ###
-import cv2 as cv
 import argparse
-import tqdm
-import numpy as np
 from typing import List, Tuple
 
+### Third Party ###
+import cv2 as cv
+import numpy as np
+import tqdm
+from classifier import OneVSRestClassifierExtended
+from clustering import calc_cluster_centers
+from dataManagementClasses import Detection, TrackedObject
+from deepsortTracking import getTracker, initTrackerMetric, updateHistory
 ### Local ###
 from detector import getTargets
 from masker import masker
-from classifier import OneVSRestClassifierExtended
-from dataManagementClasses import Detection, TrackedObject
-from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from clustering import calc_cluster_centers
-from utility.models import load_model
 from utility.dataset import load_dataset
+from utility.models import load_model
+
 
 def parseArgs():
     """Handle command line arguments.
@@ -241,7 +242,7 @@ def draw_prediction_line(image:np.ndarray, cluster_centroids_upscaled: np.ndarra
 def main():
     args = parseArgs()
 
-    from yolov7api import detect, COLORS
+    from yolov7api import COLORS, detect
 
     cap = cv.VideoCapture(args.video)
 

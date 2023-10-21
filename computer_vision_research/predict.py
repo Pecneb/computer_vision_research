@@ -17,13 +17,13 @@
 
     Contact email: ecneb2000@gmail.com
 """
-import numpy as np
 import cv2 as cv
-from sklearn import linear_model
-from sklearn.preprocessing import PolynomialFeatures, SplineTransformer
-from sklearn.pipeline import make_pipeline
-
+import numpy as np
 from dataManagementClasses import TrackedObject
+from sklearn import linear_model
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures, SplineTransformer
+
 
 def movementIsRight(obj: TrackedObject):
     """Returns true, if the object moving right, false otherwise. 

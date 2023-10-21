@@ -18,15 +18,17 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
+
 import cv2 as cv
 import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
+
 # from yolov7.models.experimental import attempt_load
 from utils.datasets import letterbox
-from utils.general import check_img_size, non_max_suppression, apply_classifier, \
-    scale_coords, xyxy2xywh
-from utils.torch_utils import select_device, load_classifier
+from utils.general import (apply_classifier, check_img_size,
+                           non_max_suppression, scale_coords, xyxy2xywh)
+from utils.torch_utils import load_classifier, select_device
 
 CONFIG = "yolov7/cfg/deploy/yolov7.yaml" #"yolov7/cfg/deploy/yolov7.yaml"
 WEIGHTS = "yolov7/yolov7.pt" #"yolov7/yolov7.pt"
@@ -41,6 +43,7 @@ CLASSES = None
 
 from GPUtil import showUtilization as gpu_usage
 from numba import cuda
+
 
 def free_gpu_cache():
     print("Initial GPU Usage")
