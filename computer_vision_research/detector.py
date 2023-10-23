@@ -32,7 +32,7 @@ import time
 from pathlib import Path
 
 import cv2 as cv
-from dataManagementClasses import Detection
+from computer_vision_research.dataManagementClasses import Detection
 from deepsortTracking import getTracker, initTrackerMetric, updateHistory
 from masker import masker
 from utility.databaseLogger import (closeConnection, getConnection,

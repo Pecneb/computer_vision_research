@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from classification import make_feature_vectors_version_one
 from clustering import calc_cluster_centers, upscale_cluster_centers
-from computer_vision_research.utility.dataManagementClasses import Detection, TrackedObject
+from computer_vision_research.dataManagementClasses import Detection, TrackedObject
 from icecream import ic
 ### Local ###
 from utility.dataset import load_dataset

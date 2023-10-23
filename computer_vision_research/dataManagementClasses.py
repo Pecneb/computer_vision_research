@@ -18,11 +18,18 @@
     Contact email: ecneb2000@gmail.com
 """
 
+import time
+import logging
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional
+from pathlib import Path
 
 import numpy as np
-from featurevector import FeatureVector
+import joblib
+import tqdm
+
+from utility.featurevector import FeatureVector
+from utility import databaseLoader
 
 
 @dataclass
@@ -650,3 +657,129 @@ def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X:
         retv = np.insert(retv, insert_idx, [X[widx], Y[widx]])
         weights_inserted += 1
     return retv
+
+def findEnterAndExitPoints(path2db: str):
+    """Extracting only the first and the last detections of tracked objects.
+
+    Args:
+        path2db (str): Path to the database file. 
+
+    Returns:
+        enterDetection, exitDetections: List of first and last detections of objects. 
+    """
+    rawDetectionData = databaseLoader.loadDetections(path2db)
+    detections = detectionParser(rawDetectionData)
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for obj in tqdm.tqdm(rawObjectData, desc="Filter out enter and exit points."):
+        tmpDets = []
+        for det in detections:
+           if det.objID == obj[0]:
+            tmpDets.append(det)
+        if len(tmpDets) > 0:
+            trackedObjects.append(trackedObjectFactory(tmpDets))
+    enterDetections = [obj.history[0] for obj in trackedObjects]
+    exitDetections = [obj.history[-1] for obj in trackedObjects]
+    return enterDetections, exitDetections 
+
+
+
+def detectionParser(rawDetectionData) -> tuple:
+    """Convert raw detection data loaded from db to class Detection and numpy arrays.
+
+    Args:
+        rawDetectionData (list): Raw values loaded from db 
+
+    Returns:
+        tuple: tuple containing detections, and all the history numpy arrays  
+    """
+    detections = []
+    history_X = np.array([])
+    history_Y = np.array([])
+    history_VX_calculated = np.array([])
+    history_VY_calculated = np.array([])
+    history_AX_calculated = np.array([])
+    history_AY_calculated = np.array([])
+    for entry in rawDetectionData:
+        detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
+        history_X = np.append(history_X, [entry[3]])
+        history_Y = np.append(history_Y, [entry[4]])
+        history_VX_calculated = np.append(history_VX_calculated, [entry[12]])
+        history_VY_calculated = np.append(history_VY_calculated, [entry[13]])
+        history_AX_calculated = np.append(history_AX_calculated, [entry[14]])
+        history_AY_calculated = np.append(history_AY_calculated, [entry[15]])
+    return (detections, history_X, history_Y, history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated)
+
+def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
+    """Takes an objID and the path 2 database, then returns a trackedObject object if detections can be assigned to the object.
+
+    Args:
+        rawObjID (int): ID of an object 
+        path2db (str): path to database 
+
+    Returns:
+        trackedObject: trackedObject object from dataManagement class, if no dets can be assigned to it, then returns False 
+    """
+    rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObjID)
+    if len(rawDets) > 0:
+        logging.debug(f"Detections loaded: {len(rawDets)} {rawDets[0]}")
+        retTO = trackedObjectFactory(detectionParser(rawDets))
+        return retTO
+    else:
+        return False
+
+def preprocess_database_data(path2db: str):
+    """Preprocessing database data (detections). Assigning detections to objects.
+
+    Args:
+        path2db (str): Path to database file. 
+
+    Returns:
+        list: list of object tracks 
+    """
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    trackedObjects = []
+    for rawObj in tqdm.tqdm(rawObjectData, desc="Loading detections of tracks."):
+        tmpDets = []
+        rawDets = databaseLoader.loadDetectionsOfObject(path2db, rawObj[0])
+        if len(rawDets) > 0:
+            tmpDets = detectionParser(rawDets)
+            trackedObjects.append(trackedObjectFactory(tmpDets))
+    return trackedObjects
+
+def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
+    """Preprocessing database data (detections). Assigning detections to objects.
+    This is the multoprocessed variant of the preprocess_database_data() func.
+
+    Args:
+        path2db (str): Path to database file. 
+
+    Returns:
+        list: list of object tracks 
+    """
+    from multiprocessing import Pool
+    rawObjectData = databaseLoader.loadObjects(path2db)
+    tracks = []
+    with Pool(processes=n_jobs) as pool:
+        print("Preprocessing started.")
+        start = time.time()
+        results = pool.starmap_async(parseRawObject2TrackedObject, [[rawObj[0], path2db] for rawObj in rawObjectData])
+        for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
+            if result:
+                tracks.append(result)
+                logging.debug(f"{len(tracks)}")
+        print(f"Detections assigned to Objects in {time.time()-start}s")
+    return tracks
+
+def tracks2joblib(path2db: str, n_jobs=18):
+    """Extract tracks from database and save them in a joblib object.
+
+    Args:
+        path2db (str): Path to database. 
+        n_jobs (int, optional): Paralell jobs to run. Defaults to 18.
+    """
+    path = Path(path2db)
+    tracks = preprocess_database_data_multiprocessed(path2db, n_jobs)
+    savepath = path.with_suffix(".joblib")
+    print('Saving: ', savepath)
+    joblib.dump(tracks, savepath)

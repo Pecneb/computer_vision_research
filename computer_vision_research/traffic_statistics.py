@@ -29,7 +29,7 @@ import numpy as np
 import seaborn as sns
 import tqdm
 from clustering import clustering_on_feature_vectors
-from computer_vision_research.utility.dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import TrackedObject
 from matplotlib import pyplot as plt
 from sklearn.cluster import OPTICS
 from utility.dataset import load_dataset

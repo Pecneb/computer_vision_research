@@ -21,8 +21,8 @@ import sqlite3
 
 import utility.databaseLoader as databaseLoader
 import utility.databaseLogger as databaseLogger
-from computer_vision_research.utility.dataManagementClasses import Detection as darknetDetection
-from computer_vision_research.utility.dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import Detection as darknetDetection
+from computer_vision_research.dataManagementClasses import TrackedObject
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection
 from deep_sort.deep_sort.tracker import Tracker

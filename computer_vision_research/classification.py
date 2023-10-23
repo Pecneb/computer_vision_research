@@ -17,18 +17,18 @@
 
     Contact email: ecneb2000@gmail.com
 """
-import os
 ### System ###
+import os
 import time
 from datetime import date
 from pathlib import Path
 from typing import List, Tuple
 
+### Third Party ###
 import icecream
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
-### Third Party ###
 import pandas as pd
 from dotenv import load_dotenv
 from icecream import ic
@@ -42,19 +42,18 @@ np.seterr(divide='ignore', invalid='ignore')
 
 import numpy as np
 import tqdm
+
+### Local ###
 from clustering import (calc_cluster_centers, make_4D_feature_vectors,
                         make_6D_feature_vectors)
-from computer_vision_research.utility.dataManagementClasses import (TrackedObject,
-                                   insert_weights_into_feature_vector)
-from computer_vision_research.utility.featurevector import FeatureVector
-from utility.dataset import (load_dataset,
-                             preprocess_database_data_multiprocessed,
-                             save_trajectories)
-from utility.general import strfy_dict_params
-### Local ###
 from utility.models import load_model, save_model
 from utility.preprocessing import filter_by_class, filter_trajectories
 from utility.training import iter_minibatches
+from dataManagementClasses import TrackedObject, insert_weights_into_feature_vector, preprocess_database_data_multiprocessed
+from utility.featurevector import FeatureVector
+from utility.dataset import (load_dataset,
+                             save_trajectories)
+from utility.general import strfy_dict_params
 
 
 def make_features_for_classification(trackedObjects: List, k: int, labels: np.ndarray):

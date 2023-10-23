@@ -8,7 +8,7 @@ from typing import Union
 import cv2
 import numpy as np
 from clustering import make_4D_feature_vectors, make_6D_feature_vectors
-from utility.dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import TrackedObject
 from joblib import dump
 from tqdm import tqdm
 ### Local ###

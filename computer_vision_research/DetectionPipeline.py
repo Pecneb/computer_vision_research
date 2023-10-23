@@ -37,8 +37,8 @@ from yolov7.utils.general import (check_img_size, check_imshow,
 from yolov7.utils.plots import plot_one_box
 from yolov7.utils.torch_utils import select_device, time_synchronized
 
-from utility.dataManagementClasses import Detection as DarknetDetection
-from utility.dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import Detection as DarknetDetection
+from computer_vision_research.dataManagementClasses import TrackedObject
 from masker import masker
 from utility.databaseLogger import logObject
 
