@@ -588,7 +588,7 @@ class TrackedObject():
             self.VY = mean[5]
             self.history[-1].VX = self.VX
             self.history[-1].VY = self.VY
-            self.updateAccel(self.VX, VX_old, self.VY, VY_old)
+            # self.updateAccel(self.VX, VX_old, self.VY, VY_old)
             self.history[-1].AX = self.AX
             self.history[-1].AY = self.AY
             self.time_since_update = 0
@@ -601,7 +601,7 @@ class TrackedObject():
         #         self.isMoving = False
         #     else:
         #         self.isMoving = True
-        if (np.abs(self.history_VX_calculated[-1]) > 0.0 or np.abs(self.history_VY_calculated[-1]) > 0.0) and len(self.history) >= 5:
+        if (np.abs(self.VX) > 0.0 or np.abs(self.VY) > 0.0) and len(self.history) >= 5:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
             self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (

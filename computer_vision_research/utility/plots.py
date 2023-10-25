@@ -10,6 +10,7 @@ from . import databaseLoader
 def savePlot(fig: plt.Figure, name: str):
     fig.savefig(name, dpi=150)
 
+
 def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
     """Convert OpenCV Y axis coordinates to numpy coordinates.
 
@@ -20,6 +21,7 @@ def cvCoord2npCoord(Y: np.ndarray) -> np.ndarray:
         np.ndarray: Y axis coordinate vector
     """
     return 1 - Y
+
 
 def makeColormap(path2db):
     """Make colormap based on number of objects logged in the database.
@@ -45,6 +47,7 @@ def makeColormap(path2db):
                 colormap[j] = colors[i]
     return colormap
 
+
 def plot_misclassified(misclassifiedTracks: List, output: str = None):
     """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
 
@@ -58,7 +61,7 @@ def plot_misclassified(misclassifiedTracks: List, output: str = None):
     Y_exit = [t.history_Y[-1] for t in misclassifiedTracks]
     X_traj = np.ravel([t.history_X[1:-1] for t in misclassifiedTracks])
     Y_traj = np.ravel([t.history_Y[1:-1] for t in misclassifiedTracks])
-    fig, ax = plt.subplots(figsize=(7,7))
+    fig, ax = plt.subplots(figsize=(7, 7))
     ax.scatter(X_enter, Y_enter, s=10, c='g')
     ax.scatter(X_exit, Y_exit, s=10, c='r')
     ax.scatter(X_traj, Y_traj, s=5, c='b')
@@ -68,6 +71,7 @@ def plot_misclassified(misclassifiedTracks: List, output: str = None):
         _output.mkdir(exist_ok=True)
         fig.savefig(fname=(_output / "misclassified.png"))
 
+
 def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str = None, background: str = None, classifier: str = "SVM"):
     """Plot misclassified trajectories. If output is given, save plot to output/plots/misclassified.png.
 
@@ -76,16 +80,19 @@ def plot_misclassified_feature_vectors(misclassifiedFV: np.ndarray, output: str 
         output (str, optional): Output directory path. Defaults to None.
         background (str, optional): Background image of plot for better visualization.
     """
-    X_mask = [False, False, False, False, False, False, True, False, False, False]
-    Y_mask = [False, False, False, False, False, False, False, True, False, False]
+    X_mask = [False, False, False, False,
+              False, False, True, False, False, False]
+    Y_mask = [False, False, False, False,
+              False, False, False, True, False, False]
     X = np.ravel([f[X_mask] for f in misclassifiedFV])
     Y = np.ravel([f[Y_mask] for f in misclassifiedFV])
-    fig, ax = plt.subplots(figsize=(7,7))
+    fig, ax = plt.subplots(figsize=(7, 7))
     if background is not None:
         I = plt.imread(fname=background)
         # I = plt.imread("/media/pecneb/4d646cbd-cce0-42c4-bdf5-b43cc196e4a1/gitclones/computer_vision_research/research_data/Bellevue_150th_Newport_24h_v2/Preprocessed/Bellevue_150th_Newport.JPG", format="jpg")
         ax.imshow(I, alpha=0.4, extent=[0, 1280, 0, 720])
-    ax.scatter((X * I.shape[1]) / (I.shape[1] / I.shape[0]), (1-Y) * I.shape[0], s=0.05, c='r')
+    ax.scatter((X * I.shape[1]) / (I.shape[1] / I.shape[0]),
+               (1-Y) * I.shape[0], s=0.05, c='r')
     ax.set_xlim(left=0, right=1280)
     ax.set_ylim(bottom=0, top=720)
     ax.grid(visible=True)

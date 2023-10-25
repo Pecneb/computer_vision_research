@@ -9,6 +9,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.cluster import OPTICS, KMeans
 
 ### Local imports ###
+from utility.featurevector import FeatureVector
 from utility.dataset import load_dataset
 from utility.models import save_model
 

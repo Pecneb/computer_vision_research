@@ -37,8 +37,8 @@ from yolov7.utils.general import (check_img_size, check_imshow,
 from yolov7.utils.plots import plot_one_box
 from yolov7.utils.torch_utils import select_device, time_synchronized
 
-from computer_vision_research.dataManagementClasses import Detection as DarknetDetection
-from computer_vision_research.dataManagementClasses import TrackedObject
+from dataManagementClasses import Detection as DarknetDetection
+from dataManagementClasses import TrackedObject
 from masker import masker
 from utility.databaseLogger import logObject
 
@@ -417,8 +417,7 @@ class DeepSORT(object):
                 if track.track_id == to.objID:
                     if track.time_since_update == 0:
                         # , k_velocity, k_acceleration)
-                        to.update(track.darknetDet, track.mean,
-                                  historyDepth=self.historyDepth)
+                        to.update(track.darknetDet, track.mean) 
                         if len(to.history) > self.historyDepth:
                             to.history.pop(0)
                     else:
@@ -455,6 +454,15 @@ class Pipeline:
         Video source path.
     _outdir : Path
         Output directory path.
+
+    Methods
+    -------
+    generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]] = None, suffix: str = ".joblib", logger: Optional[Logger] = None) -> Path
+        Generate output path name from source and output directory path.
+    filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"]) -> List[DarknetDetection]
+        Filter out detections that are not in the names list.
+    run(yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False)
+        Run detection pipeline.
     """
 
     def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
@@ -571,7 +579,7 @@ class Pipeline:
             self._logger.debug(f"Predictions: {preds}")
             new_detections = self.filter_objects(
                 new_detections=preds, frame_number=frame)
-            self._logger.debug(f"New detections: {new_detections}")
+            self._logger.debug(f"New detections: {[d.label for d in new_detections]}")
             deepSort.update_history(history=self._history, new_detections=new_detections,
                                     joblibbuffer=self._joblibbuffer, db_connection=self._database)
             if show:
@@ -585,5 +593,5 @@ if __name__ == "__main__":
         weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
     det = Pipeline(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
-                   outdir="./", database=True, joblib=True, debug=True)
-    det.run(yolo=yolo, show=True)
+                   outdir="./", database=False, joblib=False, debug=True)
+    det.run(yolo=yolo, deepSort=deepSort, show=True)

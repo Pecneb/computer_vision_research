@@ -35,6 +35,7 @@ LOAD_METADATA_SCRIPT = """SELECT * FROM metadata"""
 
 LOAD_REGRESSION_SCRIPT = """SELECT * FROM regression"""
 
+
 def loadObjects(path2db: str) -> list:
     """Load objects from database.
     A raw object entry in the database looks like this: [objID, label]
@@ -53,7 +54,7 @@ def loadObjects(path2db: str) -> list:
     except Error as e:
         print(e)
     closeConnection(conn)
-     
+
 
 def loadDetections(path2db: str) -> list:
     conn = getConnection(path2db)
@@ -65,6 +66,7 @@ def loadDetections(path2db: str) -> list:
         print(e)
     closeConnection(conn)
 
+
 def loadPredictions(path2db: str) -> list:
     conn = getConnection(path2db)
     try:
@@ -74,6 +76,7 @@ def loadPredictions(path2db: str) -> list:
     except Error as e:
         print(e)
     closeConnection(conn)
+
 
 def loadMetadata(path2db: str) -> list:
     conn = getConnection(path2db)
@@ -85,6 +88,7 @@ def loadMetadata(path2db: str) -> list:
         print(e)
     closeConnection(conn)
 
+
 def loadRegression(path2db: str) -> list:
     conn = getConnection(path2db)
     try:
@@ -94,6 +98,7 @@ def loadRegression(path2db: str) -> list:
     except Error as e:
         print(e)
     closeConnection(conn)
+
 
 def queryLastObjID(path2db) -> int:
     if type(path2db) == str:
@@ -107,6 +112,7 @@ def queryLastObjID(path2db) -> int:
     except Error as e:
         print(e)
     closeConnection(conn)
+
 
 def loadDetectionsOfObject(path2db: str, objID: int) -> list:
     conn = getConnection(path2db)
