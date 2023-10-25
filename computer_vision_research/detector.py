@@ -18,30 +18,33 @@
     Contact email: ecneb2000@gmail.com
 """
 # disable sklearn warning
-def warn(*arg, **args):
-    pass
 import os
-import warnings
-
-import tqdm
-from joblib import dump
-
-warnings.warn = warn
-import argparse
-import time
-from pathlib import Path
-
-import cv2 as cv
-from computer_vision_research.dataManagementClasses import Detection
-from deepsortTracking import getTracker, initTrackerMetric, updateHistory
-from masker import masker
+from yolov7api import COLORS, CONF_THRES, IMGSZ, IOU_THRES, STRIDE, detect
+from utility.dataset import downscale_TrackedObjects, load_dataset
 from utility.databaseLogger import (closeConnection, getConnection,
                                     getLatestFrame, init_db, logBufferSpeedy,
                                     logMetaData, logRegression)
-from utility.dataset import downscale_TrackedObjects, load_dataset
-from yolov7api import COLORS, CONF_THRES, IMGSZ, IOU_THRES, STRIDE, detect
+from masker import masker
+from deepsortTracking import getTracker, initTrackerMetric, updateHistory
+from computer_vision_research.dataManagementClasses import Detection
+import cv2 as cv
+from pathlib import Path
+import time
+import argparse
+from joblib import dump
+import tqdm
+import warnings
+
+
+def warn(*arg, **args):
+    pass
+
+
+warnings.warn = warn
+
 
 VIDEO_EXTENSIONS = [".mp4", ".avi", ".mkv", ".webm"]
+
 
 def parseArgs():
     """Function for Parsing Arguments
@@ -51,30 +54,42 @@ def parseArgs():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs='+', help="Path to video.")
-    parser.add_argument("--k_velocity", type=int, default=10, help="K value for differentiation of velocity.")
-    parser.add_argument("--k_acceleration", type=int, default=2, help="K value for differentiation of acceleration.")
-    parser.add_argument("--output", help="Path of output directory.", required=True)
-    parser.add_argument("--history", default=0, type=int, help="Length of history for regression input. WARNING: TO SAVE JOBLIB DATABASES PROPERLY THIS HAS TO BE SET REALLY HIGH (EG. 1000<HISTORY)")
-    parser.add_argument("--future", default=0, type=int, help="Length of predicted coordinate vector.")
-    parser.add_argument("--k_trainingpoints", default=0, type=int, help="The number how many coordinates from the training set should be choosen to train with.")
-    parser.add_argument("--degree", default=0, type=int, help="Degree of polynomial features used for Polynom fitting.")
+    parser.add_argument("--k_velocity", type=int, default=10,
+                        help="K value for differentiation of velocity.")
+    parser.add_argument("--k_acceleration", type=int, default=2,
+                        help="K value for differentiation of acceleration.")
+    parser.add_argument(
+        "--output", help="Path of output directory.", required=True)
+    parser.add_argument("--history", default=0, type=int,
+                        help="Length of history for regression input. WARNING: TO SAVE JOBLIB DATABASES PROPERLY THIS HAS TO BE SET REALLY HIGH (EG. 1000<HISTORY)")
+    parser.add_argument("--future", default=0, type=int,
+                        help="Length of predicted coordinate vector.")
+    parser.add_argument("--k_trainingpoints", default=0, type=int,
+                        help="The number how many coordinates from the training set should be choosen to train with.")
+    parser.add_argument("--degree", default=0, type=int,
+                        help="Degree of polynomial features used for Polynom fitting.")
     parser.add_argument("--max_cosine_distance", type=float, default=10.0,
                         help="Gating threshold for cosine distance metric (object appearance).")
     parser.add_argument("--max_iou_distance", default=0.7, type=float)
     parser.add_argument("--nn_budget", type=float, default=100,
                         help="Maximum size of the appearance descriptors gallery. If None, no budget is enforced.")
-    #parser.add_argument("--min_detection_height", type=float, default=0,
+    # parser.add_argument("--min_detection_height", type=float, default=0,
     #                    help="Threshold on the detection bounding box height. Detections with height smaller than this value are disregarded")
-    #parser.add_argument("--min_confidence", type=float, default=0.7,
+    # parser.add_argument("--min_confidence", type=float, default=0.7,
     #                    help="Detection confidence threshold. Disregard all detections that have a confidence lower than this value.")
-    #parser.add_argument("--nms_max_overlap", type=float, default=1.0,
+    # parser.add_argument("--nms_max_overlap", type=float, default=1.0,
     #                    help="Non-maxima suppression threshold: Maximum detection overlap.")
-    parser.add_argument("-d", "--device", default='cuda', help="Choose device to run neuralnet. example: cpu, cuda, 0,1,2,3...")
-    parser.add_argument("--yolov7", default=1, type=int, help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
-    parser.add_argument("--resume", "-r", action="store_true", help="Use this flag if want to resume video from last session left off.")
-    parser.add_argument("--show", action="store_true", default=False, help="Use this flag to display video while running detection, prediction on video.")
+    parser.add_argument("-d", "--device", default='cuda',
+                        help="Choose device to run neuralnet. example: cpu, cuda, 0,1,2,3...")
+    parser.add_argument("--yolov7", default=1, type=int,
+                        help="Choose which yolo model to use. Choices: yolov7 = 1, yolov4 = 0")
+    parser.add_argument("--resume", "-r", action="store_true",
+                        help="Use this flag if want to resume video from last session left off.")
+    parser.add_argument("--show", action="store_true", default=False,
+                        help="Use this flag to display video while running detection, prediction on video.")
     args = parser.parse_args()
     return args
+
 
 def printDetections(detections):
     """Function for printing out detected objects
@@ -84,7 +99,9 @@ def printDetections(detections):
     """
     for obj in detections:
         # bbox: x, y, w, h
-        print("Class: {}, Confidence: {}, Position: {}".format(obj[0], obj[1], obj[2]))
+        print("Class: {}, Confidence: {}, Position: {}".format(
+            obj[0], obj[1], obj[2]))
+
 
 def getTargets(detections, frameNum, targetNames=['car, person']):
     """Function to extract detected objects from the detections, that labels are given in the targetNames argument
@@ -100,8 +117,10 @@ def getTargets(detections, frameNum, targetNames=['car, person']):
     for label, conf, bbox in detections:
         # bbox: x, y, w, h
         if label in targetNames:
-            targets.append(Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
+            targets.append(
+                Detection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frameNum))
     return targets
+
 
 def bbox2points(bbox):
     """
@@ -114,6 +133,7 @@ def bbox2points(bbox):
     ymin = int(round(y - (h / 2)))
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
+
 
 def draw_boxes(history, image, colors, frameNumber):
     """Draw detection information to video output
@@ -130,12 +150,15 @@ def draw_boxes(history, image, colors, frameNumber):
     for detections in history:
         detection = detections.history[-1]
         if detection.frameID == frameNumber:
-            bbox = (detection.X, detection.Y, detection.Width, detection.Height)
+            bbox = (detection.X, detection.Y,
+                    detection.Width, detection.Height)
             left, top, right, bottom = bbox2points(bbox)
-            cv.rectangle(image, (left, top), (right, bottom), colors[detection.label], 1)
+            cv.rectangle(image, (left, top), (right, bottom),
+                         colors[detection.label], 1)
             cv.putText(image, "{} ID{} [{:.2f}] VX: {:.2f} VY: {:.2f}".format(detection.label, detections.objID, float(detection.confidence), float(detection.VX), float(detection.VY)),
-                        (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
-                        colors[detection.label], 2)
+                       (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5,
+                       colors[detection.label], 2)
+
 
 def num_of_moving_objs(history: list) -> int:
     n = 0
@@ -144,8 +167,9 @@ def num_of_moving_objs(history: list) -> int:
             n += 1
     return n
 
+
 def log_to_stdout(*args):
-    print('\n' * 200) 
+    print('\n' * 200)
     for arg in args:
         if type(arg) is list:
             for ar in arg:
@@ -153,6 +177,7 @@ def log_to_stdout(*args):
         else:
             print(arg)
     print('\n'*5)
+
 
 def generateOutputName(input, outdir):
     """Generate output path from input path and output directory.
@@ -169,6 +194,7 @@ def generateOutputName(input, outdir):
     outputPath = outdirPath.joinpath(inputPath.stem)
     return outputPath
 
+
 def getDirectoryEntries(dirpath):
     path = Path(dirpath)
     inputs = []
@@ -176,6 +202,7 @@ def getDirectoryEntries(dirpath):
         if i.suffix in VIDEO_EXTENSIONS:
             inputs.append(str(i))
     return inputs
+
 
 def main():
     args = parseArgs()
@@ -185,7 +212,7 @@ def main():
     else:
         inputs = args.input
         print(args.input)
-    
+
     outdir = Path(args.output)
     if not outdir.exists():
         outdir.mkdir()
@@ -197,17 +224,20 @@ def main():
     if args.yolov7:
         yoloVersion = '7'
 
-    cap = cv.VideoCapture(inputs[0]) # retrieve an initial image from video to create mask
+    # retrieve an initial image from video to create mask
+    cap = cv.VideoCapture(inputs[0])
 
-    # create mask, so only in the area of interest will be used in detection 
+    # create mask, so only in the area of interest will be used in detection
     _, img = cap.read()
     mask = masker(img)
 
     for input in tqdm.tqdm(inputs, desc="Videos"):
-        outputName = generateOutputName(input, args.output) # generate output name
+        outputName = generateOutputName(
+            input, args.output)  # generate output name
 
-        path2db = outputName.parent / (outputName.name + ".db") # add .db suffix to output name fo SQL db
-        path2db = init_db(path2db) # initialize database
+        # add .db suffix to output name fo SQL db
+        path2db = outputName.parent / (outputName.name + ".db")
+        path2db = init_db(path2db)  # initialize database
         print(f"SQL DB path: {path2db}")
 
         print(path2db)
@@ -218,15 +248,17 @@ def main():
         path2joblib = outputName.parent / (outputName.name + ".joblib")
         print(f"Joblib DB path: {path2joblib}")
 
-        # If joblib database is already exists and video is requested to be resumed, 
+        # If joblib database is already exists and video is requested to be resumed,
         # load existing data and continue detection where it was left off
         if os.path.exists(path2joblib) and args.resume:
-            buffer2joblibTracks = load_dataset(path2joblib) 
+            buffer2joblibTracks = load_dataset(path2joblib)
         buffer2joblibTracks = []
 
         # device is still hardcoded, so a gpu with cuda capability is needed for now, for real time speed it is necessary
-        logMetaData(db_connection, args.history, args.future, yoloVersion, "gpu", IMGSZ, STRIDE, CONF_THRES, IOU_THRES)
-        logRegression(db_connection, "LinearRegression", "Ridge", args.degree, args.k_trainingpoints)
+        logMetaData(db_connection, args.history, args.future,
+                    yoloVersion, "gpu", IMGSZ, STRIDE, CONF_THRES, IOU_THRES)
+        logRegression(db_connection, "LinearRegression", "Ridge",
+                      args.degree, args.k_trainingpoints)
 
         # get video capture object
         cap = cv.VideoCapture(input)
@@ -248,13 +280,15 @@ def main():
         if args.resume:
             lastframeNum = getLatestFrame(db_connection)
             if lastframeNum > 0 and lastframeNum < cap.get(cv.CAP_PROP_FRAME_COUNT):
-                cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1) 
+                cap.set(cv.CAP_PROP_POS_FRAMES, lastframeNum-1)
             # create DeepSortTracker with command line arguments, pass db_connection to query last objID from database
-            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, db_connection=db_connection, max_iou_distance=args.max_iou_distance)
+            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget),
+                                 historyDepth=args.history, db_connection=db_connection, max_iou_distance=args.max_iou_distance)
         else:
             lastframeNum = 0
             # DeepSortTracker without db_connection, starts objID count from 1
-            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
+            tracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget),
+                                 historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
         print(f"Starting video from frame number: {lastframeNum}")
         # start main loop
@@ -275,36 +309,38 @@ def main():
                 # time before computation
                 prev_time = time.time()
 
-                # run yolo inference 
-                detections = detect(cv.bitwise_or(frame, frame, mask=mask)) 
+                # run yolo inference
+                detections = detect(cv.bitwise_or(frame, frame, mask=mask))
 
                 # filter detections, only return the ones given in the targetNames tuple
-                targets = getTargets(detections, frameNumber, targetNames=("car", "motorcycle", "bus", "truck"))
+                targets = getTargets(detections, frameNumber, targetNames=(
+                    "car", "motorcycle", "bus", "truck"))
 
                 # update track history
-                updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history, joblibdb=buffer2joblibTracks, k_velocity=args.k_velocity, k_acceleration=args.k_acceleration)
+                updateHistory(trackedObjects, tracker, targets, db_connection, historyDepth=args.history,
+                              joblibdb=buffer2joblibTracks, k_velocity=args.k_velocity, k_acceleration=args.k_acceleration)
 
                 # draw bounding boxes of filtered detections
                 if args.show:
                     draw_boxes(trackedObjects, frame, COLORS, frameNumber)
 
-                # load moving objects into buffer, that will be saved to the sqlite db at exit 
+                # load moving objects into buffer, that will be saved to the sqlite db at exit
                 for obj in trackedObjects:
                     if obj.isMoving:
                         # log to stdout
                         to_log.append(obj)
                         # save data in buffer
-                        buffer2log.append([obj.objID, 
-                                        obj.history[-1].frameID, 
-                                        obj.history[-1].confidence, 
-                                        obj.X, obj.Y, 
-                                        obj.history[-1].Width, 
-                                        obj.history[-1].Height,
-                                        obj.VX, obj.VY, obj.AX, obj.AY, 
-                                        obj.history_VX_calculated[-1], obj.history_VY_calculated[-1],
-                                        obj.history_AX_calculated[-1], obj.history_AY_calculated[-1],
-                                        obj.futureX, obj.futureY
-                                        ])
+                        buffer2log.append([obj.objID,
+                                           obj.history[-1].frameID,
+                                           obj.history[-1].confidence,
+                                           obj.X, obj.Y,
+                                           obj.history[-1].Width,
+                                           obj.history[-1].Height,
+                                           obj.VX, obj.VY, obj.AX, obj.AY,
+                                           obj.history_VX_calculated[-1], obj.history_VY_calculated[-1],
+                                           obj.history_AX_calculated[-1], obj.history_AY_calculated[-1],
+                                           obj.futureX, obj.futureY
+                                           ])
 
                 # show video frame
                 if args.show:
@@ -317,7 +353,8 @@ def main():
                 # print("FPS: {}".format(fps,))
 
                 # print runtime logs
-                log_to_stdout("FPS: {}".format(fps,), to_log[:])#, f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+                # , f"Number of moving objects: {num_of_moving_objs(trackedObjects)}", f"Number of objects: {len(trackedObjects)}", f"Buffersize: {len(buffer2log)}", f"Width {frameWidth} Height {frameHeight}")
+                log_to_stdout("FPS: {}".format(fps,), to_log[:])
 
                 # press 'p' to pause playing the video
                 if cv.waitKey(1) == ord('p'):
@@ -332,7 +369,7 @@ def main():
 
         cap.release()
         # save trackedObjects into joblib database
-        downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img) 
+        downscaled_tracks = downscale_TrackedObjects(buffer2joblibTracks, img)
         dump(downscaled_tracks, path2joblib)
         print("Joblib database succesfully saved!")
         # log buffered detections in sqlite db
@@ -342,9 +379,6 @@ def main():
         if args.show:
             cv.destroyAllWindows()
 
-
-    
-    
 
 if __name__ == "__main__":
     main()

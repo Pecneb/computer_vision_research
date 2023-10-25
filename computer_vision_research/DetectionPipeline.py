@@ -91,9 +91,10 @@ class Yolov7(object):
         Random colors for each class/label
     half : bool
         If half True half precision (float16) is used, this means faster inference but lower precision
-    
+
     """
-    def __init__(self, weights: str, conf_thres: float=0.6, iou_thres: float=0.4, imgsz: int=640, stride: int=32, augment: bool=False, half: bool=True, device: Union[int, str]="0", batch_size: int=1, debug: bool=True) -> None:
+
+    def __init__(self, weights: str, conf_thres: float = 0.6, iou_thres: float = 0.4, imgsz: int = 640, stride: int = 32, augment: bool = False, half: bool = True, device: Union[int, str] = "0", batch_size: int = 1, debug: bool = True) -> None:
         # region init logger
         self._logger = getLogger("Yolo_Logger")
         _logHandler = StreamHandler()
@@ -103,7 +104,8 @@ class Yolov7(object):
         else:
             self._logger.setLevel(INFO)
             _logHandler.setLevel(INFO)
-        _formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        _formatter = Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         _logHandler.setFormatter(_formatter)
         self._logger.addHandler(_logHandler)
         # endregion
@@ -113,7 +115,7 @@ class Yolov7(object):
         self._logger.debug(f"Device: {self.device}")
         self.model = self._load(weights, imgsz, device)
         self._logger.debug(f"Model: {self.model}")
-        self.stride = int(self.model.stride.max()) # model stride
+        self.stride = int(self.model.stride.max())  # model stride
         self._logger.debug(f"Stride: {self.stride}")
         self.imgsz = check_img_size(imgsz, s=self.stride)
         self._logger.debug(f"Image size: {self.imgsz}")
@@ -121,19 +123,21 @@ class Yolov7(object):
         self._logger.debug(f"Confidence threshold: {self.conf_thres}")
         self.iou_thres = iou_thres
         self._logger.debug(f"IoU threshold: {self.iou_thres}")
-        self.names = self.model.module.names if hasattr(self.model, "module") else self.model.names
+        self.names = self.model.module.names if hasattr(
+            self.model, "module") else self.model.names
         self._logger.debug(f"Names: {self.names}")
-        self.colors = [[np.random.randint(0, 255) for _ in range(3)] for _ in range(len(self.names))]
+        self.colors = [[np.random.randint(0, 255) for _ in range(
+            3)] for _ in range(len(self.names))]
         self._logger.debug(f"Colors: {self.colors}")
-        self.augment = augment 
+        self.augment = augment
         self._logger.debug(f"Augment: {self.augment}")
         self.half = half
         if self.half:
             self.model.half()
         self._logger.debug(f"Half precision: {self.half}")
         # endregion
-    
-    def _load(self, weights: str, imgsz: int = 640, batch_size: int=1, device: str="cuda") -> nn.Module:
+
+    def _load(self, weights: str, imgsz: int = 640, batch_size: int = 1, device: str = "cuda") -> nn.Module:
         """Load weights into memory.
 
         Parameters
@@ -151,9 +155,10 @@ class Yolov7(object):
         -------
         nn.Module
             Pytorch neural network module object
-        """          
+        """
         ckpt = torch.load(weights, map_location=device)
-        model = Ensemble().append(ckpt['ema' if ckpt.get('ema') else 'model'].float().fuse().eval()) # FP32 model
+        model = Ensemble().append(ckpt['ema' if ckpt.get(
+            'ema') else 'model'].float().fuse().eval())  # FP32 model
         # Compatibility updates
         for m in model.modules():
             if type(m) in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
@@ -163,7 +168,6 @@ class Yolov7(object):
             elif type(m) is Conv:
                 m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatibility
         return model[-1]
-        
 
     def preprocess(self, img0: np.ndarray) -> np.ndarray:
         """Preprocess raw image for inference.
@@ -182,18 +186,21 @@ class Yolov7(object):
         ndarray
             Preprocessed image of shape (3,640,640)
         """
-        # Padded resize 
-        if len(img0.shape) == 3: # check for single image
+        # Padded resize
+        if len(img0.shape) == 3:  # check for single image
             self._logger.debug(f"Input image shape: {img0.shape}")
             img = letterbox(img0, new_shape=self.imgsz, stride=self.stride)[0]
             img = np.expand_dims(img, axis=0)
-        else: # check for multiple images as input
-            img = [letterbox(x, new_shape=self.imgsz, stride=self.stride)[0] for x in img0]
+        else:  # check for multiple images as input
+            img = [letterbox(x, new_shape=self.imgsz, stride=self.stride)[
+                0] for x in img0]
         img = np.stack(img, 0)
         # Convert
-        #img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = img[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img) # store img in memory in on place, not in segments for faster lookup
+        # img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        # BGR to RGB, to 3x416x416
+        img = img[:, :, :, ::-1].transpose(0, 3, 1, 2)
+        # store img in memory in on place, not in segments for faster lookup
+        img = np.ascontiguousarray(img)
         """
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()
@@ -202,8 +209,8 @@ class Yolov7(object):
             img = img.unsqueeze(0)
         """
         return img
-    
-    def postprocess(self, pred: torch.Tensor, im0: np.ndarray, im: np.ndarray, show: bool=True) -> List:
+
+    def postprocess(self, pred: torch.Tensor, im0: np.ndarray, im: np.ndarray, show: bool = True) -> List:
         """Run NMS on infer output, then rescale them and create a vector with [label, conf, bbox]
 
         Parameters
@@ -218,24 +225,30 @@ class Yolov7(object):
         List
             List of shape (n,6), where n is the number of detections per image.
         """
-        _pred = non_max_suppression(pred, conf_thres=self.conf_thres, iou_thres=self.iou_thres)
+        _pred = non_max_suppression(
+            pred, conf_thres=self.conf_thres, iou_thres=self.iou_thres)
         detections_adjusted = []
         for det in _pred:
             if len(det):
-                det[:, :4] = scale_coords(im.shape[1:], det[:, :4], im0.shape).round()
+                det[:, :4] = scale_coords(
+                    im.shape[1:], det[:, :4], im0.shape).round()
                 for *xyxy, conf, cls in det:
                     if show:
-                        plot_one_box(xyxy, im0, label=self.names[int(cls)], color=self.colors[int(cls)], line_thickness=3)
-                    bbox = xyxy2xywh(torch.tensor(xyxy).view(1, 4)) # convert to center coords, width, height format
+                        plot_one_box(xyxy, im0, label=self.names[int(
+                            cls)], color=self.colors[int(cls)], line_thickness=3)
+                    # convert to center coords, width, height format
+                    bbox = xyxy2xywh(torch.tensor(xyxy).view(1, 4))
                     label = self.names[int(cls)]
-                    detections_adjusted.append([label, conf.item(), bbox[0,:].numpy()])
+                    detections_adjusted.append(
+                        [label, conf.item(), bbox[0, :].numpy()])
         return detections_adjusted
-    
+
     def warmup(self):
         """Warm up model.
         """
         for _ in range(3):
-            self.model(torch.zeros(1, 3, self.imgsz, self.imgsz).to(self.device).type_as(next(self.model.parameters())))
+            self.model(torch.zeros(1, 3, self.imgsz, self.imgsz).to(
+                self.device).type_as(next(self.model.parameters())))
 
     def infer(self, img: np.ndarray) -> Tuple[torch.Tensor, np.ndarray]:
         """Run inference on input images.
@@ -249,15 +262,16 @@ class Yolov7(object):
         -------
         Tuple[Tensor, ndarray]
             Model output of shape and input image
-        """         
+        """
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()
         img /= 255.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
-        with torch.no_grad(): # calculating gradients would cause a GPU memory leak 
+        with torch.no_grad():  # calculating gradients would cause a GPU memory leak
             pred = self.model(img, augment=self.augment)[0]
         return pred
+
 
 class DeepSORT(object):
     """Detector class that can generate dataset for trajectory prediction model training.
@@ -276,7 +290,7 @@ class DeepSORT(object):
         Max intersection over union distance, by default 0.7
     nn_budget : float, optional
         Maximum size of the appearence descriptor gallery, by default 100
-        
+
     Attributes
     ----------
     source : Union[int, str]
@@ -293,12 +307,12 @@ class DeepSORT(object):
         Maximum size of the appearence descriptor gallery
     historyDepth : int
         Length of history 
-    
+
     _history : List
 
     """
 
-    def __init__(self, max_cosine_distance: float=10.0, max_iou_distance: float=0.7, nn_budget: float=100, historyDepth: int=30, debug: bool=False) -> None:
+    def __init__(self, max_cosine_distance: float = 10.0, max_iou_distance: float = 0.7, nn_budget: float = 100, historyDepth: int = 30, debug: bool = False) -> None:
         ### Logging ###
         self._logger = getLogger("DeepSORT_Logger")
         _logHandler = StreamHandler()
@@ -308,7 +322,8 @@ class DeepSORT(object):
         else:
             self._logger.setLevel(INFO)
             _logHandler.setLevel(INFO)
-        _formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        _formatter = Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         _logHandler.setFormatter(_formatter)
 
         self.max_cosine_distance = max_cosine_distance
@@ -320,13 +335,15 @@ class DeepSORT(object):
         self.historyDepth = historyDepth
         self._logger.debug(f"History depth: {self.historyDepth}")
 
-        self._Metric = self.init_tracker_metric(max_cosine_distance=max_cosine_distance, nn_budget=nn_budget)
+        self._Metric = self.init_tracker_metric(
+            max_cosine_distance=max_cosine_distance, nn_budget=nn_budget)
         self._logger.debug(f"Metric: {self._Metric}")
-        self._Tracker = self.tracker_factory(metric=self._Metric, max_iou_distance=max_iou_distance, historyDepth=historyDepth)
+        self._Tracker = self.tracker_factory(
+            metric=self._Metric, max_iou_distance=max_iou_distance, historyDepth=historyDepth)
         self._logger.debug(f"Tracker: {self._Tracker}")
 
     @staticmethod
-    def init_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str="cosine") -> NearestNeighborDistanceMetric:
+    def init_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric:
         """Deepsort metric factory.
 
         Parameters
@@ -339,7 +356,7 @@ class DeepSORT(object):
             Metric type, by default "cosine"
         """
         return NearestNeighborDistanceMetric(metric, max_cosine_distance, nn_budget)
-     
+
     @staticmethod
     def tracker_factory(metric: NearestNeighborDistanceMetric, max_iou_distance: float, historyDepth: int) -> Tracker:
         """Create tracker object. 
@@ -373,12 +390,12 @@ class DeepSORT(object):
         DeepSORTDetection
             A DeepSORT Detection that is wrapped around a darknet detection. 
         """
-        return DeepSORTDetection([(darknetDetection.X-darknetDetection.Width/2), 
-            (darknetDetection.Y-darknetDetection.Height/2), 
-            darknetDetection.Height, darknetDetection.Height], 
-            float(darknetDetection.confidence), [], darknetDetection)
+        return DeepSORTDetection([(darknetDetection.X-darknetDetection.Width/2),
+                                  (darknetDetection.Y-darknetDetection.Height/2),
+                                  darknetDetection.Height, darknetDetection.Height],
+                                 float(darknetDetection.confidence), [], darknetDetection)
 
-    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], joblibbuffer: Optional[List[TrackedObject]]=None, db_connection: Optional[str]=None):
+    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], joblibbuffer: Optional[List[TrackedObject]] = None, db_connection: Optional[str] = None):
         """Update trajectory history with new detections.
 
         Parameters
@@ -390,7 +407,8 @@ class DeepSORT(object):
         joblibbuffer : Optional[List[TrackedObject]], optional
             The joblib buffer, which will be saved at the end of runtime, by default None
         """
-        wrapped_Detections = [self.make_detection_object(det) for det in new_detections] 
+        wrapped_Detections = [self.make_detection_object(
+            det) for det in new_detections]
         self._Tracker.predict()
         self._Tracker.update(wrapped_Detections)
         for track in self._Tracker.tracks:
@@ -398,7 +416,9 @@ class DeepSORT(object):
             for to in history:
                 if track.track_id == to.objID:
                     if track.time_since_update == 0:
-                        to.update(track.darknetDet, track.mean, historyDepth=self.historyDepth)# , k_velocity, k_acceleration)
+                        # , k_velocity, k_acceleration)
+                        to.update(track.darknetDet, track.mean,
+                                  historyDepth=self.historyDepth)
                         if len(to.history) > self.historyDepth:
                             to.history.pop(0)
                     else:
@@ -408,27 +428,27 @@ class DeepSORT(object):
                             if joblibbuffer is not None:
                                 joblibbuffer.append(to)
                             history.remove(to)
-                    updated = True 
+                    updated = True
                     break
             if not updated:
-                newTrack = TrackedObject(track.track_id, track.darknetDet, track._max_age)
+                newTrack = TrackedObject(
+                    track.track_id, track.darknetDet, track._max_age)
                 history.append(newTrack)
                 if db_connection is not None:
                     logObject(db_connection, newTrack.objID, newTrack.label)
-    
-    
+
 
 class Pipeline:
     """Detection pipeline class.
     This class is used to run the detection pipeline.
-    
+
     Parameters
     ----------
     source : str
         Video source path.
     outdir : str
         Output directory path. 
-    
+
     Attributes
     ----------
     _source : Path
@@ -436,7 +456,8 @@ class Pipeline:
     _outdir : Path
         Output directory path.
     """
-    def __init__(self, source: str, outdir: Optional[str]=None, database: bool=False, joblib: bool=False, debug: bool=True):
+
+    def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
         # region init logger
         self._logger = getLogger("Pipeline_Logger")
         _logHandler = StreamHandler()
@@ -446,7 +467,8 @@ class Pipeline:
         else:
             self._logger.setLevel(INFO)
             _logHandler.setLevel(INFO)
-        _formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        _formatter = Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         _logHandler.setFormatter(_formatter)
         self._logger.addHandler(_logHandler)
         # endregion
@@ -464,15 +486,16 @@ class Pipeline:
         self._joblib = None
 
         if database:
-            self._database = self.generate_db_path(self._source, outdir=self._outdir, suffix=".db", logger=self._logger)
+            self._database = self.generate_db_path(
+                self._source, outdir=self._outdir, suffix=".db", logger=self._logger)
         if joblib:
-            self._joblib = self.generate_db_path(self._source, outdir=self._outdir, suffix=".joblib", logger=self._logger)
+            self._joblib = self.generate_db_path(
+                self._source, outdir=self._outdir, suffix=".joblib", logger=self._logger)
         self._joblibbuffer = []
         self._history = []
 
-    
     @staticmethod
-    def generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]]=None, suffix: str=".joblib", logger: Optional[Logger]=None) -> Path:
+    def generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]] = None, suffix: str = ".joblib", logger: Optional[Logger] = None) -> Path:
         """Generate output path name from source and output directory path.
 
         Parameters
@@ -499,9 +522,9 @@ class Pipeline:
         if logger is not None:
             logger.debug(f"Output path: {out}")
         return out
-    
+
     @staticmethod
-    def filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str]=["car"]) -> List[DarknetDetection]:
+    def filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"]) -> List[DarknetDetection]:
         """Filter out detections that are not in the names list.
 
         Parameters
@@ -522,10 +545,11 @@ class Pipeline:
         for label, conf, bbox in new_detections:
             # bbox: x, y, w, h
             if label in names:
-                targets.append(DarknetDetection(label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
+                targets.append(DarknetDetection(
+                    label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
-    
-    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT]=None, show: bool=False):
+
+    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False):
         """Run detection pipeline.
 
         Parameters
@@ -545,9 +569,11 @@ class Pipeline:
             preds = yolo.infer(img)
             preds = yolo.postprocess(preds, im0, img, show=show)
             self._logger.debug(f"Predictions: {preds}")
-            new_detections = self.filter_objects(new_detections=preds, frame_number=frame)
+            new_detections = self.filter_objects(
+                new_detections=preds, frame_number=frame)
             self._logger.debug(f"New detections: {new_detections}")
-            deepSort.update_history(history=self._history, new_detections=new_detections, joblibbuffer=self._joblibbuffer, db_connection=self._database)
+            deepSort.update_history(history=self._history, new_detections=new_detections,
+                                    joblibbuffer=self._joblibbuffer, db_connection=self._database)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
@@ -555,7 +581,9 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    yolo = Yolov7(weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
+    yolo = Yolov7(
+        weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
-    det = Pipeline(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi", outdir="./", database=True, joblib=True, debug=True)
+    det = Pipeline(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
+                   outdir="./", database=True, joblib=True, debug=True)
     det.run(yolo=yolo, show=True)

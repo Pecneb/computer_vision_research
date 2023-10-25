@@ -35,7 +35,7 @@ from utility import databaseLoader
 @dataclass
 class Detection:
     """Class for storing detections of YOLO Darknet
-        
+
        Fields: 
         label(string): classification name ex. car, person, bicycle, etc.
         confidence(float): the likeliness that the detected object is really the above label, 0.0-1.0
@@ -48,10 +48,10 @@ class Detection:
     """
     label: str
     confidence: float
-    X: float 
-    Y: float 
-    Width: float 
-    Height: float 
+    X: float
+    Y: float
+    Width: float
+    Height: float
     frameID: int
     # These variables are optional, not needed in the main loop. These are used in the analyzer script and databaseLoader script.
     VX: float = field(init=False,)
@@ -62,16 +62,24 @@ class Detection:
 
     def __repr__(self) -> str:
         return f"Label: {self.label}, Confidence: {self.confidence}, X: {self.X}, Y: {self.Y}, Width: {self.Width}, Height: {self.Height}, Framenumber: {self.frameID}"
-    
+
     def __eq__(self, other) -> bool:
-        if self.label != other.label: return False
-        if self.confidence != other.confidence : return False 
-        if self.X != other.X: return False 
-        if self.Y != other.Y: return False 
-        if self.Width != other.Width: return False 
-        if self.Height != other.Height: return False 
-        if self.frameID != other.frameID: return False 
+        if self.label != other.label:
+            return False
+        if self.confidence != other.confidence:
+            return False
+        if self.X != other.X:
+            return False
+        if self.Y != other.Y:
+            return False
+        if self.Width != other.Width:
+            return False
+        if self.Height != other.Height:
+            return False
+        if self.frameID != other.frameID:
+            return False
         return True
+
 
 @dataclass
 class TrackedObject():
@@ -131,15 +139,15 @@ class TrackedObject():
     futureX: list = field(init=False)
     futureY: list = field(init=False)
     history: List[Detection] = field(init=False)
-    history_X: np.ndarray = field(init=False) 
-    history_Y: np.ndarray = field(init=False) 
-    history_VX_calculated: np.ndarray = field(init=False) 
-    history_VY_calculated: np.ndarray = field(init=False) 
-    history_AX_calculated: np.ndarray = field(init=False) 
-    history_AY_calculated: np.ndarray = field(init=False) 
+    history_X: np.ndarray = field(init=False)
+    history_Y: np.ndarray = field(init=False)
+    history_VX_calculated: np.ndarray = field(init=False)
+    history_VY_calculated: np.ndarray = field(init=False)
+    history_AX_calculated: np.ndarray = field(init=False)
+    history_AY_calculated: np.ndarray = field(init=False)
     isMoving: bool = field(init=False)
-    time_since_update : int = field(init=False)
-    max_age : int
+    time_since_update: int = field(init=False)
+    max_age: int
     mean: list = field(init=False)
     X: int
     Y: int
@@ -151,7 +159,7 @@ class TrackedObject():
     # featureVector: np.ndarray = field(init=False)
     _dataset: str = field(init=False)
 
-    def __init__(self, id: int, first: Detection, max_age: int =30):
+    def __init__(self, id: int, first: Detection, max_age: int = 30):
         """Constructor of the TrackedObject class.
 
         Parameters
@@ -174,7 +182,7 @@ class TrackedObject():
         self.history_AY_calculated = np.array([])
         self.X = first.X
         self.Y = first.Y
-        self.VX = 0 
+        self.VX = 0
         self.VY = 0
         self.AX = 0
         self.AY = 0
@@ -189,17 +197,18 @@ class TrackedObject():
         self.max_age = max_age
         self.time_since_update = 0
         self.mean = []
-        #self.bugged = 0 
+        # self.bugged = 0
         self._dataset = ""
-    
+
     def __repr__(self) -> str:
         return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
-    
+
     def __hash__(self) -> int:
-        retval = int(self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
+        retval = int(
+            self.objID+np.sum([self.history[i].frameID for i in range(len(self.history))]))
         # print(retval, self.objID, self._dataset)
         return retval
-    
+
     def __eq__(self, other) -> bool:
         for i in range(len(self.history)):
             for j in range(len(other.history)):
@@ -215,7 +224,7 @@ class TrackedObject():
         """
         areas = [(det.Width*det.Height) for det in self.history]
         return np.average(areas)
-    
+
     def updateAccel(self, new_vx, old_vx, new_vy, old_vy) -> None:
         """Calculate acceleration based on kalman filters velocity.
         Normal acceleration calculation (new_v - old_v) / (new_time - old_time).
@@ -255,9 +264,11 @@ class TrackedObject():
         ret_featureVector = np.array([])
         for i in range(featureVector.shape[0]):
             if i == 0 or i % 2 == 0:
-                ret_featureVector = np.append(ret_featureVector, [featureVector[i]*framewidth/ratio])
+                ret_featureVector = np.append(
+                    ret_featureVector, [featureVector[i]*framewidth/ratio])
             else:
-                ret_featureVector = np.append(ret_featureVector, [frameheight*featureVector[i]])
+                ret_featureVector = np.append(
+                    ret_featureVector, [frameheight*featureVector[i]])
         return ret_featureVector
 
     @staticmethod
@@ -279,7 +290,7 @@ class TrackedObject():
         -------
         ndarray
             Normalized feature vector
-        """        
+        """
         if featureVector is None:
             return None
         ratio = framewidth / frameheight
@@ -287,9 +298,11 @@ class TrackedObject():
         ret_featureVector = np.array([])
         for i in range(featureVector.shape[0]):
             if i == 0 or i % 2 == 0:
-                ret_featureVector = np.append(ret_featureVector, [featureVector[i]/framewidth*ratio])
+                ret_featureVector = np.append(
+                    ret_featureVector, [featureVector[i]/framewidth*ratio])
             else:
-                ret_featureVector = np.append(ret_featureVector, [featureVector[i]/frameheight])
+                ret_featureVector = np.append(
+                    ret_featureVector, [featureVector[i]/frameheight])
         return ret_featureVector
 
         """
@@ -303,7 +316,7 @@ class TrackedObject():
                         featureVector[9] / frameheight])
 
         """
-                        
+
     def feature_v1(self) -> Optional[np.ndarray]:
         """Extract version 1 feature vector from history.
 
@@ -317,7 +330,7 @@ class TrackedObject():
             return None
         return FeatureVector._1(self.history)
 
-    def feature_v1_SG(self, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+    def feature_v1_SG(self, window_length: int = 7, polyorder: int = 2) -> Optional[np.ndarray]:
         """Extract version 1SG feature vector from history.
 
         Returns
@@ -329,7 +342,7 @@ class TrackedObject():
         if n < 3:
             return None
         return FeatureVector._1_SG(self.history, window_length=window_length, polyorder=polyorder)
-    
+
     def feature_v3(self) -> np.ndarray:
         """Return version 3 feature vector.
 
@@ -337,7 +350,7 @@ class TrackedObject():
         -------
         ndarray 
             Feature vector version 3
-        """         
+        """
         n = len(self.history)-1
         if n < 3:
             return None
@@ -350,11 +363,11 @@ class TrackedObject():
     #     n = len(self.history)-1
     #     if n < 3:
     #         return None
-    #     return np.array([self.history[0].X, self.history[0].Y, 
-    #                     self.history[n//2].X, self.history[n//2].Y, 
+    #     return np.array([self.history[0].X, self.history[0].Y,
+    #                     self.history[n//2].X, self.history[n//2].Y,
     #                     self.history[n].X, self.history[n].Y])
-    
-    def feature_v7(self, history_size: int=30, weights: Optional[np.ndarray]=None) -> Optional[np.ndarray]:
+
+    def feature_v7(self, history_size: int = 30, weights: Optional[np.ndarray] = None) -> Optional[np.ndarray]:
         """Extract feature version 7 from history.
 
         Parameters
@@ -370,14 +383,14 @@ class TrackedObject():
         if self.history_X.shape[0] < history_size:
             return None
         return FeatureVector._7(
-            x=self.history_X[-history_size:], 
+            x=self.history_X[-history_size:],
             y=self.history_Y[-history_size:],
             vx=self.history_VX_calculated[-history_size:],
             vy=self.history_VY_calculated[-history_size:],
             weights=weights,
         )
-    
-    def feature_v7_SG(self, history_size: int=30, weights: np.ndarray=None, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+
+    def feature_v7_SG(self, history_size: int = 30, weights: np.ndarray = None, window_length: int = 7, polyorder: int = 2) -> Optional[np.ndarray]:
         """Extract feature version 7SG from history.
 
         Parameters
@@ -397,14 +410,14 @@ class TrackedObject():
         if self.history_X.shape[0] < history_size:
             return None
         return FeatureVector._7_SG(
-            x=self.history_X[-history_size:], 
+            x=self.history_X[-history_size:],
             y=self.history_Y[-history_size:],
             weights=weights,
             window_length=window_length,
             polyorder=polyorder
         )
 
-    def feature_v8(self, history_size: int=30) -> Optional[np.ndarray]:
+    def feature_v8(self, history_size: int = 30) -> Optional[np.ndarray]:
         """Extract feature version 7 from history.
 
         Parameters
@@ -420,11 +433,11 @@ class TrackedObject():
         if self.history_X.shape[0] < history_size:
             return None
         return FeatureVector._8(
-            x=self.history_X[-history_size:], 
+            x=self.history_X[-history_size:],
             y=self.history_Y[-history_size:]
         )
-    
-    def feature_v8_SG(self, history_size: int=30, window_length: int=7, polyorder: int=2) -> Optional[np.ndarray]:
+
+    def feature_v8_SG(self, history_size: int = 30, window_length: int = 7, polyorder: int = 2) -> Optional[np.ndarray]:
         """Extract feature version 7SG from history.
 
         Parameters
@@ -444,9 +457,9 @@ class TrackedObject():
         if self.history_X.shape[0] < history_size:
             return None
         return FeatureVector._8_SG(
-            x=self.history_X[-history_size:], 
-            y=self.history_Y[-history_size:], 
-            window_length=window_length, 
+            x=self.history_X[-history_size:],
+            y=self.history_Y[-history_size:],
+            window_length=window_length,
             polyorder=polyorder
         )
 
@@ -469,10 +482,11 @@ class TrackedObject():
             return None
         feature = np.array([self.history_X[0], self.history_Y[0],
                             self.history_X[-1], self.history_Y[-1]])
-        feature = insert_weights_into_feature_vector(n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
+        feature = insert_weights_into_feature_vector(
+            n, self.history_X.shape[0], n_weights, self.history_X, self.history_Y, 2, feature)
         return feature
-    
-    def feature_vector(self, version: str='1', **kwargs) -> Optional[np.ndarray]:
+
+    def feature_vector(self, version: str = '1', **kwargs) -> Optional[np.ndarray]:
         """Return the corresponding feature vector version of the given version argument.
         Pass additional keyword arguments.
 
@@ -486,11 +500,16 @@ class TrackedObject():
         np.ndarray
             Feature vector
         """
-        if version == '1': return self.feature_v1()
-        elif version == '7': return self.feature_v7(history_size=kwargs["history_size"])
-        elif version == '7SG': return self.feature_v7_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
-        elif version == '8': return self.feature_v8(history_size=kwargs["history_size"])
-        elif version == '8SG': return self.feature_v8_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
+        if version == '1':
+            return self.feature_v1()
+        elif version == '7':
+            return self.feature_v7(history_size=kwargs["history_size"])
+        elif version == '7SG':
+            return self.feature_v7_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
+        elif version == '8':
+            return self.feature_v8(history_size=kwargs["history_size"])
+        elif version == '8SG':
+            return self.feature_v8_SG(history_size=kwargs["history_size"], window_length=kwargs["window_length"], polyorder=kwargs["polyorder"])
         return None
 
     def update_velocity(self, k: int = 10):
@@ -498,39 +517,53 @@ class TrackedObject():
         """
         raise DeprecationWarning("This method is deprecated!")
         if self.history_X.shape[0] < k:
-            self.history_VX_calculated = np.append(self.history_VX_calculated, [0]) 
-            self.history_VY_calculated = np.append(self.history_VY_calculated, [0]) 
+            self.history_VX_calculated = np.append(
+                self.history_VX_calculated, [0])
+            self.history_VY_calculated = np.append(
+                self.history_VY_calculated, [0])
         else:
-            #self.history_DT = np.append(self.history_DT, [self.history[-1].frameID - self.history[-k].frameID])
-            #if self.history_DT[-1] == 0:
-            #    dx = 0 
+            # self.history_DT = np.append(self.history_DT, [self.history[-1].frameID - self.history[-k].frameID])
+            # if self.history_DT[-1] == 0:
+            #    dx = 0
             #    dy = 0
-            #else:
-            dx = (self.history_X[-1] - self.history_X[-k]) / (self.history[-1].frameID - self.history[-k].frameID)
-            dy = (self.history_Y[-1] - self.history_Y[-k]) / (self.history[-1].frameID - self.history[-k].frameID)
-            self.history_VX_calculated = np.append(self.history_VX_calculated, [dx]) 
-            self.history_VY_calculated = np.append(self.history_VY_calculated, [dy])  
-        self.history_VT = np.append(self.history_VT, [self.history[-1].frameID])
+            # else:
+            dx = (self.history_X[-1] - self.history_X[-k]) / \
+                (self.history[-1].frameID - self.history[-k].frameID)
+            dy = (self.history_Y[-1] - self.history_Y[-k]) / \
+                (self.history[-1].frameID - self.history[-k].frameID)
+            self.history_VX_calculated = np.append(
+                self.history_VX_calculated, [dx])
+            self.history_VY_calculated = np.append(
+                self.history_VY_calculated, [dy])
+        self.history_VT = np.append(
+            self.history_VT, [self.history[-1].frameID])
 
     def update_accel(self, k: int = 2):
         """Calculate velocity from X,Y coordinates.
         """
         raise DeprecationWarning("This method is deprecated!")
         if self.history_VX_calculated.shape[0] < k:
-            self.history_AX_calculated = np.append(self.history_AX_calculated, [0]) 
-            self.history_AY_calculated = np.append(self.history_AY_calculated, [0]) 
+            self.history_AX_calculated = np.append(
+                self.history_AX_calculated, [0])
+            self.history_AY_calculated = np.append(
+                self.history_AY_calculated, [0])
         else:
-            dt =(self.history_VT[-1] - self.history_VT[-k]) 
+            dt = (self.history_VT[-1] - self.history_VT[-k])
             if dt == 0:
-                dvx = 0 
+                dvx = 0
                 dvy = 0
             else:
-                dvx = (self.history_VX_calculated[-1] - self.history_VX_calculated[-k]) / dt 
-                dvy = (self.history_VY_calculated[-1] - self.history_VY_calculated[-k]) / dt
-            self.history_AX_calculated = np.append(self.history_AX_calculated, [dvx]) 
-            self.history_AY_calculated = np.append(self.history_AY_calculated, [dvy])  
+                dvx = (
+                    self.history_VX_calculated[-1] - self.history_VX_calculated[-k]) / dt
+                dvy = (
+                    self.history_VY_calculated[-1] - self.history_VY_calculated[-k]) / dt
+            self.history_AX_calculated = np.append(
+                self.history_AX_calculated, [dvx])
+            self.history_AY_calculated = np.append(
+                self.history_AY_calculated, [dvy])
 
-    def update(self, detection: Detection=None, mean=None): #, k_velocity=10, k_acceleration=2):
+    # , k_velocity=10, k_acceleration=2):
+    def update(self, detection: Detection = None, mean=None):
         """Update the tracked object state with new detection.
 
         Parameters
@@ -539,15 +572,15 @@ class TrackedObject():
             New Detection from yolo, by default None
         mean : List, optional
             Object values calculated by Kalman filter, by default None
-        """         
+        """
         if detection is not None:
             self.history.append(detection)
             self.history_X = np.append(self.history_X, [detection.X])
             self.history_Y = np.append(self.history_Y, [detection.Y])
             # self.update_velocity(k=k_velocity)
             # self.update_accel(k=k_acceleration)
-            self.mean = mean 
-            self.X = detection.X 
+            self.mean = mean
+            self.X = detection.X
             self.Y = detection.Y
             VX_old = self.VX
             VY_old = self.VY
@@ -558,10 +591,10 @@ class TrackedObject():
             self.updateAccel(self.VX, VX_old, self.VY, VY_old)
             self.history[-1].AX = self.AX
             self.history[-1].AY = self.AY
-            self.time_since_update = 0 
+            self.time_since_update = 0
         else:
             self.time_since_update += 1
-        # it seems, that calculating euclidean distance of first and last stored detection, gives more accurate estimation of movement, 
+        # it seems, that calculating euclidean distance of first and last stored detection, gives more accurate estimation of movement,
         # it can filter out phantom motion, when yolov7 detects a motionless object a bit off where it was last detected.
         # if mean is not None:
         #     if (abs(self.VX) < 1.0 and abs(self.VY) < 1.0):
@@ -571,17 +604,19 @@ class TrackedObject():
         if (np.abs(self.history_VX_calculated[-1]) > 0.0 or np.abs(self.history_VY_calculated[-1]) > 0.0) and len(self.history) >= 5:
             # calculating euclidean distance of the first stored detection and last stored detection
             # this is still hard coded, so its a bit hacky, gotta find a good metric to tell if an object is moving or not
-            self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (self.history[-5].Y-self.history[-1].Y)**2)**(1/2) > 5.0  
+            self.isMoving = ((self.history[-5].X-self.history[-1].X)**2 + (
+                self.history[-5].Y-self.history[-1].Y)**2)**(1/2) > 5.0
         else:
             self.isMoving = False
         # this is a fix for a specific problem, when an track is stuck, and showed as moving object
         # this is just a hack for now, TODO: find real solution
-        #if len(self.history) == 2:
+        # if len(self.history) == 2:
         #        self.bugged += 1
-        #else:
+        # else:
         #    self.bugged = 0
 
-def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax:float, ay: float):
+
+def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x: float, y: float, width: float, height: float, vx: float, vy: float, ax: float, ay: float):
     """Create Detection object.
 
     Args:
@@ -601,13 +636,14 @@ def detectionFactory(objID: int, frameNum: int, label: str, confidence: float, x
     Returns:
         Detection: The Detection object, which is to be returned. 
     """
-    retDet = Detection(label, confidence, x,y,width,height,frameNum)
+    retDet = Detection(label, confidence, x, y, width, height, frameNum)
     retDet.objID = objID
     retDet.VX = vx
     retDet.VY = vy
     retDet.AX = ax
     retDet.AY = ay
     return retDet
+
 
 def trackedObjectFactory(detections: tuple):
     """Create trackedObject object from list of detections
@@ -636,6 +672,7 @@ def trackedObjectFactory(detections: tuple):
     tmpObj.AY = detections[0][-1].AY
     return tmpObj
 
+
 def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X: np.ndarray, Y: np.ndarray, insert_idx: int, feature_vector: np.ndarray):
     """Insert coordinates into feature vector starting from the start_insert_idx index.
 
@@ -658,6 +695,7 @@ def insert_weights_into_feature_vector(start: int, stop: int, n_weights: int, X:
         weights_inserted += 1
     return retv
 
+
 def findEnterAndExitPoints(path2db: str):
     """Extracting only the first and the last detections of tracked objects.
 
@@ -674,14 +712,13 @@ def findEnterAndExitPoints(path2db: str):
     for obj in tqdm.tqdm(rawObjectData, desc="Filter out enter and exit points."):
         tmpDets = []
         for det in detections:
-           if det.objID == obj[0]:
-            tmpDets.append(det)
+            if det.objID == obj[0]:
+                tmpDets.append(det)
         if len(tmpDets) > 0:
             trackedObjects.append(trackedObjectFactory(tmpDets))
     enterDetections = [obj.history[0] for obj in trackedObjects]
     exitDetections = [obj.history[-1] for obj in trackedObjects]
-    return enterDetections, exitDetections 
-
+    return enterDetections, exitDetections
 
 
 def detectionParser(rawDetectionData) -> tuple:
@@ -701,7 +738,8 @@ def detectionParser(rawDetectionData) -> tuple:
     history_AX_calculated = np.array([])
     history_AY_calculated = np.array([])
     for entry in rawDetectionData:
-        detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4], entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
+        detections.append(detectionFactory(entry[0], entry[1], entry[2], entry[3], entry[4],
+                          entry[5], entry[6], entry[7], entry[8], entry[9], entry[10], entry[11]))
         history_X = np.append(history_X, [entry[3]])
         history_Y = np.append(history_Y, [entry[4]])
         history_VX_calculated = np.append(history_VX_calculated, [entry[12]])
@@ -709,6 +747,7 @@ def detectionParser(rawDetectionData) -> tuple:
         history_AX_calculated = np.append(history_AX_calculated, [entry[14]])
         history_AY_calculated = np.append(history_AY_calculated, [entry[15]])
     return (detections, history_X, history_Y, history_VX_calculated, history_VY_calculated, history_AX_calculated, history_AY_calculated)
+
 
 def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
     """Takes an objID and the path 2 database, then returns a trackedObject object if detections can be assigned to the object.
@@ -727,6 +766,7 @@ def parseRawObject2TrackedObject(rawObjID: int, path2db: str):
         return retTO
     else:
         return False
+
 
 def preprocess_database_data(path2db: str):
     """Preprocessing database data (detections). Assigning detections to objects.
@@ -747,6 +787,7 @@ def preprocess_database_data(path2db: str):
             trackedObjects.append(trackedObjectFactory(tmpDets))
     return trackedObjects
 
+
 def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
     """Preprocessing database data (detections). Assigning detections to objects.
     This is the multoprocessed variant of the preprocess_database_data() func.
@@ -763,13 +804,15 @@ def preprocess_database_data_multiprocessed(path2db: str, n_jobs=None):
     with Pool(processes=n_jobs) as pool:
         print("Preprocessing started.")
         start = time.time()
-        results = pool.starmap_async(parseRawObject2TrackedObject, [[rawObj[0], path2db] for rawObj in rawObjectData])
+        results = pool.starmap_async(parseRawObject2TrackedObject, [
+                                     [rawObj[0], path2db] for rawObj in rawObjectData])
         for result in tqdm.tqdm(results.get(), desc="Unpacking the result of detection assignment."):
             if result:
                 tracks.append(result)
                 logging.debug(f"{len(tracks)}")
         print(f"Detections assigned to Objects in {time.time()-start}s")
     return tracks
+
 
 def tracks2joblib(path2db: str, n_jobs=18):
     """Extract tracks from database and save them in a joblib object.

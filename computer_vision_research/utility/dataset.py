@@ -2,13 +2,14 @@ import logging
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import List
+from typing import List, Union, Optional
 
 import joblib
 import numpy as np
 import tqdm
 
 from . import databaseLoader
+
 
 def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
     """Normalize the values of the detections with the given np.ndarray image.
@@ -21,11 +22,13 @@ def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
     aspect_ratio = img.shape[1] / img.shape[0]
     for o in tqdm.tqdm(trackedObjects, desc="Downscale"):
         t = deepcopy(o)
-        t.history_X = t.history_X / img.shape[1] * aspect_ratio 
+        t.history_X = t.history_X / img.shape[1] * aspect_ratio
         t.history_Y = t.history_Y / img.shape[0]
-        t.history_VX_calculated = t.history_VX_calculated / img.shape[1] * aspect_ratio 
+        t.history_VX_calculated = t.history_VX_calculated / \
+            img.shape[1] * aspect_ratio
         t.history_VY_calculated = t.history_VY_calculated / img.shape[0]
-        t.history_AX_calculated = t.history_AX_calculated / img.shape[1] * aspect_ratio 
+        t.history_AX_calculated = t.history_AX_calculated / \
+            img.shape[1] * aspect_ratio
         t.history_AY_calculated = t.history_AY_calculated / img.shape[0]
         for d in t.history:
             d.X = d.X / img.shape[1] * aspect_ratio
@@ -40,14 +43,18 @@ def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
     return ret_trackedObjects
 
 
-def loadDatasetsFromDirectory(path):
+def loadDatasetsFromDirectory(path: Union[str, Path]) -> Union[np.ndarray, bool]:
     """Load all datasets from a directory.
 
-    Args:
-        path (str | Path): Directory path. 
+    Parameters
+    ----------
+    path : Union[str, Path]
+        Path to directory containing datasets.
 
-    Returns:
-        ndarray: Numpy array of all datasets. 
+    Returns
+    -------
+    Union[np.ndarray, bool]
+        Numpy array containing all datasets, or False if path is not a directory.
     """
     dirPath = Path(path)
     if not dirPath.is_dir():
@@ -59,13 +66,16 @@ def loadDatasetsFromDirectory(path):
         # print(len(tmpDataset))
     return dataset
 
+
 def load_dataset_with_labels(path):
     dataset = load_dataset(path)
     dataset_labeled = (dataset, str(path))
     return dataset_labeled
 
+
 def loadDatasetMultiprocessedCallback(result):
     print(len(result[0]), result[1])
+
 
 def loadDatasetMultiprocessed(path, n_jobs=-1):
     from multiprocessing import Pool
@@ -76,24 +86,54 @@ def loadDatasetMultiprocessed(path, n_jobs=-1):
     dataset = []
     with Pool(processes=n_jobs) as pool:
         for i, p in enumerate(datasetPaths):
-            tmpDatasetLabeled = pool.apply_async(load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
+            tmpDatasetLabeled = pool.apply_async(
+                load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
             dataset.append(tmpDatasetLabeled.get())
     return np.array(dataset)
 
-def save_trajectories(trajectories: List or np.ndarray, output: str or Path, classifier: str = "SVM", name: str = "trajectories") -> List[str]:
+
+def save_trajectories(trajectories: Union[List, np.ndarray], output: Union[str, Path], classifier: str = "SVM", name: str = "trajectories") -> List[str]:
+    """Save trajectories to a file.
+
+    Parameters
+    ----------
+    trajectories : Union[List, np.ndarray]
+        Trajectories to save.
+    output : Union[str, Path]
+        Output directory path.
+    classifier : str, optional
+        Name of classifier, by default "SVM"
+    name : str, optional
+        Additional name to identify file, by default "trajectories"
+
+    Returns
+    -------
+    List[str]
+        List of saved file paths.
+
+    """
     _filename = Path(output) / f"{classifier}_{name}.joblib"
     return joblib.dump(trajectories, filename=_filename)
 
-def load_dataset(path2dataset: str or Path or List[str]):
-    """Load dataset from either a joblib file or a database file.
-    If dataset path is a directory load all joblib files from the directory.
-    dict['track': TrackedObject, 'class': label].
 
-    Args:
-        path2dataset (str): Path to file containing dataset. 
+def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
+    """Load a dataset from a file or a directory.
 
-    Returns:
-        list[TrackedObject]: list of TrackedObject objects. 
+    Parameters
+    ----------
+    path2dataset : Union[str, List[str], Path]
+
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array containing the dataset. 
+
+    Raises
+    ------
+    IOError
+        Wrong file type.
+
     """
     if type(path2dataset) == list:
         datasets = []
@@ -105,7 +145,7 @@ def load_dataset(path2dataset: str or Path or List[str]):
     if ext == ".joblib":
         dataset = joblib.load(path2dataset)
         if type(dataset[0]) == dict:
-            ret_dataset = [d['track'] for d in dataset] 
+            ret_dataset = [d['track'] for d in dataset]
             dataset = ret_dataset
         for d in dataset:
             d._dataset = path2dataset
@@ -114,7 +154,8 @@ def load_dataset(path2dataset: str or Path or List[str]):
     #     return np.array(preprocess_database_data_multiprocessed(path2dataset, n_jobs=None))
     elif Path.is_dir(datasetPath):
         return mergeDatasets(loadDatasetsFromDirectory(datasetPath))
-    raise Exception("Wrong file type.")
+    raise IOError("Wrong file type.")
+
 
 def mergeDatasets(datasets: np.ndarray):
     """Merge datasets into one.
@@ -123,7 +164,7 @@ def mergeDatasets(datasets: np.ndarray):
         datasets (ndarray): List of datasets to merge. 
             shape(n, m) where n is the number of datasets 
             and m is the number of tracks in the dataset.
-    
+
     Returns:
         ndarray: Merged dataset.
     """

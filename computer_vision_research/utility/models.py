@@ -3,7 +3,8 @@ from typing import Optional, Any
 
 import joblib
 
-def save_model(savedir: str, classifier_type: str, model, version: Optional[str]=None) -> bool:
+
+def save_model(savedir: str, classifier_type: str, model, version: Optional[str] = None) -> bool:
     """Save ML Model.
 
     Parameters
@@ -26,7 +27,8 @@ def save_model(savedir: str, classifier_type: str, model, version: Optional[str]
         os.mkdir(os.path.join(savedir, "models"))
     savepath = os.path.join(savedir, "models")
     if version is not None:
-        filename = os.path.join(savepath, f"{classifier_type}_{version}.joblib")
+        filename = os.path.join(
+            savepath, f"{classifier_type}_{version}.joblib")
     else:
         filename = os.path.join(savepath, f"{classifier_type}.joblib")
     try:
@@ -34,7 +36,7 @@ def save_model(savedir: str, classifier_type: str, model, version: Optional[str]
     except Exception:
         return False
     return True
-    
+
 
 def load_model(path2model: str) -> Any:
     """Load classifier model.
