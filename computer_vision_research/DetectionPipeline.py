@@ -438,7 +438,7 @@ class DeepSORT(object):
                     logObject(db_connection, newTrack.objID, newTrack.label)
 
 
-class Pipeline:
+class Detector:
     """Detection pipeline class.
     This class is used to run the detection pipeline.
 
