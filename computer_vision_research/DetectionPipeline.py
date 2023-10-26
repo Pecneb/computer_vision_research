@@ -24,6 +24,7 @@ from typing import List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
+from joblib import dump
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection as DeepSORTDetection
 from deep_sort.deep_sort.nn_matching import NearestNeighborDistanceMetric
@@ -417,7 +418,7 @@ class DeepSORT(object):
                 if track.track_id == to.objID:
                     if track.time_since_update == 0:
                         # , k_velocity, k_acceleration)
-                        to.update(track.darknetDet, track.mean) 
+                        to.update(track.darknetDet, track.mean)
                         if len(to.history) > self.historyDepth:
                             to.history.pop(0)
                     else:
@@ -527,6 +528,8 @@ class Pipeline:
                 logger.debug(f"Output path: {out}")
             return out
         out = Path(outdir).joinpath(_source.with_suffix(suffix=suffix).name)
+        if not Path(outdir).exists():
+            Path(outdir).mkdir(parents=True)
         if logger is not None:
             logger.debug(f"Output path: {out}")
         return out
@@ -579,13 +582,21 @@ class Pipeline:
             self._logger.debug(f"Predictions: {preds}")
             new_detections = self.filter_objects(
                 new_detections=preds, frame_number=frame)
-            self._logger.debug(f"New detections: {[d.label for d in new_detections]}")
+            self._logger.debug(
+                f"New detections: {[d.label for d in new_detections]}")
             deepSort.update_history(history=self._history, new_detections=new_detections,
                                     joblibbuffer=self._joblibbuffer, db_connection=self._database)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
+        if self._joblib is not None:
+            self._logger.debug(f"Saving joblib buffer to {self._joblib}.")
+            self._logger.debug(f"Length of buffer: {len(self._joblibbuffer)}")
+            t0 = time_synchronized() 
+            dump(value=self._joblibbuffer, filename=self._joblib)
+            t1 = time_synchronized()
+            self._logger.debug(f"Joblib dump time: {t1-t0}s")
 
 
 if __name__ == "__main__":
@@ -593,5 +604,5 @@ if __name__ == "__main__":
         weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
     det = Pipeline(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
-                   outdir="./", database=False, joblib=False, debug=True)
+                   outdir="./research_data/rouren_video/", database=False, joblib=True, debug=True)
     det.run(yolo=yolo, deepSort=deepSort, show=True)
