@@ -100,6 +100,7 @@ QUERY_LASTFRAME = """SELECT frameNum
                      ORDER BY frameNum DESC
                      LIMIT 1"""
 
+
 def dowscalecoord(scalenum: float, coord: float, a: float):
     """Downscale coordinate number with given scale number and aspect ratio.
 
@@ -112,6 +113,7 @@ def dowscalecoord(scalenum: float, coord: float, a: float):
         float: downscaled value
     """
     return ((coord / scalenum) * a)
+
 
 def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, vy: float, ax: float, ay: float, vx_c: float, vy_c: float, ax_c: float, ay_c: float):
     """Downscale bounding box values to with given image's width and height using aspect ratio.
@@ -135,19 +137,20 @@ def bbox2float(img0: numpy.ndarray, x: int, y: int, w: int, h: int, vx: float, v
         tuple: tuple of downscaled values 
     """
     aspect_ratio = img0.shape[1] / img0.shape[0]
-    rettup = (dowscalecoord(img0.shape[1], x, aspect_ratio), 
-              dowscalecoord(img0.shape[0], y, 1), 
-              dowscalecoord(img0.shape[1], w, aspect_ratio), 
-              dowscalecoord(img0.shape[0], h, 1), 
-              dowscalecoord(img0.shape[1], vx, aspect_ratio), 
-              dowscalecoord(img0.shape[0], vy, 1), 
-              dowscalecoord(img0.shape[1], ax, aspect_ratio), 
+    rettup = (dowscalecoord(img0.shape[1], x, aspect_ratio),
+              dowscalecoord(img0.shape[0], y, 1),
+              dowscalecoord(img0.shape[1], w, aspect_ratio),
+              dowscalecoord(img0.shape[0], h, 1),
+              dowscalecoord(img0.shape[1], vx, aspect_ratio),
+              dowscalecoord(img0.shape[0], vy, 1),
+              dowscalecoord(img0.shape[1], ax, aspect_ratio),
               dowscalecoord(img0.shape[0], ay, 1),
               dowscalecoord(img0.shape[1], vx_c, aspect_ratio),
               dowscalecoord(img0.shape[0], vy_c, 1),
               dowscalecoord(img0.shape[1], ax_c, aspect_ratio),
               dowscalecoord(img0.shape[0], ay_c, 1))
-    return rettup 
+    return rettup
+
 
 def prediction2float(img0: numpy.ndarray, x: float, y: float):
     """Downscale prediction coordinates to floats.
@@ -158,7 +161,8 @@ def prediction2float(img0: numpy.ndarray, x: float, y: float):
         y (int): Y coordinate
     """
     aspect_ratio = img0.shape[1] / img0.shape[0]
-    return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0] 
+    return (x / img0.shape[1]) * aspect_ratio, y / img0.shape[0]
+
 
 def init_db(outpath: str or Path):
     """Initialize SQLite3 database. Input video_name which is the DIR name.
@@ -182,6 +186,7 @@ def init_db(outpath: str or Path):
             print("Detections table created!")
     return outpath
 
+
 def getConnection(db_path: str) -> sqlite3.Connection:
     """Creates connection to the database.
 
@@ -197,10 +202,11 @@ def getConnection(db_path: str) -> sqlite3.Connection:
         return conn
     except Error as e:
         print(e)
-    
+
     return conn
 
-def closeConnection(conn : sqlite3.Connection):
+
+def closeConnection(conn: sqlite3.Connection):
     """Closes connection to the database.
 
     Args:
@@ -211,12 +217,13 @@ def closeConnection(conn : sqlite3.Connection):
     except Error as e:
         print(e)
 
+
 def logDetection(
-        conn : sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum:int, 
-        confidence: float, x_coord: int, y_coord: int, width: int, height: int, 
-        x_vel: float, y_vel: float, x_acc: float, y_acc: float, x_vel_calc: float, 
+        conn: sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNum: int,
+        confidence: float, x_coord: int, y_coord: int, width: int, height: int,
+        x_vel: float, y_vel: float, x_acc: float, y_acc: float, x_vel_calc: float,
         y_vel_calc: float, x_acc_calc: float, y_acc_calc: float
-        ):
+):
     """Logging detections to the database. Downscale bbox coordinates to floats. 
     Insert entry to database if there is no similar entry found.
 
@@ -236,13 +243,16 @@ def logDetection(
     if not detectionExists(conn, objID, frameNum):
         try:
             cur = conn.cursor()
-            x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c = bbox2float(img0, x_coord, y_coord, width, height, x_vel, y_vel, x_acc, y_acc, x_vel_calc, y_vel_calc, x_acc_calc, y_acc_calc)
-            cur.execute(INSERT_DETECTION, (objID, frameNum, confidence, x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c))
+            x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c = bbox2float(
+                img0, x_coord, y_coord, width, height, x_vel, y_vel, x_acc, y_acc, x_vel_calc, y_vel_calc, x_acc_calc, y_acc_calc)
+            cur.execute(INSERT_DETECTION, (objID, frameNum, confidence,
+                        x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c))
             conn.commit()
             # print("Detection added to database.")
         except Error as e:
             print(e)
-        
+
+
 def objExists(conn: sqlite3.Connection, objID: int, label: str) -> bool:
     """Check if entry already exists in database. 
     No multiple detections can occur in a single frame, that have the same objID.
@@ -265,6 +275,7 @@ def objExists(conn: sqlite3.Connection, objID: int, label: str) -> bool:
             return False
     except Error as e:
         print(e)
+
 
 def detectionExists(conn: sqlite3.Connection, objID: int, frameNumber: int):
     """Check if entry already exists in database. 
@@ -289,6 +300,7 @@ def detectionExists(conn: sqlite3.Connection, objID: int, frameNumber: int):
     except Error as e:
         print(e)
 
+
 def getLatestFrame(conn: sqlite3.Connection):
     """Gets the number of last frame, when the last sessions logging was stopped.
 
@@ -305,7 +317,8 @@ def getLatestFrame(conn: sqlite3.Connection):
     except Error as e:
         print(e)
 
-def logPredictions(conn: sqlite3.Connection, img0: numpy.ndarray, objID:int, frameNumber: int, x: numpy.ndarray, y: numpy.ndarray):
+
+def logPredictions(conn: sqlite3.Connection, img0: numpy.ndarray, objID: int, frameNumber: int, x: numpy.ndarray, y: numpy.ndarray):
     """Log predictions to database, in format (objID, frameNum, idx, x, y)
 
     Args:
@@ -324,6 +337,7 @@ def logPredictions(conn: sqlite3.Connection, img0: numpy.ndarray, objID:int, fra
     except Error as e:
         print(e)
 
+
 def logObject(conn: sqlite3.Connection, objID: int, label: str):
     """Log new object to the database.
 
@@ -340,7 +354,8 @@ def logObject(conn: sqlite3.Connection, objID: int, label: str):
         except Error as e:
             print(e)
 
-def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int, 
+
+def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int,
                 yoloVersion: str, device: str, imsz: int, stride: int, conf_thres: float, iou_thres: float):
     """Log environment data to the database.
 
@@ -351,11 +366,13 @@ def logMetaData(conn: sqlite3.Connection, historyDepth: int, futureDepth: int,
     """
     try:
         cur = conn.cursor()
-        cur.execute(INSERT_METADATA, (historyDepth, futureDepth, yoloVersion, device, imsz, stride, conf_thres, iou_thres))
+        cur.execute(INSERT_METADATA, (historyDepth, futureDepth,
+                    yoloVersion, device, imsz, stride, conf_thres, iou_thres))
         conn.commit()
     except Error as e:
         print(e)
         print("SQL error at metadata logging.")
+
 
 def logRegression(conn: sqlite3.Connection, linearFunction: str, polynomFunction: str, polynomDegree: int, trainingPoints: int):
     """Log regression function data to database.
@@ -369,10 +386,12 @@ def logRegression(conn: sqlite3.Connection, linearFunction: str, polynomFunction
     """
     try:
         cur = conn.cursor()
-        cur.execute(INSERT_REGRESSION, (linearFunction, polynomFunction, polynomDegree, trainingPoints))
+        cur.execute(INSERT_REGRESSION, (linearFunction,
+                    polynomFunction, polynomDegree, trainingPoints))
         conn.commit()
     except Error as e:
         print(e)
+
 
 def logBuffer(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
     """Log buffer to the database after main loop is ended.
@@ -392,14 +411,20 @@ def logBuffer(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
     """
     import tqdm
     for idx in tqdm.tqdm(range(len(buffer)), desc="Do not interrupt! Logging buffer to database!"):
-        logDetection(conn, frame, 
-            buffer[idx][0], buffer[idx][1], buffer[idx][2],                 # objID, frameID, confidence 
-            buffer[idx][3], buffer[idx][4],                                 # X, Y 
-            buffer[idx][5], buffer[idx][6],                                 # W, H 
-            buffer[idx][7], buffer[idx][8], buffer[idx][9], buffer[idx][10],# VX, VY, AX, AY
-            buffer[idx][11], buffer[idx][12],                               # VX_calculated, VY_calculated
-            buffer[idx][13], buffer[idx][14])                               # AX_calculated, AY_calculated 
-        #logPredictions(conn, frame, buffer[idx][0], buffer[idx][1], buffer[idx][15], buffer[idx][16])
+        logDetection(conn, frame,
+                     # objID, frameID, confidence
+                     buffer[idx][0], buffer[idx][1], buffer[idx][2],
+                     # X, Y
+                     buffer[idx][3], buffer[idx][4],
+                     # W, H
+                     buffer[idx][5], buffer[idx][6],
+                     # VX, VY, AX, AY
+                     buffer[idx][7], buffer[idx][8], buffer[idx][9], buffer[idx][10],
+                     # VX_calculated, VY_calculated
+                     buffer[idx][11], buffer[idx][12],
+                     buffer[idx][13], buffer[idx][14])                               # AX_calculated, AY_calculated
+        # logPredictions(conn, frame, buffer[idx][0], buffer[idx][1], buffer[idx][15], buffer[idx][16])
+
 
 def logBufferSpeedy(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list):
     """Log buffer to the database after main loop is ended. 
@@ -421,10 +446,12 @@ def logBufferSpeedy(conn: sqlite3.Connection, frame: numpy.ndarray, buffer: list
     print("Dont interrupt! Logging buffer to database!")
     detections2log = []
     for buf in buffer:
-        x,y,w,h,vx,vy,ax,ay,vx_c,vy_c,ax_c,ay_c = bbox2float(frame, buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14])
-        detections2log.append((buf[0], buf[1], buf[2], x,y,w,h,vx,vy,ax,ay,vx_c,vy_c,ax_c,ay_c))
-    #predictions2log = []
-    #for i in range(len(buffer)):
+        x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c = bbox2float(
+            frame, buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14])
+        detections2log.append(
+            (buf[0], buf[1], buf[2], x, y, w, h, vx, vy, ax, ay, vx_c, vy_c, ax_c, ay_c))
+    # predictions2log = []
+    # for i in range(len(buffer)):
     #    for j in range(len(buffer[i][11])):
     #        x,y = prediction2float(frame, buffer[i][11][j], buffer[i][12][j])
     #        predictions2log.append((buffer[i][0], buffer[i][1], j, x, y))
