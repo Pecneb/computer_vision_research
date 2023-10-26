@@ -1,4 +1,4 @@
 
 [submodule "yolov7"]
-	path = yolov7
+	path = computer_vision_research/yolov7
 	url = git@github.com:WongKinYiu/yolov7.git

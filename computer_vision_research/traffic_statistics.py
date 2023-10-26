@@ -19,22 +19,25 @@
 """
 import argparse
 import logging
-import time
 import os
-import tqdm
-import cv2
-import numpy as np
+import time
 from pathlib import Path
-from matplotlib import pyplot as plt
-import seaborn as sns
-from sklearn.cluster import OPTICS
 from typing import List
 
+import cv2
+import numpy as np
+import seaborn as sns
+import tqdm
 from clustering import clustering_on_feature_vectors
-from dataManagementClasses import TrackedObject
+from computer_vision_research.dataManagementClasses import TrackedObject
+from matplotlib import pyplot as plt
+from sklearn.cluster import OPTICS
 from utility.dataset import load_dataset
 from utility.preprocessing import filter_trajectories
-from utils.cluster import calc_cluster_centers, upscale_cluster_centers, make_4D_feature_vectors
+
+from utils.cluster import (calc_cluster_centers, make_4D_feature_vectors,
+                           upscale_cluster_centers)
+
 sns.set_theme()
 
 logging.basicConfig(level=logging.INFO)

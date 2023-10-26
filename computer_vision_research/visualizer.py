@@ -18,21 +18,23 @@
     Contact email: ecneb2000@gmail.com
 """
 
+import argparse
+from typing import List, Tuple
+
 ### Third Party ###
 import cv2 as cv
-import argparse
-import tqdm
 import numpy as np
-
+import tqdm
+from classifier import OneVSRestClassifierExtended
+from clustering import calc_cluster_centers
+from computer_vision_research.dataManagementClasses import Detection, TrackedObject
+from deepsortTracking import getTracker, initTrackerMetric, updateHistory
 ### Local ###
 from detector import getTargets
 from masker import masker
-from classifier import OneVSRestClassifierExtended
-from dataManagementClasses import Detection, TrackedObject
-from deepsortTracking import initTrackerMetric, getTracker, updateHistory
-from clustering import calc_cluster_centers
-from utility.models import load_model
 from utility.dataset import load_dataset
+from utility.models import load_model
+
 
 def parseArgs():
     """Handle command line arguments.
@@ -41,27 +43,31 @@ def parseArgs():
         args: arguments object, that contains the args given in the command line 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video", required=True, help="Path to video.", type=str)
-    parser.add_argument("--model", required=True, help="Path to trained model.", type=str)
+    parser.add_argument("--video", required=True,
+                        help="Path to video.", type=str)
+    parser.add_argument("--model", required=True,
+                        help="Path to trained model.", type=str)
     parser.add_argument("--dataset", help="Path to dataset.", type=str)
-    parser.add_argument("--history", type=int, default=30, 
+    parser.add_argument("--history", type=int, default=30,
                         help="How many detections will be saved in the track's history.")
     parser.add_argument("--max_cosine_distance",  type=float, default=10.0,
                         help="Gating threshold for cosine distance metric (object apperance)")
     parser.add_argument("--max_iou_distance", type=float, default=0.7)
     parser.add_argument("--nn_budget", type=float, default=100,
                         help="Maximum size of the apperance descriptors gallery. If None, no budget is enforced.")
-    parser.add_argument("--feature_version", choices=['1', '2','3', '4', '7'], default='2', 
+    parser.add_argument("--feature_version", choices=['1', '1SG', '7', '7SG', '8', '8SG'], default='2',
                         help="What version of feature vectors to use.")
     parser.add_argument("--top_k", type=int, default=1,
                         help="Number of highest confidence predictions to show.")
     parser.add_argument("--record", action="store_true", default=False,
                         help="Use this flag if want to record video of prediction results.")
-    parser.add_argument("--output", type=str, 
+    parser.add_argument("--output", type=str,
                         help="Use this flag if want to record video of prediction results.")
-    parser.add_argument("--pool", action="store_true", default=False, help="Use this flag to enable cluster center pooling.")
+    parser.add_argument("--pool", action="store_true", default=False,
+                        help="Use this flag to enable cluster center pooling.")
     args = parser.parse_args()
     return args
+
 
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.
@@ -77,11 +83,12 @@ def upscalebbox(bbox, fwidth, fheight):
     """
     ratio = fwidth / fheight
     X, Y, W, H = bbox
-    X = (X * fwidth) / ratio 
+    X = (X * fwidth) / ratio
     W = (W * fwidth) / ratio
-    Y = Y * fheight 
-    H = H * fheight 
+    Y = Y * fheight
+    H = H * fheight
     return X, Y, W, H
+
 
 def bbox2points(bbox):
     """
@@ -95,6 +102,7 @@ def bbox2points(bbox):
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
 
+
 def drawbbox(bbox: tuple, image: np.ndarray):
     """Draw bounding box of an object to the given image.
 
@@ -104,7 +112,8 @@ def drawbbox(bbox: tuple, image: np.ndarray):
     """
     bboxUpscaled = upscalebbox(bbox, image.shape[1], image.shape[0])
     left, top, right, bottom = bbox2points(bboxUpscaled)
-    cv.rectangle(image, (left, top), (right, bottom), (0,255,0), 1)
+    cv.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 1)
+
 
 def aoiextraction(tracks, classes):
     """Calculate the centroids of the area of interests, the gravity center of clusters.
@@ -132,6 +141,7 @@ def aoiextraction(tracks, classes):
         centroids[l, 1] = y_sum/n
     return centroids
 
+
 def upscale_aoi(centroids, framewidth: int, frameheight: int):
     """Scale centroids of clusters up to the video's resolution.
 
@@ -148,9 +158,10 @@ def upscale_aoi(centroids, framewidth: int, frameheight: int):
     for i in range(centroids.shape[0]):
         retarr[i, 0] = centroids[i, 0] * framewidth / ratio
         retarr[i, 1] = centroids[i, 1] * frameheight
-    return retarr 
+    return retarr
 
-def draw_prediction(trackedObject, centroid: list[np.ndarray], image: np.ndarray, framenum: int, predictions: np.ndarray, confidences: np.ndarray):
+
+def draw_prediction(trackedObject, centroid: List[np.ndarray], image: np.ndarray, framenum: int, predictions: np.ndarray, confidences: np.ndarray):
     """Draw prediction path.
 
     Args:
@@ -160,26 +171,32 @@ def draw_prediction(trackedObject, centroid: list[np.ndarray], image: np.ndarray
     """
     ratio = image.shape[1] / image.shape[0]
     X, Y = int(trackedObject.history[-1].X), int(trackedObject.history[-1].Y)
-    W, H = int(trackedObject.history[-1].Width), int(trackedObject.history[-1].Height)
+    W, H = int(
+        trackedObject.history[-1].Width), int(trackedObject.history[-1].Height)
     if trackedObject.history[-1].frameID == framenum:
         bbox = (X, Y, W, H)
         left, top, right, bottom = bbox2points(bbox)
-        cv.rectangle(image, (left, top), (right, bottom), (0,255,0), 1)
-        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[-1]]:3.2f}", (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+        cv.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 1)
+        cv.putText(image, f"ID {trackedObject.objID} {predictions} {confidences[predictions[-1]]:3.2f}", (
+            left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         for i in range(centroid.shape[0]):
             if i == len(predictions)-1:
-                cv.line(image, (X, Y), (int(centroid[i, 0]), int(centroid[i, 1])), (0,255,0), 3)
-                cv.circle(image, (int(centroid[i, 0]), int(centroid[i, 1])), 10, (0,255,0), 3)
-                cv.putText(image, f"Cluster: {predictions[-1]}", 
-                            (int(centroid[i, 0]), int(centroid[i, 1])),
-                            cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+                cv.line(image, (X, Y), (int(centroid[i, 0]), int(
+                    centroid[i, 1])), (0, 255, 0), 3)
+                cv.circle(image, (int(centroid[i, 0]), int(
+                    centroid[i, 1])), 10, (0, 255, 0), 3)
+                cv.putText(image, f"Cluster: {predictions[-1]}",
+                           (int(centroid[i, 0]), int(centroid[i, 1])),
+                           cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             else:
-                cv.line(image, (X, Y), (int(centroid[i, 0]), int(centroid[i, 1])), (0,0,255), 3)
-        
+                cv.line(image, (X, Y), (int(centroid[i, 0]), int(
+                    centroid[i, 1])), (0, 0, 255), 3)
+
 
 def upscale_coordinates(p1, p2, image: np.ndarray):
     ratio = image.shape[1]/image.shape[0]
     return (p1 * image.shape[1] / ratio), (p2 * image.shape[0])
+
 
 def feature_at_idx(track: TrackedObject, frameidx: int):
     lastidx = 0
@@ -188,7 +205,7 @@ def feature_at_idx(track: TrackedObject, frameidx: int):
             break
         lastidx += 1
     if lastidx == len(track.history):
-        return None 
+        return None
     x_0 = track.history[0].X
     y_0 = track.history[0].Y
     vx_0 = track.history[0].VX
@@ -200,6 +217,7 @@ def feature_at_idx(track: TrackedObject, frameidx: int):
     vx_2 = track.history[lastidx].VX
     vy_2 = track.history[lastidx].VY
     return np.array([x_0, y_0, vx_0, vy_0, x_1, y_1, x_2, y_2, vx_2, vy_2])
+
 
 def prediction_paralell(t: TrackedObject, model: OneVSRestClassifierExtended, frame: np.ndarray, framewidth: int, frameheight: int, cluster_centroids: dict, cluster_centroids_upscaled: dict, feature_v3: bool = False):
     """Prediction algorithm for paralellism.
@@ -219,24 +237,40 @@ def prediction_paralell(t: TrackedObject, model: OneVSRestClassifierExtended, fr
     if t.isMoving:
         if feature is not None:
             if VERSION_3:
-                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), 1, centroids=cluster_centroids).reshape((-1))
+                predictions = model.predict(np.array([t.downscale_feature(
+                    feature, framewidth, frameheight, VERSION_3)]), 1, centroids=cluster_centroids).reshape((-1))
             else:
-                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
-            #upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
+                predictions = model.predict(np.array(
+                    [t.downscale_feature(feature, framewidth, frameheight)]), 1).reshape((-1))
+            # upscaledFeature = upscale_feature(featureVector=feature, framewidth=framewidth, frameheight=frameheight)
             centroids = [cluster_centroids_upscaled[p] for p in predictions]
-            #draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
+            # draw_prediction((int(upscaledFeature[6]), int(upscaledFeature[7])), centroids, frame)
             draw_prediction((int(t.X), int(t.Y)), centroids, frame)
+
+
+def draw_clusters(cluster_centroids_upscaled: np.ndarray, image: np.ndarray):
+    for i in range(cluster_centroids_upscaled.shape[0]):
+        cv.circle(image, (int(cluster_centroids_upscaled[i][0]), int(
+            cluster_centroids_upscaled[i][1])), 10, (0, 0, 255), 3)
+        cv.putText(image, f"Cluster: {i}",
+                   (int(cluster_centroids_upscaled[i][0]), int(
+                       cluster_centroids_upscaled[i][1])),
+                   cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+
+def draw_prediction_line(image: np.ndarray, cluster_centroids_upscaled: np.ndarray, predicted_cluster: int, coordinates: Tuple[int, int]):
+    cv.line(image, (int(coordinates[0]), int(coordinates[1])), (int(cluster_centroids_upscaled[predicted_cluster, 0]), int(
+        cluster_centroids_upscaled[predicted_cluster, 1])), (0, 0, 255), 3)
+
 
 def main():
     args = parseArgs()
 
-    VERSION_3 = int(args.feature_version) == 3
-
-    from yolov7api import detect, COLORS
+    from yolov7api import COLORS, detect
 
     cap = cv.VideoCapture(args.video)
 
-    # create mask, so only in the area of interest will be used in detection 
+    # create mask, so only in the area of interest will be used in detection
     _, img = cap.read()
     mask = masker(img)
 
@@ -248,46 +282,30 @@ def main():
             print("No video output given exiting...")
             exit(0)
         fourcc = cv.VideoWriter_fourcc(*'XVID')
-        out = cv.VideoWriter(filename=args.output, fourcc=fourcc, fps=30.00, frameSize=(int(framewidth), int(frameheight)), isColor=True)
+        out = cv.VideoWriter(filename=args.output, fourcc=fourcc, fps=30.00, frameSize=(
+            int(framewidth), int(frameheight)), isColor=True)
 
     model = load_model(args.model)
     model.n_jobs = 18
-    try:
-        dataset = model.tracks
-    except:
-        dataset = load_dataset(args.dataset)
+
     centroids_labels = model.centroid_labels
-    """
-    dataset = load_joblib_tracks(args.train_tracks) 
-    if type(dataset[0]) != dict:
-        raise TypeError("Bad type of dataset file. The train_tracks dataset should contain clustered data. List containing dicts with keys: track, class.")
-    if args.all_tracks:
-        all_tracks = load_joblib_tracks(args.all_tracks)
+    centroids_coordinates = model.centroid_coordinates
 
-    dataset_filtered = [d for d in dataset if d["class"] != -1]
-    """
-    tracks = [d["track"] for d in dataset]
-    classes = [d["class"] for d in dataset]
-    reduced_classes = [d["reduced_class"] for d in dataset if d["reduced_class"] != -1]
-
-    # extract cluster centroids from dataset of classes and tracks
-    if args.pool:
-        cluster_centroids = calc_cluster_centers(tracks, reduced_classes)
-    else:
-        cluster_centroids = calc_cluster_centers(tracks, classes)
     # upscale the coordinates of the centroids to the video's scale
-    cluster_centroids_upscaled = upscale_aoi(cluster_centroids, framewidth, frameheight)
+    cluster_centroids_upscaled = upscale_aoi(
+        centroids_coordinates, framewidth, frameheight)
 
-    dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget), historyDepth=args.history, max_iou_distance=args.max_iou_distance)
+    dsTracker = getTracker(initTrackerMetric(args.max_cosine_distance, args.nn_budget),
+                           historyDepth=args.history, max_iou_distance=args.max_iou_distance)
 
-    history: list[TrackedObject] = [] # TrackedObjects
+    history: list[TrackedObject] = []  # TrackedObjects
 
     frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 
     # create named window
     cv.namedWindow("Video")
     # create trackbar to be able to set frameposition
-    setFrame = lambda frame_num: cap.set(cv.CAP_PROP_POS_FRAMES, frame_num)
+    def setFrame(frame_num): return cap.set(cv.CAP_PROP_POS_FRAMES, frame_num)
     cv.createTrackbar("Frame", "Video", 0, frame_count, setFrame)
 
     for frameidx in tqdm.tqdm(range(frame_count)):
@@ -296,47 +314,50 @@ def main():
             if frame is None:
                 print("Video enden, closing player.")
                 break
-            
+
             masked_frame = cv.bitwise_and(frame, frame, mask=mask)
 
             frameNum = cap.get(cv.CAP_PROP_POS_FRAMES)
-            yoloDetections = detect(masked_frame) # get detections from yolo nn
-            targetDetections = getTargets(yoloDetections, frameNum, targetNames=("car")) # get target detections and make Detection() objects
-            updateHistory(history, dsTracker, targetDetections, historyDepth=args.history) # update track history and update tracker
+            # get detections from yolo nn
+            yoloDetections = detect(masked_frame)
+            # get target detections and make Detection() objects
+            targetDetections = getTargets(
+                yoloDetections, frameNum, targetNames=("car"))
+            # update track history and update tracker
+            updateHistory(history, dsTracker, targetDetections,
+                          historyDepth=args.history)
 
-            #draw_boxes(history, frame, COLORS, frameNum)
+            # draw_boxes(history, frame, COLORS, frameNum)
 
             for i in range(cluster_centroids_upscaled.shape[0]):
-                cv.circle(frame, (int(cluster_centroids_upscaled[i][0]), int(cluster_centroids_upscaled[i][1])), 10, (0,0,255), 3)
-                cv.putText(frame, f"Cluster: {i}", 
-                            (int(cluster_centroids_upscaled[i][0]), int(cluster_centroids_upscaled[i][1])),
-                            cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
+                cv.circle(frame, (int(cluster_centroids_upscaled[i][0]), int(
+                    cluster_centroids_upscaled[i][1])), 10, (0, 0, 255), 3)
+                cv.putText(frame, f"Cluster: {i}",
+                           (int(cluster_centroids_upscaled[i][0]), int(
+                               cluster_centroids_upscaled[i][1])),
+                           cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
             for t in history:
-                    if args.feature_version == '3':
-                        feature = t.feature_v3()
-                    if args.feature_version == '4':
-                        feature = t.feature_v4()
-                    if args.feature_version == '7':
-                        feature = t.feature_v7()
-                    else:
-                        feature = t.feature_()
-                    if t.isMoving:
-                        if feature is not None:
-                            if VERSION_3:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight, VERSION_3)]), args.top_k, centroids=cluster_centroids).reshape((-1))
-                            elif args.pool:
-                                predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)]), classes=centroids_labels)
-                                # print(predictions_proba)
-                                predictions = np.argsort(predictions_proba)[:, -args.top_k:]
-                                # print(predictions)
-                                predictions = predictions.reshape((-1))
-                                predictions_proba = predictions_proba.reshape((-1))
-                            else:
-                                predictions = model.predict(np.array([t.downscale_feature(feature, framewidth, frameheight)]), args.top_k).reshape((-1))
-                                predictions_proba = model.predict_proba(np.array([t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))
-                            centroids = np.array([cluster_centroids_upscaled[p] for p in predictions])
-                            draw_prediction(t, centroids, frame, frameNum, predictions, predictions_proba)
-            
+                feature = t.feature_vector(
+                    version=args.feature_version, history_size=args.history, window_length=7, polyorder=2)
+                if t.isMoving:
+                    if feature is not None:
+                        if args.pool:
+                            predictions_proba = model.predict_proba(np.array([t.downscale_feature(
+                                feature, framewidth, frameheight)]), classes=centroids_labels)
+                            predictions = np.argsort(predictions_proba)[
+                                :, -args.top_k:]
+                            predictions = predictions.reshape((-1))
+                            predictions_proba = predictions_proba.reshape((-1))
+                        else:
+                            predictions = model.predict(np.array([t.downscale_feature(
+                                feature, framewidth, frameheight)]), args.top_k).reshape((-1))
+                            predictions_proba = model.predict_proba(np.array(
+                                [t.downscale_feature(feature, framewidth, frameheight)])).reshape((-1))
+                        centroids = np.array(
+                            [cluster_centroids_upscaled[p] for p in predictions])
+                        draw_prediction(t, centroids, frame,
+                                        frameNum, predictions, predictions_proba)
+
             cv.imshow("Video", frame)
             cv.setTrackbarPos("Frame", "Video", int(frameNum))
 
@@ -350,7 +371,7 @@ def main():
                 if key == ord('r'):
                     continue
                 elif key == ord('q'):
-                    break 
+                    break
             # quit vudeo player
             if cv.waitKey(1) == ord('q'):
                 break
@@ -360,6 +381,7 @@ def main():
     if args.record:
         out.release()
     cv.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

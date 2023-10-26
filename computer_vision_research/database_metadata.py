@@ -20,26 +20,22 @@
 
 ### Third Part ###
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
 ### Local ###
-import utility.databaseLoader as databaseLoader 
-from utility.general import (
-    checkDir
-)
-from utility.plots import (
-    cvCoord2npCoord,
-)
-from utility.dataset import (
-    load_dataset
-)
+import utility.databaseLoader as databaseLoader
+from utility.dataset import load_dataset
+from utility.general import checkDir
+from utility.plots import cvCoord2npCoord
+
 
 # disable sklearn warning
 def warn(*arg, **args):
     pass
 import warnings
+
 warnings.warn = warn
 
 def coordinates2heatmap(path2db):

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def iter_minibatches(X: np.ndarray, y: np.ndarray, batch_size: int):
     """Generate minibatches for training.
 

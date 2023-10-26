@@ -17,25 +17,24 @@
 
     Contact email: ecneb2000@gmail.com
 """
+import logging
+import os
 ### System ###
 import time
-import os
-import logging
-from typing import List
 from copy import deepcopy
 from pathlib import Path
+from typing import List
 
+### Local ###
+import databaseLoader as databaseLoader
+import computer_vision_research.dataManagementClasses as dataManagementClasses
+import joblib
 ### Third Party ###
 import matplotlib.pyplot as plt
 import numpy as np
 import tqdm
-import joblib 
-
-### Local ###
-import databaseLoader as databaseLoader
-from classifier import OneVSRestClassifierExtended 
+from classifier import OneVSRestClassifierExtended
 from visualizer import aoiextraction
-import dataManagementClasses as dataManagementClasses
 
 logging.basicConfig(filename="processing_utils.log", level=logging.DEBUG)
 
@@ -1203,7 +1202,7 @@ def trackslabels2joblib(path2tracks: str, output: str, min_samples = 10, max_eps
     Returns:
         _type_: _description_
     """
-    from clustering import clustering_on_feature_vectors 
+    from clustering import clustering_on_feature_vectors
     from sklearn.cluster import OPTICS
     filext = path2tracks.split('/')[-1].split('.')[-1]
     
