@@ -18,28 +18,29 @@
     Contact email: ecneb2000@gmail.com
 """
 
-from utility.preprocessing import (
-    euclidean_distance, filter_by_class,
-    filter_out_false_positive_detections_by_enter_exit_distance,
-    filter_trajectories, shuffle_data)
-from utility.dataset import (load_dataset,
-                             loadDatasetsFromDirectory)
-from dataManagementClasses import TrackedObject, detectionParser, preprocess_database_data_multiprocessed, trackedObjectFactory
-import utility.databaseLoader as databaseLoader
 import os
 from pathlib import Path
 from typing import List, Tuple
 
-### Third Party ###
 import matplotlib
 import numpy as np
 import tqdm
+import utility.databaseLoader as databaseLoader
+from dataManagementClasses import (TrackedObject, detectionParser,
+                                   preprocess_database_data_multiprocessed,
+                                   trackedObjectFactory)
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
+from utility.dataset import load_dataset, loadDatasetsFromDirectory
+from utility.preprocessing import (
+    euclidean_distance, filter_by_class,
+    filter_out_false_positive_detections_by_enter_exit_distance,
+    filter_trajectories, shuffle_data)
+from utility.logging import init_logger
 
 matplotlib.use('Agg')
 
-### Local ###
+_logger = init_logger(__name__)
 
 
 def makeFeatureVectors_Nx2(trackedObjects: List) -> np.ndarray:
@@ -149,7 +150,8 @@ def calc_cluster_centers(tracks, labels, exit=True):
                 else:
                     tracks_xy.append(
                         [tracks[j].history[0].X, tracks[j].history[0].Y])
-        tracks_xy = np.array(tracks_xy)
+        tracks_xy = np.array(tracks_xy[:5])
+        _logger.debug(f"tracks_xy: {tracks_xy}")
         cluster_centers[i, 0] = np.average(tracks_xy[:, 0])
         cluster_centers[i, 1] = np.average(tracks_xy[:, 1])
     return cluster_centers

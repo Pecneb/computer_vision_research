@@ -17,18 +17,6 @@
 
     Contact email: ecneb2000@gmail.com
 """
-### System ###
-from utility.general import strfy_dict_params
-from utility.dataset import (load_dataset,
-                             save_trajectories)
-from utility.featurevector import FeatureVector
-from dataManagementClasses import TrackedObject, insert_weights_into_feature_vector, preprocess_database_data_multiprocessed
-from utility.training import iter_minibatches
-from utility.preprocessing import filter_by_class, filter_trajectories
-from utility.models import load_model, save_model
-from clustering import (calc_cluster_centers, make_4D_feature_vectors,
-                        make_6D_feature_vectors)
-import tqdm
 import os
 import time
 from datetime import date
@@ -41,9 +29,22 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import tqdm
+from clustering import (calc_cluster_centers, make_4D_feature_vectors,
+                        make_6D_feature_vectors)
+from dataManagementClasses import (TrackedObject,
+                                   insert_weights_into_feature_vector,
+                                   preprocess_database_data_multiprocessed)
 from icecream import ic
 from scipy.signal import savgol_filter
 from tqdm import tqdm
+from utility.dataset import load_dataset, save_trajectories
+from utility.featurevector import FeatureVector
+### System ###
+from utility.general import strfy_dict_params
+from utility.models import load_model, save_model
+from utility.preprocessing import filter_by_class, filter_trajectories
+from utility.training import iter_minibatches
 
 icecream.install()
 
@@ -1708,8 +1709,8 @@ def plot_decision_tree(path2model: str):
     Args:
         path2model (str): Path to the joblib binary model file.
     """
-    from sklearn import tree
     import graphviz
+    from sklearn import tree
     model = load_model(path2model=path2model)
     parent_dir = Path(path2model).parent
     plots_dir = Path(os.path.join(parent_dir, "plots"))

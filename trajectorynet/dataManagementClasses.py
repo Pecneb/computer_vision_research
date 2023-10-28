@@ -18,18 +18,17 @@
     Contact email: ecneb2000@gmail.com
 """
 
-import time
 import logging
+import time
 from dataclasses import dataclass, field
-from typing import List, Optional
 from pathlib import Path
+from typing import List, Optional
 
-import numpy as np
 import joblib
+import numpy as np
 import tqdm
-
-from utility.featurevector import FeatureVector
 from utility import databaseLoader
+from utility.featurevector import FeatureVector
 
 
 @dataclass

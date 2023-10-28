@@ -1,16 +1,15 @@
 ### Standard imports ###
-import sys
-from logging import getLogger, INFO, DEBUG, StreamHandler, Logger
-
 ### Third party imports ###
 import argparse
-import numpy as np
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.cluster import OPTICS, KMeans
+import sys
+from logging import DEBUG, INFO, Logger, StreamHandler, getLogger
 
+import numpy as np
+from sklearn.cluster import OPTICS, KMeans
+from sklearn.multiclass import OneVsRestClassifier
+from utility.dataset import load_dataset
 ### Local imports ###
 from utility.featurevector import FeatureVector
-from utility.dataset import load_dataset
 from utility.models import save_model
 
 

@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
-from DetectionPipeline import Yolov7, DeepSORT, Detector
+from DetectionPipeline import DeepSORT, Detector, Yolov7
+
 
 def get_args():
     parser = ArgumentParser(description='Detect objects in a video.')

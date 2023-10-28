@@ -18,7 +18,6 @@
     Contact email: ecneb2000@gmail.com
 """
 import argparse
-import logging
 import os
 import time
 from pathlib import Path
@@ -35,9 +34,13 @@ from dataManagementClasses import TrackedObject
 from matplotlib import pyplot as plt
 from sklearn.cluster import OPTICS
 from utility.dataset import load_dataset
+from utility.logging import init_logger
 from utility.preprocessing import filter_trajectories
 
 sns.set_theme()
+
+_logger = init_logger("TrafficStatistics", "traffic_statistics.log")
+
 
 def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: str, bg_img: str):
     """
@@ -75,7 +78,9 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     X = dataset
     Y = labels
     enter_cluster_center = calc_cluster_centers(X, Y, False)
+    _logger.debug(enter_cluster_center)
     exit_cluster_center = calc_cluster_centers(X, Y, True)
+    _logger.debug(exit_cluster_center)
     fig1, ax1 = plt.subplots(1, 1, figsize=(15, 10))
     ax1.set_title(f"{output} clusters histogram")
     classes = np.array(list(set(Y)))
@@ -100,7 +105,7 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     if output is not None:
         fig1Name = os.path.join(output, "histogram.png")
         fig1.savefig(fig1Name)
-        logging.info(f"Fig1: \"{fig1Name}\"")
+        _logger.info(f"Fig1: \"{fig1Name}\"")
     if bg_img is not None:
         fig2, ax2 = plt.subplots(1, 1, figsize=(15, 10))
         ax2.set_title(f"{output} cluster heatmap")
@@ -110,6 +115,7 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         bgImg = 255 - (255 - bgImg) * 0.5
         bgImg = bgImg.astype(np.uint8)
         mp = ax2.imshow(bgImg)
+        _logger.debug(f"bgImg.shape: {bgImg.shape}")
         # Upscale cluster centers to the size of the background image
         upscaled_enters = upscale_cluster_centers(
             enter_cluster_center, bgImg.shape[1], bgImg.shape[0])
@@ -137,7 +143,7 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
             fig2.savefig(fig2Name)
-            logging.info(f"Fig2: \"{fig2Name}\"")
+            _logger.info(f"Fig2: \"{fig2Name}\"")
     plt.show()
     plt.close()
 
@@ -325,7 +331,7 @@ def trafficHistogramModule(args):
     labels and filtered trajectories.
 
     """
-    logging.info("Traffic histogram module started")
+    _logger.info("Traffic histogram module started")
     start = time.time()
     tracks = load_dataset(args.database[0])
     if not args.filtered:
@@ -346,7 +352,7 @@ def trafficHistogramModule(args):
                      labels=Y,
                      output=args.output,
                      bg_img=args.bg_img)
-    logging.info(
+    _logger.info(
         f"Traffic histogram module ran for {time.time()-start} seconds")
 
 
@@ -370,7 +376,7 @@ def hourlyStatisticsModule(args):
     are saved to disk in various formats.
 
     """
-    logging.info("Traffic hourly statistics module started")
+    _logger.info("Traffic hourly statistics module started")
     start = time.time()
     tracksHourly = []
     labelsHourly = []
@@ -455,12 +461,12 @@ def hourlyStatisticsModule(args):
     hourlyTable(datasets, tracksHourlyClustered,
                 labelsHourlyClustered, classes, args.output)
     # hourlyHistorgram(labelsHourlyClustered, classes, args.output)
-    logging.info(
+    _logger.info(
         f"Traffic hourly statistics module ran for {time.time()-start} seconds")
 
 
 def trafficStatisticTable(args):
-    logging.info("Traffic histogram module started")
+    _logger.info("Traffic histogram module started")
     start = time.time()
     tracks = load_dataset(args.database[0])
     if not args.filtered:

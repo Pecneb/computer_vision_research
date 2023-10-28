@@ -24,12 +24,16 @@ from typing import List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
-from joblib import dump
+from dataManagementClasses import Detection as DarknetDetection
+from dataManagementClasses import TrackedObject
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection as DeepSORTDetection
 from deep_sort.deep_sort.nn_matching import NearestNeighborDistanceMetric
 from deep_sort.deep_sort.tracker import Tracker
+from joblib import dump
+from masker import masker
 from torch import nn
+from utility.databaseLogger import logObject
 from yolov7.models.common import Conv
 from yolov7.models.experimental import Ensemble
 from yolov7.utils.datasets import LoadImages, letterbox
@@ -37,11 +41,6 @@ from yolov7.utils.general import (check_img_size, check_imshow,
                                   non_max_suppression, scale_coords, xyxy2xywh)
 from yolov7.utils.plots import plot_one_box
 from yolov7.utils.torch_utils import select_device, time_synchronized
-
-from dataManagementClasses import Detection as DarknetDetection
-from dataManagementClasses import TrackedObject
-from masker import masker
-from utility.databaseLogger import logObject
 
 
 class Yolov7(object):
