@@ -284,44 +284,66 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
 
 
 class OneVSRestClassifierExtended(OneVsRestClassifier):
-    """Extended One vs. Rest Classifier
+    """
+    Extended One vs. Rest Classifier.
 
-    The predict() method takes 2 extra agruments, threshold and a top n.
-    Only the top n classes over the threshold will be returned.
-    Also a validate and a validate_predictions method is implemented.
-    The validate() method calculates the balanced accuracy of the classifier.
-    It takes 3 arguments, X_test, y_test, threshold. X and y test are the
-    testing datasets, the threshold is a float value that 
+    This class extends the `OneVsRestClassifier` class from scikit-learn to provide additional functionality.
+    Specifically, the `predict()` method takes two extra arguments, `threshold` and `top_n`. Only the top `n` classes
+    over the `threshold` will be returned. Additionally, two new methods are implemented: `validate()` and
+    `validate_predictions()`. The `validate()` method calculates the balanced accuracy of the classifier. It takes
+    three arguments: `X_test`, `y_test`, and `threshold`. `X_test` and `y_test` are the testing datasets, and `threshold`
+    is a float value that determines the threshold for the classifier. The `validate_predictions()` method validates
+    the predictions of the classifier. It takes two arguments: `X_test` and `y_test`.
 
     Attributes
     ----------
+    estimator : estimator object
+        A regressor or a classifier that implements fit. When a classifier is passed, decision_function will be used
+        in priority and it will fallback to predict_proba if it is not available. When a regressor is passed, predict
+        is used.
+    tracks : list
+        Filtered track dataset, that was used to create feature vectors for clustering, and X, y feature vectors and
+        labels.
+    n_jobs : int
+        Number of processes to run. Default n_jobs value is 16.
+    centroid_labels : list
+        List of centroid labels.
+    centroid_coordinates : list
+        List of centroid coordinates.
 
     Parameters
     ----------
-    estimator : estimator object
-        A regressor or a classifier that implements fit. When a classifier is passed, 
-        decision_function will be used in priority and it will fallback to :term`predict_proba` 
-        if it is not available. When a regressor is passed, predict is used.
-    tracks : list
-
+    estimator : classifier
+        Scikit-Learn classifier object, that will be used to create the binary classifiers.
+    tracks : list[TrackedObject], optional
+        Filtered track dataset, that was used to create feature vectors for clustering, and X, y feature vectors and
+        labels.
+    n_jobs : int, optional
+        Number of processes to run. Default n_jobs value is 16.
+    centroid_labels : list, optional
+        List of centroid labels.
+    centroid_coordinates : list, optional
+        List of centroid coordinates.
     """
 
     def __init__(self, estimator, tracks=None, n_jobs=16, centroid_labels=None, centroid_coordinates=None):
-        """_summary_
+        """
+        Initialize a TrajectoryNet classifier.
 
         Parameters
         ----------
-        estimator : classifier 
-            Scikit-Learn classifier object, that will be used
-            to create the binary classifiers.
-        tracks : list[TrackedObject]
-            Filtered track dataset, that was used to create
-            feature vectors for clustering, and X, y feature
-            vectors and labels. 
-        n_jobs : int
-            Number of processes to run. 
-            Default n_jobs value is 16.
+        estimator : object
+            An estimator object implementing `fit` and `predict` methods.
+        tracks : list, optional
+            A list of tracks to use for training the classifier. Defaults to None.
+        n_jobs : int, optional
+            The number of parallel jobs to run for training the classifier. Defaults to 16.
+        centroid_labels : list, optional
+            A list of labels for the centroids. Defaults to None.
+        centroid_coordinates : list, optional
+            A list of coordinates for the centroids. Defaults to None.
         """
+
         self.tracks = tracks
         self.centroid_labels = centroid_labels
         self.centroid_coordinates = centroid_coordinates
@@ -330,25 +352,31 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         super().__init__(estimator, n_jobs=n_jobs)
 
     def fit(self, X, y, centroids: dict = None, scale: bool = False):
-        """Fit underlying estimators.
-        If centroids dictionary are given,
-        then version three feature vectors
-        are calculated per cluster.
+        """
+        Fit the classifier to the training data.
 
         Parameters
         ----------
-        X : (sparse) array-like of shape (n_samples, n_features)
-            Data.
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
 
-        y : (sparse) array-like of shape (n_samples,) or (n_samples, n_classes)
-            Multi-class targets. An indicator matrix turns on multilabel
-            classification.
+        y : array-like of shape (n_samples,)
+            The target values.
+
+        centroids : dict, optional
+            A dictionary containing the centroids for each class. If provided,
+            the training data will be augmented with the distances between each
+            sample and its corresponding class centroid.
+
+        scale : bool, default=False
+            Whether to scale the input data before fitting the classifier.
 
         Returns
         -------
         self : object
-            Instance of fitted estimator.
+            Returns self.
         """
+
         # A sparse LabelBinarizer, with sparse_output=True, has been shown to
         # outperform or match a dense label binarizer in all cases and has also
         # resulted in less or equal memory consumption in the fit_ovr function
@@ -407,31 +435,32 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return self
 
     def partial_fit(self, X, y, classes=None, centroids=None):
-        """Partially fit underlying estimators.
-
-        Should be used when memory is inefficient to train all data.
-        Chunks of data can be passed in several iteration.
+        """
+        Incrementally trains the classifier on a batch of samples.
 
         Parameters
         ----------
-        X : (sparse) array-like of shape (n_samples, n_features)
-            Data.
+        X : array-like of shape (n_samples, n_features)
+            The input data.
 
-        y : (sparse) array-like of shape (n_samples,) or (n_samples, n_classes)
-            Multi-class targets. An indicator matrix turns on multilabel
-            classification.
+        y : array-like of shape (n_samples,)
+            The target values.
 
-        classes : array, shape (n_classes, )
-            Classes across all calls to partial_fit.
-            Can be obtained via `np.unique(y_all)`, where y_all is the
-            target vector of the entire dataset.
-            This argument is only required in the first call of partial_fit
-            and can be omitted in the subsequent calls.
+        classes : array-like of shape (n_classes,), default=None
+            List of all the classes that can possibly appear in the y vector.
+            Must be provided on the first call to partial_fit, but can be omitted
+            on subsequent calls if the set of classes hasn't changed.
+
+        centroids : dict, default=None
+            A dictionary containing the centroids for each class. If provided,
+            the function will compute the distance between each sample and the
+            corresponding class centroid, and add these distances as additional
+            features to the input data.
 
         Returns
         -------
         self : object
-            Instance of partially fitted estimator.
+            Returns self.
         """
         if _check_partial_fit_first_call(self, classes):
             if not hasattr(self.estimator, "partial_fit"):
@@ -473,22 +502,51 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return self
 
     def predict_proba(self, X: np.ndarray, classes: np.ndarray = None, centroids: dict = None, scale: bool = False):
-        """Return predicted probabilities of dataset X.
-        If cluster centroids dictionary is given, then 
-        version three feature vectors are used, that are
-        calculated per cluster.
-        If classes paramter is given, then the prediction
-        vector is pooled from the given classes. The pooled
-        probabilities are the maximum probabilities of the
-        original prediction vector.
+        """
+        Predict class probabilities for X.
 
         Parameters
         ----------
-        X : np.ndarray shape (n_samples, n_features)
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
 
-        Returns:
-        np.ndarray : shape (n_samples, n_classes_) 
-            Prediction probabilities of 
+        classes : array-like of shape (n_classes,), default=None
+            The classes to consider for classification. By default, all classes
+            in the training data are considered.
+
+        centroids : dict, default=None
+            A dictionary containing the centroids for each class. If provided,
+            the function will compute the distance between each sample and the
+            corresponding class centroid, and add these distances as additional
+            features to the input data.
+
+        scale : bool, default=False
+            Whether to scale the input data using the scaler fitted during training.
+
+        Returns
+        -------
+        Y : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples. The order of the classes
+            corresponds to that in the attribute `classes_`.
+
+        Raises
+        ------
+        NotFittedError
+            If the estimator is not fitted.
+
+        ValueError
+            If the input data is not a 2D array.
+
+        Notes
+        -----
+        If `centroids` is provided, the function will add 6 additional features to
+        the input data, corresponding to the Euclidean distance between each sample
+        and the centroid of each class. This is done to allow the classifier to take
+        into account the relative position of each sample with respect to the class
+        centroids.
+
+        If `classes` is provided, the function will only compute the class probabilities
+        for the specified classes, and will return a matrix of shape (n_samples, len(classes)).
         """
         check_is_fitted(self)
         X = validation.check_array(X, ensure_2d=True)
@@ -521,23 +579,24 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return Y
 
     def predict(self, X: np.ndarray, top: int = 1, centroids: dict = None):
-        """Return predicted top labels of dataset X in ascending order.
+        """
+        Predict class labels for samples in X.
 
         Parameters
         ----------
-        X : np.ndarray shape (n_samples, n_features)
-            Sample dataset.
-        threshold : np.float32
-            Probability threshold, if prediction is above this value,
-            then it has a chance to get in the top n predictions.
-        top : int
-            Number of classes with the highest probability
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
+        top : int, optional (default=1)
+            The number of top classes to return.
+        centroids : dict, optional (default=None)
+            The centroids of the classes.
 
         Returns
         -------
-        predictions : np.ndarray shape (top,) 
-            Top n classes.
+        prediction_result : ndarray of shape (n_samples, top)
+            The predicted class labels for each sample in X.
         """
+
         check_is_fitted(self)
         X = validation.check_array(X, ensure_2d=True)
 
@@ -559,23 +618,24 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         # return top_pred_res[:,-top:]
 
     def validate(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, centroids: dict = None):
-        """Validate trained models.
-
-        Calculates the balanced accuracy of the underlying trained models.
+        """
+        Validate the classifier on the given test data and return the balanced accuracy for each class.
 
         Parameters
         ----------
-        X_test : np.ndarray shape ( n_samples, n_features )
-            Test dataset. 
-        y_test : np.ndarray shape (n_samples,)
-            Labels of the test dataset.
-        threshold : np.float32 
-            Probability threshold, if prediction probability higher
-            than the threshold, then it counts as a valid prediction.
+        X_test : np.ndarray
+            The test data to be used for validation.
+        y_test : np.ndarray
+            The true labels for the test data.
+        threshold : np.float32
+            The probability threshold for classification.
+        centroids : dict, optional
+            The centroids for each class, used for weighted classification.
 
         Returns
         -------
-        balanced_accuracy : float, shape (n_classes,)
+        balanced_accuracy : list of float
+            The balanced accuracy for each class.
         """
         if centroids is not None:
             predict_proba_results = self.predict_proba(X_test, centroids)
@@ -619,19 +679,41 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return balanced_accuracy
 
     def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, top: int = 1, centroids: dict = None):
-        """Validate trained models.
+        """
+        Validates the predictions made by the model.
 
         Parameters
         ----------
-        X_test : np.ndarray shape ( n_samples, n_features )
-            Test dataset. 
-        y_test : np.ndarray shape (n_samples,)
-            Labels of the test dataset.
-        threshold : np.float32 
-            Probability threshold, if prediction probability higher
-            than the threshold, then it counts as a valid prediction.
-        top : int
-            Parameter for predict() method, that returns the top n predictions.
+        X_test : np.ndarray
+            The input data to validate the predictions for.
+        y_test : np.ndarray
+            The true class labels for the input data.
+        top : int, optional
+            The number of top predictions to consider, by default 1.
+        centroids : dict, optional
+            A dictionary containing the centroids of the classes, by default None.
+
+        Returns
+        -------
+        float
+            The mean average precision (MAP) score for the predictions.
+
+        Notes
+        -----
+        This function calculates the mean average precision (MAP) score for the predictions made by the model. The MAP score is
+        calculated as the ratio of true positive predictions to the total number of predictions made. The function takes in the
+        input data `X_test` and the true class labels `y_test`, and optionally the number of top predictions to consider `top`
+        and a dictionary containing the centroids of the classes `centroids`. If `centroids` is not provided, the function will
+        use the default centroids calculated during training.
+
+        Examples
+        --------
+        >>> classifier = TrajectoryNetClassifier()
+        >>> X_test = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> y_test = np.array([0, 1, 2])
+        >>> map_score = classifier.validate_predictions(X_test, y_test)
+        >>> print(map_score)
+        0.0
         """
         if centroids is not None:
             predict_results = self.predict(

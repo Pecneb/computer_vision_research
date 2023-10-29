@@ -34,6 +34,7 @@ from joblib import dump
 from masker import masker
 from torch import nn
 from utility.databaseLogger import logObject
+from utility.models import load_model
 from yolov7.models.common import Conv
 from yolov7.models.experimental import Ensemble
 from yolov7.utils.datasets import LoadImages, letterbox
@@ -465,7 +466,7 @@ class Detector:
         Run detection pipeline.
     """
 
-    def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
+    def __init__(self, source: str, outdir: Optional[str] = None, model: Optional[str]=None, database: bool = False, joblib: bool = False, debug: bool = True):
         # region init logger
         self._logger = getLogger("Pipeline_Logger")
         _logHandler = StreamHandler()
@@ -489,6 +490,7 @@ class Detector:
         else:
             self._outdir = self._source.parent
 
+        self.model = load_model(model)
         self._dataset = LoadImages(self._source, img_size=640, stride=32)
         self._database = None
         self._joblib = None
