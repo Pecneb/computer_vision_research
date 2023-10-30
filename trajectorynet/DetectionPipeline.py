@@ -448,6 +448,14 @@ class Detector:
         Video source path.
     outdir : str
         Output directory path. 
+    model : str
+        Path to model weights file.
+    database : bool, optional
+        Save results to database, by default False
+    joblib : bool, optional
+        Save results to joblib, by default False
+    debug : bool, optional
+        Debug flag, by default True
 
     Attributes
     ----------
@@ -455,6 +463,18 @@ class Detector:
         Video source path.
     _outdir : Path
         Output directory path.
+    _model : Model
+        Loaded scikit-learn model.
+    _dataset : LoadImages
+        LoadImages object, which is used to load images from video source. 
+    _database : Path
+        Path to database file.
+    _joblib : Path
+        Path to joblib file.
+    _joblibbuffer : List
+        Joblib buffer, which is used to store TrackedObject objects.
+    _history : List
+        History list, which is used to store TrackedObject objects.
 
     Methods
     -------
@@ -464,9 +484,17 @@ class Detector:
         Filter out detections that are not in the names list.
     run(yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False)
         Run detection pipeline.
+
+    Examples
+    --------
+    >>> from DetectionPipeline import Detector, Yolov7, DeepSORT
+    >>> detector = Detector(source="path/to/video.mp4", outdir="path/to/output/directory", database=True, joblib=True) # database and joblib are optional
+    >>> yolo = Yolov7(weights="path/to/model/weights.pt", conf_thres=0.5, iou_thres=0.5, half=True, device="cuda", debug=True)
+    >>> deepSort = DeepSORT(max_age=30, debug=True)
+    >>> detector.run(yolo, deepSort, show=True)
     """
 
-    def __init__(self, source: str, outdir: Optional[str] = None, model: Optional[str]=None, database: bool = False, joblib: bool = False, debug: bool = True):
+    def __init__(self, source: str, outdir: Optional[str] = None, model: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
         # region init logger
         self._logger = getLogger("Pipeline_Logger")
         _logHandler = StreamHandler()
@@ -490,7 +518,7 @@ class Detector:
         else:
             self._outdir = self._source.parent
 
-        self.model = load_model(model)
+        self._model = load_model(model)
         self._dataset = LoadImages(self._source, img_size=640, stride=32)
         self._database = None
         self._joblib = None
@@ -574,7 +602,7 @@ class Detector:
             Show flag to visualize frames with cv2 GUI, by default False
         """
         # mask = masker(img) # mask out not wanted areas
-        yolo.warmup()
+        yolo.warmup() # warm up yolo model
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
             self._logger.debug(f"Input image shape: {img.shape}")
@@ -587,14 +615,17 @@ class Detector:
                 f"New detections: {[d.label for d in new_detections]}")
             deepSort.update_history(history=self._history, new_detections=new_detections,
                                     joblibbuffer=self._joblibbuffer, db_connection=self._database)
+            if self._model is not None:
+                # TODO if model is not None, run model on new_detections and draw predictions
+                ...
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
-        if self._joblib is not None:
+        if self._joblib is not None: # save joblib buffer
             self._logger.debug(f"Saving joblib buffer to {self._joblib}.")
             self._logger.debug(f"Length of buffer: {len(self._joblibbuffer)}")
-            t0 = time_synchronized() 
+            t0 = time_synchronized()
             dump(value=self._joblibbuffer, filename=self._joblib)
             t1 = time_synchronized()
             self._logger.debug(f"Joblib dump time: {t1-t0}s")
