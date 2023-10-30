@@ -271,7 +271,7 @@ class TrackedObject():
         self._dataset = ""
 
     def __repr__(self) -> str:
-        return "Label: {}, ID: {}, X: {:10.4f}, Y: {:10.4f}, VX: {:10.4f}, VY: {:10.4f}, Age: {}, ActualHistoryLength: {}".format(self.label, self.objID, self.X, self.Y, self.history_VX_calculated[-1], self.history_VY_calculated[-1], self.time_since_update, len(self.history))
+        return f"ID: {self.objID}, Label: {self.label}, X: {self.X}, Y: {self.Y}, VX: {self.VX}, VY: {self.VY}, AX: {self.AX}, AY: {self.AY}, Time since update: {self.time_since_update}, Max age: {self.max_age}, Dataset: {self._dataset}"
 
     def __hash__(self) -> int:
         retval = int(
