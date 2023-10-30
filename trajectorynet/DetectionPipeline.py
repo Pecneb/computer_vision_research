@@ -35,6 +35,7 @@ from masker import masker
 from torch import nn
 from utility.databaseLogger import logObject
 from utility.models import load_model
+from utility.plots import plot_one_cluster, plot_one_prediction
 from yolov7.models.common import Conv
 from yolov7.models.experimental import Ensemble
 from yolov7.utils.datasets import LoadImages, letterbox
@@ -511,26 +512,33 @@ class Detector:
         # endregion
 
         self._source = Path(source)
-        self._logger.debug(f"Video source: {self._source}")
+        # self._logger.debug(f"Video source: {self._source}")
         if outdir is not None:
             self._outdir = Path(outdir).absolute()
             self._logger.debug(f"Output directory: {self._outdir}")
         else:
             self._outdir = self._source.parent
 
-        self._model = load_model(model)
         self._dataset = LoadImages(self._source, img_size=640, stride=32)
-        self._database = None
-        self._joblib = None
-
+        self._logger.debug(f"Files: {self._dataset.files}")
         if database:
-            self._database = self.generate_db_path(
-                self._source, outdir=self._outdir, suffix=".db", logger=self._logger)
+            self._databases = [self.generate_db_path(f, self._outdir, suffix=".db", logger=self._logger)
+                               for f in self._dataset.files]
+        else:
+            self._databases = None
         if joblib:
-            self._joblib = self.generate_db_path(
-                self._source, outdir=self._outdir, suffix=".joblib", logger=self._logger)
-        self._joblibbuffer = []
+            self._joblibs = [self.generate_db_path(self._source, self._outdir, suffix=".joblib", logger=self._logger)
+                             for f in self._dataset.files]
+            self._joblibbuffers = [[] for _ in self._dataset.files]
+        else:
+            self._joblibbuffers = [None] * len(self._dataset.files)
+        self._logger.debug(f"Joblib buffers: {self._joblibbuffers}")
         self._history = []
+        if model is not None:
+            self._model = load_model(model)
+            self._logger.info(f"Loaded model: {self._model}")
+        else:
+            self._model = None
 
     @staticmethod
     def generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]] = None, suffix: str = ".joblib", logger: Optional[Logger] = None) -> Path:
@@ -589,6 +597,16 @@ class Detector:
                     label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
 
+    def predict(self, history: List[TrackedObject]):
+        """Predict trajectories.
+
+        Parameters
+        ----------
+        history : List[TrackedObject]
+            History list.
+        """
+        pass
+
     def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False):
         """Run detection pipeline.
 
@@ -602,39 +620,42 @@ class Detector:
             Show flag to visualize frames with cv2 GUI, by default False
         """
         # mask = masker(img) # mask out not wanted areas
-        yolo.warmup() # warm up yolo model
+        yolo.warmup()  # warm up yolo model
+        previous_path = None
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
             self._logger.debug(f"Input image shape: {img.shape}")
+            # run inference
             preds = yolo.infer(img)
+            # postprocess predictions
             preds = yolo.postprocess(preds, im0, img, show=show)
             self._logger.debug(f"Predictions: {preds}")
+            # filter out unwanted detections and create Detection objects
             new_detections = self.filter_objects(
                 new_detections=preds, frame_number=frame)
             self._logger.debug(
                 f"New detections: {[d.label for d in new_detections]}")
+            # update tracker and history
             deepSort.update_history(history=self._history, new_detections=new_detections,
-                                    joblibbuffer=self._joblibbuffer, db_connection=self._database)
-            if self._model is not None:
+                                    joblibbuffer=self._joblibbuffers[self._dataset.count], db_connection=self._databases)
+            self._logger.debug(f"History: {self._history}")
+            if self._model is not None:  # if model is not None, predict trajectories and draw predictions
                 # TODO if model is not None, run model on new_detections and draw predictions
                 ...
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
-        if self._joblib is not None: # save joblib buffer
-            self._logger.debug(f"Saving joblib buffer to {self._joblib}.")
-            self._logger.debug(f"Length of buffer: {len(self._joblibbuffer)}")
-            t0 = time_synchronized()
-            dump(value=self._joblibbuffer, filename=self._joblib)
-            t1 = time_synchronized()
-            self._logger.debug(f"Joblib dump time: {t1-t0}s")
+        for i, buf in enumerate(self._joblibbuffers):
+            self._logger.debug(f"Joblib buffer {i}: len({len(buf)})")
+            dump(buf, self._joblibs[i])
 
 
 if __name__ == "__main__":
     yolo = Yolov7(
         weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
-    det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
-                   outdir="./research_data/rouren_video/", database=False, joblib=True, debug=True)
+    det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/Bellevue_116th_NE12th/",  # Bellevue_116th_NE12th__2017-09-11_11-08-33.mp4",
+                   outdir="./research_data/Bellevue_NE116th_test/", database=False, joblib=True, debug=True)
+    # model="/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Preprocessed_threshold_0.7_enter-exit-distance_0.1/models/SVM_7.joblib")
     det.run(yolo=yolo, deepSort=deepSort, show=True)
