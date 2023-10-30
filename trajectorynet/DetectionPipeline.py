@@ -527,7 +527,7 @@ class Detector:
         else:
             self._databases = None
         if joblib:
-            self._joblibs = [self.generate_db_path(self._source, self._outdir, suffix=".joblib", logger=self._logger)
+            self._joblibs = [self.generate_db_path(f, self._outdir, suffix=".joblib", logger=self._logger)
                              for f in self._dataset.files]
             self._joblibbuffers = [[] for _ in self._dataset.files]
         else:
@@ -647,7 +647,7 @@ class Detector:
             if cv2.waitKey(1) == ord('q'):
                 break
         for i, buf in enumerate(self._joblibbuffers):
-            self._logger.debug(f"Joblib buffer {i}: len({len(buf)})")
+            self._logger.debug(f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
             dump(buf, self._joblibs[i])
 
 
@@ -655,7 +655,7 @@ if __name__ == "__main__":
     yolo = Yolov7(
         weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
-    det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/Bellevue_116th_NE12th/",  # Bellevue_116th_NE12th__2017-09-11_11-08-33.mp4",
-                   outdir="./research_data/Bellevue_NE116th_test/", database=False, joblib=True, debug=True)
+    det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/short_ones/",  # Bellevue_116th_NE12th__2017-09-11_11-08-33.mp4",
+                   outdir="./research_data/short_test_videos/", database=False, joblib=True, debug=True)
     # model="/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Preprocessed_threshold_0.7_enter-exit-distance_0.1/models/SVM_7.joblib")
     det.run(yolo=yolo, deepSort=deepSort, show=True)
