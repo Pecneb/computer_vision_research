@@ -1,7 +1,10 @@
 import os
-from typing import Optional, Any
+from typing import Any, Optional
 
 import joblib
+from .logging import init_logger
+
+_logger = init_logger(__name__)
 
 
 def save_model(savedir: str, classifier_type: str, model, version: Optional[str] = None) -> bool:
@@ -39,12 +42,17 @@ def save_model(savedir: str, classifier_type: str, model, version: Optional[str]
 
 
 def load_model(path2model: str) -> Any:
-    """Load classifier model.
+    """
+    Load model from disk.
 
-    Args:
-        path2model (str): Path to model. 
+    Parameters
+    ----------
+    path2model : str
+        Path to model
 
-    Returns:
-        BinaryClassifier: Trained binary classifier model. 
+    Returns
+    -------
+    Any
+        Model object
     """
     return joblib.load(path2model)

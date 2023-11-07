@@ -2,7 +2,7 @@ import logging
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Optional, Union
 
 import joblib
 import numpy as np

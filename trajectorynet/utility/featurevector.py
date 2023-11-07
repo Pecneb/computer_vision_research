@@ -7,6 +7,7 @@ from scipy.signal import savgol_filter
 
 ic.disable()
 
+
 class FeatureVector(object):
     """Class representing a feature vector.
     """
@@ -260,8 +261,10 @@ class FeatureVector(object):
         np.ndarray
             Feature Vector.
         """
-        vx = savgol_filter(x, window_length=window_length, polyorder=polyorder, deriv=1)
-        vy = savgol_filter(y, window_length=window_length, polyorder=polyorder, deriv=1)
+        vx = savgol_filter(x, window_length=window_length,
+                           polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y, window_length=window_length,
+                           polyorder=polyorder, deriv=1)
         return np.array([x[-1], y[-1], vx[-1], vy[-1]])*weights
 
     @staticmethod
@@ -426,7 +429,31 @@ class FeatureVector(object):
 
     @staticmethod
     def factory_7_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray] = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32), window_length: int = 7, polyorder: int = 2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        # weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
+        """
+        Factory method for computing feature vectors using 7th order Savitzky-Golay filter.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            List of tracked objects.
+        labels : np.ndarray
+            Array of labels.
+        pooled_labels : np.ndarray
+            Array of pooled labels.
+        max_stride : int
+            Maximum stride.
+        weights : Optional[np.ndarray], optional
+            Array of weights for each feature, by default np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)
+        window_length : int, optional
+            Window length for Savitzky-Golay filter, by default 7
+        polyorder : int, optional
+            Polynomial order for Savitzky-Golay filter, by default 2
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing feature vectors, labels, pooled labels, and metadata.
+        """
         X_feature_vectors = np.array([])
         y_new_labels = np.array([])
         y_new_pooled_labels = np.array([])
@@ -436,7 +463,6 @@ class FeatureVector(object):
             if stride > t.history_X.shape[0]:
                 continue
             for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
-                # midx = j + (3*stride // 4) - 1
                 end_idx = j + stride - 1
                 feature_vector = FeatureVector._7_SG(
                     x=t.history_X[j:j+max_stride],
@@ -454,14 +480,33 @@ class FeatureVector(object):
                 y_new_labels = np.append(y_new_labels, labels[i])
                 y_new_pooled_labels = np.append(
                     y_new_pooled_labels, pooled_labels[i])
-                # ic(j,len(trackedObjects[i].history), t.history_X.shape)
-                # metadata.append([trackedObjects[i].history[j].frameID, None,
-                #     trackedObjects[i].history[end_idx].frameID, len(trackedObjects[i].history), trackedObjects[i]])
-                metadata.append([None, None, None, None, trackedObjects[i]])
+                metadata.append(
+                    [None, None, None, None, trackedObjects[i]])
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
     @staticmethod
     def factory_8(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weight: float = 0.8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Computes the feature vectors for a list of tracked objects.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            List of tracked objects.
+        labels : np.ndarray
+            Array of labels for each tracked object.
+        pooled_labels : np.ndarray
+            Array of pooled labels for each tracked object.
+        max_stride : int
+            Maximum stride to be used in the feature vector computation.
+        weight : float, optional
+            Weight to be used in the feature vector computation, by default 0.8.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing the computed feature vectors, labels, pooled labels, and metadata.
+        """
         X_feature_vectors = np.array([])
         y_new_labels = np.array([])
         y_new_pooled_labels = np.array([])
@@ -471,7 +516,6 @@ class FeatureVector(object):
             if stride > t.history_X.shape[0]:
                 continue
             for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
-                # midx = j + (3*stride // 4) - 1
                 end_idx = j + stride - 1
                 feature_vector = FeatureVector._8(
                     x=t.history_X[j:j+max_stride],
@@ -487,9 +531,6 @@ class FeatureVector(object):
                 y_new_labels = np.append(y_new_labels, labels[i])
                 y_new_pooled_labels = np.append(
                     y_new_pooled_labels, pooled_labels[i])
-                # ic(j,len(trackedObjects[i].history), t.history_X.shape)
-                # metadata.append([trackedObjects[i].history[j].frameID, None,
-                #     trackedObjects[i].history[end_idx].frameID, len(trackedObjects[i].history), trackedObjects[i]])
                 metadata.append([None, None, None, None, trackedObjects[i]])
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
 
