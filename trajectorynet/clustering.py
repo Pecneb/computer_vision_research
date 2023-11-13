@@ -1117,7 +1117,7 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObje
     for i in range(n_clusters):
         # Create figure for cluster trajectory and cluster histogram plot
         n_cluster_fig, n_cluster_axes = plt.subplots(
-            nrows=1, ncols=2, figsize=(30, 15))
+            nrows=1, ncols=1, figsize=(30, 15))
         # Declare the X for the i-th clusters historgram
         n_cluster_histogram_X = []
         # Declare track counter for cluster
@@ -1134,31 +1134,31 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObje
                     tracks_X.append(clustered_objects[j].history[k].X)
                     tracks_Y.append(clustered_objects[j].history[k].Y)
 
-        n_cluster_axes[0].scatter(
+        n_cluster_axes.scatter(
             np.array(tracks_X), 1-np.array(tracks_Y), s=2)
-        n_cluster_axes[0].set_xlim(0, 2)
-        n_cluster_axes[0].set_ylim(0, 2)
-        n_cluster_axes[0].set_title(
+        n_cluster_axes.set_xlim(0, 2)
+        n_cluster_axes.set_ylim(0, 1)
+        n_cluster_axes.set_title(
             f"Axis of cluster number {i}, with {n_tracks} detections")
         enter_x = np.array([X[idx, 0]
                            for idx in range(X.shape[0]) if Y[idx] == i])
         enter_y = np.array([1-X[idx, 1]
                            for idx in range(X.shape[0]) if Y[idx] == i])
-        n_cluster_axes[0].scatter(
+        n_cluster_axes.scatter(
             enter_x, enter_y, c='g', s=10, label=f"Enter points")
         exit_x = np.array([X[idx, 2]
                           for idx in range(X.shape[0]) if Y[idx] == i])
         exit_y = np.array([1-X[idx, 3]
                           for idx in range(X.shape[0]) if Y[idx] == i])
-        n_cluster_axes[0].scatter(
+        n_cluster_axes.scatter(
             exit_x, exit_y, c='r', s=10, label=f"Exit points")
-        n_cluster_axes[0].legend()
-        n_cluster_axes[0].grid(True)
+        n_cluster_axes.legend()
+        n_cluster_axes.grid(True)
         histogram_X = np.append(histogram_X, np.array(n_cluster_histogram_X))
-        n_cluster_axes[1].hist(n_cluster_histogram_X,
-                               bins="auto", edgecolor="white")
-        n_cluster_axes[1].set_xlabel("Length of history")
-        n_cluster_axes[1].set_ylabel("Number of objects")
+        # n_cluster_axes[1].hist(n_cluster_histogram_X,
+        #                        bins="auto", edgecolor="white")
+        # n_cluster_axes[1].set_xlabel("Length of history")
+        # n_cluster_axes[1].set_ylabel("Number of objects")
         # create filename
         filename = f"n_cluster_{i}_n_tracks_{n_tracks}.png"
         # save plot with filename into dir
@@ -1181,7 +1181,7 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObje
     nocluster_axis[0].scatter(
         np.array(no_cluster_tracks_X), 1-np.array(no_cluster_tracks_Y), s=2)
     nocluster_axis[0].set_xlim(0, 2)
-    nocluster_axis[0].set_ylim(0, 2)
+    nocluster_axis[0].set_ylim(0, 1)
     nocluster_axis[0].set_title(
         f"Axis of cluster number -1, with {X_nocluster.shape[0]} detections")
     no_cluster_enter_x = np.array([X_nocluster[idx, 0]
@@ -1884,80 +1884,126 @@ def submodule_optics(args):
 
 def submodule_birch(args):
     from sklearn.cluster import Birch
-    if args.dimensions == "2D":
-        clustering_search_on_2D_feature_vectors(
-            estimator=Birch,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            threshold=args.threshold,
-            branching_factor=args.branching,
-            n_clusters=args.n_clusters
-        )
-    elif args.dimensions == "4D":
-        clustering_search_on_4D_feature_vectors(
-            estimator=Birch,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            threshold=args.threshold,
-            branching_factor=args.branching,
-            n_clusters=args.n_clusters
-        )
-    elif args.dimensions == "6D":
-        clustering_search_on_6D_feature_vectors(
-            estimator=Birch,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            threshold=args.threshold,
-            branching_factor=args.branching,
-            n_clusters=args.n_clusters
-        )
+    if args.preprocessed:
+        path = Path(args.database)
+        if path.is_dir():
+            dataset = loadDatasetsFromDirectory(
+                args.database)  # load dataset from directory
+        else:
+            dataset = load_dataset(args.database)
+        clustering_on_4D_feature_vectors(estimator=Birch,
+                                         trackedObjects=dataset,
+                                         outdir=args.outdir,
+                                         n_jobs=args.n_jobs,
+                                         filter_threshold=0.7,
+                                         threshold=args.threshold,
+                                         branching_factor=args.branching,
+                                         n_clusters=args.n_clusters)
+    else:
+        if args.dimensions == "2D":
+            clustering_search_on_2D_feature_vectors(
+                estimator=Birch,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                threshold=args.threshold,
+                branching_factor=args.branching,
+                n_clusters=args.n_clusters
+            )
+        elif args.dimensions == "4D":
+            clustering_search_on_4D_feature_vectors(
+                estimator=Birch,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                threshold=args.threshold,
+                branching_factor=args.branching,
+                n_clusters=args.n_clusters
+            )
+        elif args.dimensions == "6D":
+            clustering_search_on_6D_feature_vectors(
+                estimator=Birch,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                threshold=args.threshold,
+                branching_factor=args.branching,
+                n_clusters=args.n_clusters
+            )
 
 
 def submodule_kmeans(args):
     from sklearn.cluster import KMeans
-    if args.dimensions == "4D":
-        clustering_search_on_4D_feature_vectors(
-            estimator=KMeans,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            n_clusters=args.n_clusters
-        )
-    if args.dimensions == "6D":
-        clustering_search_on_6D_feature_vectors(
-            estimator=KMeans,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            n_clusters=args.n_clusters
-        )
+    if args.preprocessed:
+        path = Path(args.database)
+        if path.is_dir():
+            dataset = loadDatasetsFromDirectory(
+                args.database)  # load dataset from directory
+        else:
+            dataset = load_dataset(args.database)
+        clustering_on_4D_feature_vectors(estimator=KMeans,
+                                         trackedObjects=dataset,
+                                         outdir=args.outdir,
+                                         n_jobs=args.n_jobs,
+                                         filter_threshold=0.7,
+                                         n_clusters=args.n_clusters)
+    else:
+        if args.dimensions == "4D":
+            clustering_search_on_4D_feature_vectors(
+                estimator=KMeans,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                n_clusters=args.n_clusters
+            )
+        if args.dimensions == "6D":
+            clustering_search_on_6D_feature_vectors(
+                estimator=KMeans,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                n_clusters=args.n_clusters
+            )
 
 
 def submodule_dbscan(args):
     from sklearn.cluster import DBSCAN
-    if args.dimensions == "4D":
-        clustering_search_on_4D_feature_vectors(
-            estimator=DBSCAN,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            eps=args.eps,
-            min_samples=args.min_samples,
-            p=args.p_norm
-        )
-    if args.dimensions == "6D":
-        clustering_search_on_6D_feature_vectors(
-            estimator=DBSCAN,
-            database=args.database,
-            outdir=args.outdir,
-            n_jobs=args.n_jobs,
-            eps=args.eps,
-            min_samples=args.min_samples,
-            p=args.p_norm
-        )
+    if args.preprocessed:
+        path = Path(args.database)
+        if path.is_dir():
+            dataset = loadDatasetsFromDirectory(
+                args.database)  # load dataset from directory
+        else:
+            dataset = load_dataset(args.database)
+        clustering_on_4D_feature_vectors(estimator=DBSCAN,
+                                         trackedObjects=dataset,
+                                         outdir=args.outdir,
+                                         n_jobs=args.n_jobs,
+                                         filter_threshold=0.7,
+                                         eps=args.eps,
+                                         min_samples=args.min_samples,
+                                         p=args.p_norm)
+    else:
+        if args.dimensions == "4D":
+            clustering_search_on_4D_feature_vectors(
+                estimator=DBSCAN,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                eps=args.eps,
+                min_samples=args.min_samples,
+                p=args.p_norm
+            )
+        if args.dimensions == "6D":
+            clustering_search_on_6D_feature_vectors(
+                estimator=DBSCAN,
+                database=args.database,
+                outdir=args.outdir,
+                n_jobs=args.n_jobs,
+                eps=args.eps,
+                min_samples=args.min_samples,
+                p=args.p_norm
+            )
 
 
 def submodule_aoi_birch(args):
