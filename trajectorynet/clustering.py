@@ -30,7 +30,7 @@ from dataManagementClasses import (TrackedObject, detectionParser,
                                    preprocess_database_data_multiprocessed,
                                    trackedObjectFactory)
 from matplotlib import pyplot as plt
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, OPTICS
 from utility.dataset import load_dataset, loadDatasetsFromDirectory
 from utility.preprocessing import (
     euclidean_distance, filter_by_class,
@@ -44,48 +44,72 @@ _logger = init_logger(__name__)
 
 
 def makeFeatureVectors_Nx2(trackedObjects: List) -> np.ndarray:
-    """Create 2D feature vectors from tracks.
+    """
+    Create 2D feature vectors from tracks.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array of feature vectors.
+
+    Notes
+    -----
     The enter and exit coordinates are put in different vectors. Only creating 2D vectors.
-
-    Args:
-        trackedObjects (list): list of tracked objects 
-
-    Returns:
-        np.ndarray: numpy array of feature vectors 
     """
     featureVectors = []
     for obj in trackedObjects:
-        featureVectors.append(obj.history[0].X, obj.history[0].Y)
-        featureVectors.append(obj.history[-1].X, obj.history[-1].Y)
+        featureVectors.append((obj.history[0].X, obj.history[0].Y))
+        featureVectors.append((obj.history[-1].X, obj.history[-1].Y))
     return np.array(featureVectors)
 
 
 def make_2D_feature_vectors(trackedObjects: List) -> np.ndarray:
-    """Create 2D feature vectors from tracks.
-    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    """
+    Create 2D feature vectors from tracks.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array of feature vectors.
+
+    Notes
+    -----
+    The enter and exit coordinates are put in one vector, creating 4D vectors.
     v = [exitX, exitY]
-
-    Args:
-        trackedObjects (list): list of tracked objects 
-
-    Returns:
-        np.ndarray: numpy array of feature vectors 
     """
     featureVectors = np.array([np.array([obj.history[-1].X, obj.history[-1].Y])
-                              for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+                              for obj in trackedObjects])
     return featureVectors
 
 
 def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
-    """Create 4D feature vectors from tracks.
-    The enter and exit coordinates are put in one vector. Creating 4D vectors.
+    """
+    Create 4D feature vectors from tracks.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array of feature vectors.
+
+    Notes
+    -----
+    The enter and exit coordinates are put in one vector, creating 4D vectors.
     v = [enterX, enterY, exitX, exitY]
-
-    Args:
-        trackedObjects (list): list of tracked objects 
-
-    Returns:
-        np.ndarray: numpy array of feature vectors 
     """
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y])
                               for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
@@ -93,31 +117,46 @@ def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
 
 
 def make_6D_feature_vectors(trackedObjects: List) -> np.ndarray:
-    """Create 6D feature vectors from tracks.
+    """
+    Create 6D feature vectors from tracks.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array of feature vectors.
+
+    Notes
+    -----
     The enter, middle and exit coordinates are put in one vector. Creating 6D vectors.
     v = [enterX, enterY, exitX, exitY]
-
-    Args:
-        trackedObjects (list): list of tracked objects 
-
-    Returns:
-        np.ndarray: numpy array of feature vectors 
     """
     featureVectors = np.array([np.array([obj.history[0].X, obj.history[0].Y, obj.history[len(obj.history) // 2].X, obj.history[len(
         obj.history) // 2].Y, obj.history[-1].X, obj.history[-1].Y]) for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
     return featureVectors
 
 
-def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
-    """Scale centroids of clusters up to the video's resolution.
+def upscale_cluster_centers(centroids: np.ndarray, framewidth: int, frameheight: int) -> np.ndarray:
+    """
+    Scale centroids of clusters up to the video's resolution.
 
-    Args:
-        centroids (dict): Output of aoiextraction() function. 
-        framewidth (int): Width resolution of the video. 
-        frameheight (int): Height resolution of the video. 
+    Parameters
+    ----------
+    centroids : numpy.ndarray
+        Output of aoiextraction() function.
+    framewidth : int
+        Width resolution of the video.
+    frameheight : int
+        Height resolution of the video.
 
-    Returns:
-        dict: Upscaled centroid coordinates. 
+    Returns
+    -------
+    numpy.ndarray
+        Upscaled centroid coordinates.
     """
     ratio = framewidth / frameheight
     retarr = centroids.copy()
@@ -128,15 +167,23 @@ def upscale_cluster_centers(centroids, framewidth: int, frameheight: int):
 
 
 def calc_cluster_centers(tracks, labels, exit=True):
-    """Calculate center of mass for every class's exit points.
+    """
+    Calculate center of mass for every class's exit points.
     These will be the exit points of the clusters.
 
-    Args:
-        tracks (List[TrackedObject]): List of tracked objects 
-        labels (_type_): Labels of tracked objects 
+    Parameters
+    ----------
+    tracks : List[TrackedObject]
+        List of tracked objects
+    labels : _type_
+        Labels of tracked objects
+    exit : bool, optional
+        Whether to calculate exit points or entry points, by default True
 
-    Returns:
-        cluster_centers: The center of mass for every class's exits points
+    Returns
+    -------
+    cluster_centers : numpy.ndarray
+        The center of mass for every class's exits points
     """
     classes = set(labels)
     cluster_centers = np.zeros(shape=(len(classes), 2))
@@ -151,7 +198,6 @@ def calc_cluster_centers(tracks, labels, exit=True):
                     tracks_xy.append(
                         [tracks[j].history[0].X, tracks[j].history[0].Y])
         tracks_xy = np.array(tracks_xy[:5])
-        _logger.debug(f"tracks_xy: {tracks_xy}")
         cluster_centers[i, 0] = np.average(tracks_xy[:, 0])
         cluster_centers[i, 1] = np.average(tracks_xy[:, 1])
     return cluster_centers
@@ -262,21 +308,32 @@ def dbscan_on_featureVectors(featureVectors: np.ndarray, eps: float, min_samples
     return dbscan.labels_
 
 
-def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int, xi: float, min_cluster_size: float, n_jobs: int, max_eps: float, p: int):
-    """Run optics clustering algorithm on extracted feature vectors.
-
-    Args:
-        featureVectors (np.ndarray): A numpy array of extracted features to run the clustering on.
-        min_samples (int, optional): The number of samples in a neighborhood for a point to be considered as a core point. Defaults to 10.
-        xi (float, optional): Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. Defaults to 0.05.
-        min_cluster_size (float, optional): Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Defaults to 0.05.
-        max_eps (float): The maximum distance between two samples for one to be considered as in the neighborhood of the other.
-        p (int): Parameter for distance metric. Default = 2.
-
-    Returns:
-        labels: Cluster labels for each point in the dataset given to fit(). Noisy samples and points which are not included in a leaf cluster of cluster_hierarchy_ are labeled as -1.
+def optics_on_featureVectors(featureVectors: np.ndarray, min_samples: int = 10, xi: float = 0.05, min_cluster_size: float = 0.05, n_jobs: int = -1, max_eps: float = 0.15, p: int = 2) -> np.ndarray:
     """
-    from sklearn.cluster import OPTICS
+    Run OPTICS clustering algorithm on extracted feature vectors.
+
+    Parameters
+    ----------
+    featureVectors : np.ndarray
+        A numpy array of extracted features to run the clustering on.
+    min_samples : int, optional
+        The number of samples in a neighborhood for a point to be considered as a core point. Defaults to 10.
+    xi : float, optional
+        Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. Defaults to 0.05.
+    min_cluster_size : float, optional
+        Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Defaults to 0.05.
+    n_jobs : int, optional
+        The number of parallel jobs to run for neighbors search. -1 means using all processors. Defaults to -1.
+    max_eps : float
+        The maximum distance between two samples for one to be considered as in the neighborhood of the other.
+    p : int, optional
+        Parameter for distance metric. Default = 2.
+
+    Returns
+    -------
+    np.ndarray
+        Cluster labels for each point in the dataset given to fit(). Noisy samples and points which are not included in a leaf cluster of cluster_hierarchy_ are labeled as -1.
+    """
     optics = OPTICS(min_samples=min_samples, max_eps=max_eps, xi=xi,
                     min_cluster_size=min_cluster_size, n_jobs=n_jobs).fit(featureVectors)
     return optics.labels_
@@ -1074,16 +1131,28 @@ def clustering_on_2D_feature_vectors(estimator, trackedObjects: List[TrackedObje
 
 
 def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
-    """Run clustering on 4 dimensional feature vectors.
+    """
+    Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
     and create histograms from the lenght of the tracks.
 
-    Args:
-        estimator (estimator): sklearn estimator class
-        trackedObjects (list[TrackedObject]): TrackedObject python object dataset. 
-        outdir (str): Output directory path. 
-        n_jobs (int, optional): Number of processes to run. 
-            Defaults to -1, that means all cpu threads will be utilized.
+    Parameters
+    ----------
+    estimator : estimator
+        sklearn estimator class
+    trackedObjects : list[TrackedObject]
+        TrackedObject python object dataset.
+    outdir : str
+        Output directory path.
+    n_jobs : int, optional
+        Number of processes to run. Defaults to -1, that means all cpu threads will be utilized.
+    filter_threshold : float, optional
+        Threshold for filtering out low-density clusters. Defaults to None.
+
+    Returns
+    -------
+    None
+
     """
     # Create feature vectors from list of trackedObjects
     X = make_4D_feature_vectors(trackedObjects)
@@ -1220,16 +1289,28 @@ def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObje
 
 
 def clustering_on_6D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
-    """Run clustering on 6 dimensional feature vectors.
+    """
+    Run clustering on 6 dimensional feature vectors.
     Create plots of every cluster with their tracks,
-    and create histograms from the lenght of the tracks.
+    and create histograms from the length of the tracks.
 
-    Args:
-        estimator (estimator): sklearn estimator class
-        trackedObjects (list[TrackedObject]): TrackedObject python object dataset. 
-        outdir (str): Output directory path. 
-        n_jobs (int, optional): Number of processes to run. 
-            Defaults to -1, that means all cpu threads will be utilized.
+    Parameters
+    ----------
+    estimator : estimator
+        sklearn estimator class
+    trackedObjects : list[TrackedObject]
+        TrackedObject python object dataset.
+    outdir : str
+        Output directory path.
+    n_jobs : int, optional
+        Number of processes to run. Defaults to -1, that means all cpu threads will be utilized.
+    filter_threshold : float, optional
+        Threshold for filtering out low-density clusters. Defaults to None.
+
+    Returns
+    -------
+    None
+
     """
     # Create feature vectors from list of trackedObjects
     X = make_6D_feature_vectors(trackedObjects)
@@ -1378,6 +1459,29 @@ def clustering_on_6D_feature_vectors(estimator, trackedObjects: List[TrackedObje
 
 
 def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+    """
+    Perform clustering on 2D feature vectors.
+
+    Parameters
+    ----------
+    estimator : object
+        A clustering estimator object that implements the scikit-learn estimator interface.
+    database : str
+        The path to the dataset to be loaded.
+    outdir : str
+        The path to the output directory.
+    filter_threshold : tuple of float, optional
+        A tuple containing the minimum and maximum filter thresholds for the trajectories. Default is (0.1, 0.7).
+    n_jobs : int, optional
+        The number of parallel jobs to run. Default is -1, which means using all processors.
+    **estkwargs : dict, optional
+        Additional keyword arguments to be passed to the clustering estimator.
+
+    Returns
+    -------
+    None
+    """
+
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -1406,6 +1510,29 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
 
 
 def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+    """
+    Perform clustering on 4D feature vectors of tracked objects in a given database.
+
+    Parameters
+    ----------
+    estimator : object
+        A clustering estimator object that implements the fit and predict methods.
+    database : str
+        The path to the database containing tracked objects.
+    outdir : str
+        The path to the output directory where the clustering results will be saved.
+    filter_threshold : tuple of float, optional
+        A tuple containing the minimum and maximum filter thresholds for the trajectories.
+        Default is (0.1, 0.7).
+    n_jobs : int, optional
+        The number of parallel jobs to run. Default is -1, which means using all available CPUs.
+    **estkwargs : dict, optional
+        Additional keyword arguments to be passed to the clustering estimator.
+
+    Returns
+    -------
+    None
+    """
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -1434,6 +1561,28 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
 
 
 def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+    """
+    Perform clustering on 6D feature vectors.
+
+    Parameters
+    ----------
+    estimator : object
+        A clustering estimator object.
+    database : str
+        Path to the dataset.
+    outdir : str
+        Path to the output directory.
+    filter_threshold : tuple of float, optional
+        A tuple of two floats representing the minimum and maximum filter threshold values. Default is (0.1, 0.7).
+    n_jobs : int, optional
+        The number of jobs to run in parallel. Default is -1.
+    **estkwargs : dict
+        Additional keyword arguments to pass to the clustering estimator.
+
+    Returns
+    -------
+    None
+    """
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -1602,21 +1751,33 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
         thres += 0.1
 
 
-def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs):
-    """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
+def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_jobs: int = 10, mse_threshold: float = 0.5, preprocessed: bool = False, **estkwargs) -> Tuple:
+    """
+    Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
     Return the number of clusters where the mean squared error is below the threshold.
 
-    Args:
-        database (str): Database path. 
-        dirpath (str): Path to directory where to save the plot.
-        threshold (float, optional): Trajectory filtering threshold. Defaults to 0.7.
-        n_jobs (int, optional): Number of processes to run. Defaults to 10.
-        mse_threshold (float, optional): Mean squared error threshold. Defaults to 0.5.
+    Parameters
+    ----------
+    database : str
+        Database path.
+    dirpath : str
+        Path to directory where to save the plot.
+    threshold : float, optional
+        Trajectory filtering threshold, by default 0.7.
+    n_jobs : int, optional
+        Number of processes to run, by default 10.
+    mse_threshold : float, optional
+        Mean squared error threshold, by default 0.5.
+    preprocessed : bool, optional
+        Whether the data has already been preprocessed, by default False.
+    **estkwargs : dict
+        Additional arguments to pass to the clustering estimator.
 
-    Returns:
-        tuple(classifier, int, float): Returns the classifier with the best number of clusters, the number of clusters and the mean squared error.
+    Returns
+    -------
+    Tuple
+        Returns the classifier with the best number of clusters, the number of clusters and the mean squared error.
     """
-    from sklearn.cluster import OPTICS, KMeans
     trackedObjects = load_dataset(database)
     if not preprocessed:
         trackedObjects = filter_trajectories(
@@ -1687,17 +1848,24 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
 
 
 def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> Tuple[np.ndarray, KMeans, int, float]:
-    """Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
-    Return the clustering results based on cluster exit point centers.
-
-    Args:
-        X (np.ndarray): Already clustered trajectories. 
-        Y (np.ndarray): Labels of trajectories. 
-        n_jobs (int, optional): Number of processes to run. Defaults to 10.
-        mse_threshold (float, optional): The mean squared error threshold of min search. Defaults to 0.5.
-
+    """
+    Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
+    
+    Parameters:
+    -----------
+    X : np.ndarray
+        Already clustered trajectories.
+    Y : np.ndarray
+        Labels of trajectories.
+    n_jobs : int, optional
+        Number of processes to run. Defaults to 10.
+    mse_threshold : float, optional
+        The mean squared error threshold of min search. Defaults to 0.5.
+    
     Returns:
-        tuple(ndarray, classifier, int, float): Returns the labels of the trajectories, the classifier with the best mean squared error, the number of clusters and the mean squared error.
+    --------
+    Tuple[np.ndarray, KMeans, int, float]
+        Returns the labels of the trajectories, the classifier with the best mean squared error, the number of clusters and the mean squared error.
     """
     Y_exitcluster_centers = calc_cluster_centers(X, Y)
     mse = 9999

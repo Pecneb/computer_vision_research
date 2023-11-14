@@ -11,7 +11,7 @@ from icecream import ic
 ### Local ###
 from utility.dataset import load_dataset
 from utility.models import load_model
-from visualizer import draw_clusters, draw_prediction, draw_prediction_line
+# from visualizer import draw_clusters, draw_prediction, draw_prediction_line
 
 DEBUG = True if os.getenv("DEBUG") else False
 if not DEBUG:
@@ -178,7 +178,7 @@ def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
     tracks = load_dataset(args.database)
-    model = load_model(args.model)
+    # model = load_model(args.model)
     i_track = 0
     while i_track >= 0 and i_track < len(tracks):
         video = cv2.VideoCapture(args.video)
@@ -190,8 +190,8 @@ def examine_tracks(args):
         act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)+1
         frame_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
         frame_width = video.get(cv2.CAP_PROP_FRAME_WIDTH)
-        centroids_upscaled = upscale_cluster_centers(
-            model.centroid_coordinates, frame_width, frame_height)
+        # centroids_upscaled = upscale_cluster_centers(
+        #     model.centroid_coordinates, frame_width, frame_height)
 
         if act_start_frame == start_frame:
             window_name = f"Object ID{tracks[i_track].objID}"
@@ -200,7 +200,7 @@ def examine_tracks(args):
             i_frame = 0
             act_frame_num = video.get(cv2.CAP_PROP_FRAME_COUNT)
             # feature_vs, _, metadata, _ = make_feature_vectors_version_one([tracks[i_track]], k=6)
-            feature_vs, frame_numbers = make_feature_vectors(tracks[i_track])
+            # feature_vs, frame_numbers = make_feature_vectors(tracks[i_track])
             while i_frame < tracks[i_track].history[-1].frameID-tracks[i_track].history[0].frameID and i_frame >= 0:
                 ret, frame = video.read()
                 if not ret:
@@ -210,14 +210,14 @@ def examine_tracks(args):
                 frame = 255 - (255 - frame) * 0.5
                 frame = frame.astype(np.uint8)
 
-                draw_clusters(centroids_upscaled, frame)
+                # draw_clusters(centroids_upscaled, frame)
 
                 act_frame_num = video.get(cv2.CAP_PROP_POS_FRAMES)
 
-                fv = None
-                for i in range(len(feature_vs)):
-                    if act_frame_num == frame_numbers[i]:
-                        fv = feature_vs[i]
+                # fv = None
+                # for i in range(len(feature_vs)):
+                #     if act_frame_num == frame_numbers[i]:
+                #         fv = feature_vs[i]
 
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
                     print_object_info(tracks[i_track], i_det, frame)
@@ -227,18 +227,18 @@ def examine_tracks(args):
                         tracks[i_track].history[i_det],
                         frame_traj
                     )
-                    if fv is not None:
-                        # TODO actual feature vector, not last
-                        pred_proba = model.predict_proba(
-                            fv.reshape(1, -1), classes=model.centroid_labels)
-                        pred = np.argsort(pred_proba)[:, -1:]  # -args.top_k:]
-                        pred = pred.reshape((-1))
-                        ic(pred)
-                        ic(pred_proba)
-                        fv_upscaled = tracks[i_track].upscale_feature(
-                            fv, frame_width, frame_height)
-                        draw_prediction_line(
-                            frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
+                    # if fv is not None:
+                    #     # TODO actual feature vector, not last
+                    #     pred_proba = model.predict_proba(
+                    #         fv.reshape(1, -1), classes=model.centroid_labels)
+                    #     pred = np.argsort(pred_proba)[:, -1:]  # -args.top_k:]
+                    #     pred = pred.reshape((-1))
+                    #     ic(pred)
+                    #     ic(pred_proba)
+                    #     fv_upscaled = tracks[i_track].upscale_feature(
+                    #         fv, frame_width, frame_height)
+                    #     draw_prediction_line(
+                    #         frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
 
                     i_det += 1
                 else:
@@ -303,12 +303,12 @@ def main():
         required=True,
         help="Path to joblib database file."
     )
-    argparser.add_argument(
-        "-m", "--model",
-        type=str,
-        required=True,
-        help="Path to model."
-    )
+    # argparser.add_argument(
+    #     "-m", "--model",
+    #     type=str,
+    #     required=True,
+    #     help="Path to model."
+    # )
     argparser.add_argument(
         "--video",
         type=str,
