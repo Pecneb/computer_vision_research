@@ -143,7 +143,10 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     datasetPath = Path(path2dataset)
     ext = datasetPath.suffix
     if ext == ".joblib":
-        dataset = joblib.load(path2dataset)
+        try:
+            dataset = joblib.load(path2dataset)
+        except:
+            return np.array([])
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset]
             dataset = ret_dataset
