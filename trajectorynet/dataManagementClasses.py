@@ -33,71 +33,45 @@ from utility.featurevector import FeatureVector
 
 @dataclass
 class Detection:
-   """Class for storing detections of YOLO Darknet.
-
-    Parameters
-    ----------
-    label : str
-        Classification name ex. car, person, bicycle, etc.
-    confidence : float
-        The likeliness that the detected object is really the above label, 0.0-1.0.
-    X : float
-        Center of bounding box in the X axis.
-    Y : float
-        Center of bounding box in the Y axis.
-    Width : float
-        Width of the bounding box.
-    Height : float
-        Height of the bounding box.
-    frameID : int
-        The number of the frame, the detection is acquired.
-    VX : float, optional
-        Velocity in the X axis. Used in the analyzer script and databaseLoader script.
-    VY : float, optional
-        Velocity in the Y axis. Used in the analyzer script and databaseLoader script.
-    AX : float, optional
-        Acceleration in the X axis. Used in the analyzer script and databaseLoader script.
-    AY : float, optional
-        Acceleration in the Y axis. Used in the analyzer script and databaseLoader script.
-    objID : int, optional
-        Object ID. Used in the analyzer script and databaseLoader script.
+    """
+    A class representing a detection in a video frame.
 
     Attributes
     ----------
     label : str
-        Classification name ex. car, person, bicycle, etc.
+        The label of the detected object.
     confidence : float
-        The likeliness that the detected object is really the above label, 0.0-1.0.
+        The confidence score of the detection.
     X : float
-        Center of bounding box in the X axis.
+        The x-coordinate of the top-left corner of the bounding box.
     Y : float
-        Center of bounding box in the Y axis.
+        The y-coordinate of the top-left corner of the bounding box.
     Width : float
-        Width of the bounding box.
+        The width of the bounding box.
     Height : float
-        Height of the bounding box.
+        The height of the bounding box.
     frameID : int
-        The number of the frame, the detection is acquired.
+        The ID of the frame in which the detection was made.
     VX : float, optional
-        Velocity in the X axis. Used in the analyzer script and databaseLoader script.
+        The x-velocity of the detected object. Default is None.
     VY : float, optional
-        Velocity in the Y axis. Used in the analyzer script and databaseLoader script.
+        The y-velocity of the detected object. Default is None.
     AX : float, optional
-        Acceleration in the X axis. Used in the analyzer script and databaseLoader script.
+        The x-acceleration of the detected object. Default is None.
     AY : float, optional
-        Acceleration in the Y axis. Used in the analyzer script and databaseLoader script.
+        The y-acceleration of the detected object. Default is None.
     objID : int, optional
-        Object ID. Used in the analyzer script and databaseLoader script.
+        The ID of the detected object. Default is None.
 
     Methods
     -------
     __repr__() -> str
         Returns a string representation of the Detection object.
     __eq__(other) -> bool
-        Compares two Detection objects for equality.
-
+        Returns True if the given Detection object is equal to this Detection object, False otherwise.
     """
     label: str
+
     confidence: float
     X: float
     Y: float
@@ -606,7 +580,6 @@ class TrackedObject():
     def update_velocity(self, k: int = 10):
         """Calculate velocity from X,Y coordinates.
         """
-        raise DeprecationWarning("This method is deprecated!")
         if self.history_X.shape[0] < k:
             self.history_VX_calculated = np.append(
                 self.history_VX_calculated, [0])
@@ -632,7 +605,6 @@ class TrackedObject():
     def update_accel(self, k: int = 2):
         """Calculate velocity from X,Y coordinates.
         """
-        raise DeprecationWarning("This method is deprecated!")
         if self.history_VX_calculated.shape[0] < k:
             self.history_AX_calculated = np.append(
                 self.history_AX_calculated, [0])
@@ -668,8 +640,8 @@ class TrackedObject():
             self.history.append(detection)
             self.history_X = np.append(self.history_X, [detection.X])
             self.history_Y = np.append(self.history_Y, [detection.Y])
-            # self.update_velocity(k=k_velocity)
-            # self.update_accel(k=k_acceleration)
+            self.update_velocity(k=2)
+            self.update_accel(k=2)
             self.mean = mean
             self.X = detection.X
             self.Y = detection.Y
@@ -679,7 +651,7 @@ class TrackedObject():
             self.VY = mean[5]
             self.history[-1].VX = self.VX
             self.history[-1].VY = self.VY
-            # self.updateAccel(self.VX, VX_old, self.VY, VY_old)
+            self.updateAccel(self.VX, VX_old, self.VY, VY_old)
             self.history[-1].AX = self.AX
             self.history[-1].AY = self.AY
             self.time_since_update = 0

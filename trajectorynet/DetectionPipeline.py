@@ -19,11 +19,13 @@
 """
 from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Literal
+from functools import lru_cache
 
 import cv2
 import numpy as np
 import torch
+from classifier import OneVSRestClassifierExtended
 from dataManagementClasses import Detection as DarknetDetection
 from dataManagementClasses import TrackedObject
 from deep_sort.deep_sort import nn_matching
@@ -439,6 +441,109 @@ class DeepSORT(object):
                     logObject(db_connection, newTrack.objID, newTrack.label)
 
 
+class TrajectoryNet:
+    def __init__(self, model: str, debug: bool = False):
+        self._logger = getLogger("TrajectoryNet_Logger")
+        _logHandler = StreamHandler()
+        if debug:
+            self._logger.setLevel(DEBUG)
+            _logHandler.setLevel(DEBUG)
+        else:
+            self._logger.setLevel(INFO)
+            _logHandler.setLevel(INFO)
+        _formatter = Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        _logHandler.setFormatter(_formatter)
+        self._logger.addHandler(_logHandler)
+
+        self._model: OneVSRestClassifierExtended = load_model(model)
+        self._logger.debug(f"Model: {self._model}")
+
+    def predict(self, feature_vector: np.ndarray) -> np.ndarray:
+        """Predict trajectories.
+
+        Parameters
+        ----------
+        feature_vectors : np.ndarray
+            Feature vector.
+        """
+        return self._model.predict_proba(feature_vector, self._model.centroid_labels)
+
+    @staticmethod
+    def feature_extraction(trajectory: TrackedObject, feature_version: Literal["1", "7"]) -> np.ndarray:
+        """Extract features from history.
+
+        Parameters
+        ----------
+        trajectory : TrackedObject
+            Trajectory object.
+        """
+        if feature_version == "1":
+            return trajectory.feature_v1()
+        elif feature_version == "7":
+            return trajectory.feature_v7()
+
+    @staticmethod
+    def draw_clusters(cluster_centroids: np.ndarray, image: np.ndarray) -> np.ndarray:
+        """Draw exit clusters on image.
+
+        Parameters
+        ----------
+        cluster_centroids : np.ndarray
+            Cluster x,y kooridnates.
+        image : np.ndarray
+            Image to draw on.
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
+        """
+        for i, cluster in enumerate(cluster_centroids):
+            cv2.circle(image, (cluster[0], cluster[1]), 10, (0, 0, 255), 3)
+
+    @staticmethod
+    def draw_predictions(prediction: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray) -> np.ndarray:
+        """Draw predictions on image.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Predictions.
+        image : np.ndarray
+            Image to draw on.
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
+        """
+        #TODO implement
+        pass
+
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def upscale_koordinate(p1, p2, shape: Tuple[int, int, int]) -> Tuple[int, int]:
+        """Upscale koordinate from 0-1 range to image size.
+
+        Parameters
+        ----------
+        p1 : float
+            Koordinate x.
+        p2 : float
+            Koordinate y.
+        shape : Tuple[int, int, int]
+            Image shape.
+
+        Returns
+        -------
+        Tuple[int, int]
+            Upscaled koordinate.
+        """
+        aspect_ratio = shape[1]/shape[0]
+        return (int((p1*shape[1])/aspect_ratio), int(p2*shape[0]))
+
+
 class Detector:
     """Detection pipeline class.
     This class is used to run the detection pipeline.
@@ -597,17 +702,7 @@ class Detector:
                     label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
 
-    def predict(self, history: List[TrackedObject]):
-        """Predict trajectories.
-
-        Parameters
-        ----------
-        history : List[TrackedObject]
-            History list.
-        """
-        pass
-
-    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False):
+    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: TrajectoryNet = None, show: bool = False):
         """Run detection pipeline.
 
         Parameters
@@ -622,6 +717,10 @@ class Detector:
         # mask = masker(img) # mask out not wanted areas
         yolo.warmup()  # warm up yolo model
         previous_path = None
+        _, _, im0s, _ = next(iter(self._dataset))
+        cluster_centroids = np.array([trajectoryNet.upscale_koordinate(
+            coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.centroid_coordinates])
+        self._logger.debug(f"Cluster centroids: {cluster_centroids}")
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
             self._logger.debug(f"Input image shape: {img.shape}")
@@ -629,7 +728,7 @@ class Detector:
             preds = yolo.infer(img)
             # postprocess predictions
             preds = yolo.postprocess(preds, im0, img, show=show)
-            self._logger.debug(f"Predictions: {preds}")
+            self._logger.debug(f"Detections: {preds}")
             # filter out unwanted detections and create Detection objects
             new_detections = self.filter_objects(
                 new_detections=preds, frame_number=frame)
@@ -639,15 +738,27 @@ class Detector:
             deepSort.update_history(history=self._history, new_detections=new_detections,
                                     joblibbuffer=self._joblibbuffers[self._dataset.count], db_connection=self._databases)
             self._logger.debug(f"History: {self._history}")
-            if self._model is not None:  # if model is not None, predict trajectories and draw predictions
-                # TODO if model is not None, run model on new_detections and draw predictions
-                ...
+            if trajectoryNet is not None:
+                # extract features from history
+                feature_vectors = np.array(
+                    [trajectoryNet.feature_extraction(t, feature_version="7") for t in self._history])
+                self._logger.debug(f"Feature vectors: {feature_vectors}")
+                # predict trajectories
+                predictions = [trajectoryNet.predict(
+                    feature_vector.reshape(1, -1)) for feature_vector in feature_vectors if feature_vector is not None]
+                self._logger.debug(f"Predictions: {predictions}")
+                # draw clusters
+                trajectoryNet.draw_clusters(
+                    cluster_centroids=cluster_centroids, image=im0)
+                # draw predictions
+                # trajectoryNet.draw_predictions(prediction=predictions, cluster_centers=cluster_centroids, image=im0)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
         for i, buf in enumerate(self._joblibbuffers):
-            self._logger.debug(f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
+            self._logger.debug(
+                f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
             dump(buf, self._joblibs[i])
 
 

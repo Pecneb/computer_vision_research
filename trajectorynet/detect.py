@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from DetectionPipeline import DeepSORT, Detector, Yolov7
+from DetectionPipeline import DeepSORT, Detector, Yolov7, TrajectoryNet
 
 
 def get_args():
@@ -32,7 +32,8 @@ def main():
     yolo = Yolov7(weights=args.yolo_model, conf_thres=args.score, iou_thres=args.iou, half=args.half, device=args.device, debug=True)
     deepSort = DeepSORT(args.max_age)
     detector = Detector(source=args.video, outdir=args.outdir, database=args.database, joblib=args.joblib, model=args.model)
-    detector.run(yolo, deepSort, show=args.show)
+    predictor = TrajectoryNet(model=args.model, debug=True)
+    detector.run(yolo, deepSort, predictor, show=args.show)
 
     
 if __name__ == '__main__':
