@@ -311,8 +311,19 @@ class DeepSORT(object):
         Maximum size of the appearence descriptor gallery
     historyDepth : int
         Length of history 
-
     _history : List
+        History list, which is used to store TrackedObject objects.
+    
+    Methods
+    -------
+    ini_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric 
+        Deepsort metric factory.
+    tracker_factory(metric: NearestNeighborDistanceMetric, max_iou_distance: float, historyDepth: int) -> Tracker
+        Create tracker object.
+    make_detection_object(darknetDetection: DarknetDetection) -> DeepSORTDetection
+        Wrap a DarknetDetection object into a DeepSORT Detection object.
+    update_history(history: List[TrackedObject], new_detections: List[DarknetDetection], joblibbuffer: Optional[List[TrackedObject]] = None, db_connection: Optional[str] = None)
+        Update trajectory history with new detections.
 
     """
 
@@ -467,7 +478,7 @@ class TrajectoryNet:
         feature_vectors : np.ndarray
             Feature vector.
         """
-        return self._model.predict_proba(feature_vector, self._model.centroid_labels)
+        return self._model.predict(feature_vector, 1, self._model.centroid_labels)
 
     @staticmethod
     def feature_extraction(trajectory: TrackedObject, feature_version: Literal["1", "7"]) -> np.ndarray:
@@ -500,10 +511,10 @@ class TrajectoryNet:
             Output image.
         """
         for i, cluster in enumerate(cluster_centroids):
-            cv2.circle(image, (cluster[0], cluster[1]), 10, (0, 0, 255), 3)
+            cv2.circle(image, (int(cluster[0]), int(cluster[1])), 10, (0, 0, 255), 3)
 
     @staticmethod
-    def draw_predictions(prediction: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray) -> np.ndarray:
+    def draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray) -> np.ndarray:
         """Draw predictions on image.
 
         Parameters
@@ -518,8 +529,9 @@ class TrajectoryNet:
         np.ndarray
             Output image.
         """
-        #TODO implement
-        pass
+        #TODO draw line from detection coordinate to cluster center
+        cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(cluster_centers[predicted_cluster][0]), int(cluster_centers[predicted_cluster][1])), (0, 255, 0), 3)
+        
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -541,7 +553,7 @@ class TrajectoryNet:
             Upscaled koordinate.
         """
         aspect_ratio = shape[1]/shape[0]
-        return (int((p1*shape[1])/aspect_ratio), int(p2*shape[0]))
+        return (p1*shape[1])/aspect_ratio, p2*shape[0]
 
 
 class Detector:
@@ -588,7 +600,7 @@ class Detector:
         Generate output path name from source and output directory path.
     filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"]) -> List[DarknetDetection]
         Filter out detections that are not in the names list.
-    run(yolo: Yolov7, deepSort: Optional[DeepSORT] = None, show: bool = False)
+    run(yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: TrajectoryNet = None, show: bool = False)
         Run detection pipeline.
 
     Examples
@@ -711,12 +723,14 @@ class Detector:
             Yolov7 object
         deepSort: Optional[DeepSORT], optional
             DeepSORT object, by default None
+        trajectoryNet : Optional[TrajectoryNet], optional
+            TrajectoryNet object, by default None
         show : bool, optional
             Show flag to visualize frames with cv2 GUI, by default False
         """
         # mask = masker(img) # mask out not wanted areas
         yolo.warmup()  # warm up yolo model
-        previous_path = None
+        # previous_path = None
         _, _, im0s, _ = next(iter(self._dataset))
         cluster_centroids = np.array([trajectoryNet.upscale_koordinate(
             coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.centroid_coordinates])
@@ -739,19 +753,20 @@ class Detector:
                                     joblibbuffer=self._joblibbuffers[self._dataset.count], db_connection=self._databases)
             self._logger.debug(f"History: {self._history}")
             if trajectoryNet is not None:
-                # extract features from history
-                feature_vectors = np.array(
-                    [trajectoryNet.feature_extraction(t, feature_version="7") for t in self._history])
-                self._logger.debug(f"Feature vectors: {feature_vectors}")
-                # predict trajectories
-                predictions = [trajectoryNet.predict(
-                    feature_vector.reshape(1, -1)) for feature_vector in feature_vectors if feature_vector is not None]
-                self._logger.debug(f"Predictions: {predictions}")
                 # draw clusters
                 trajectoryNet.draw_clusters(
                     cluster_centroids=cluster_centroids, image=im0)
-                # draw predictions
-                # trajectoryNet.draw_predictions(prediction=predictions, cluster_centers=cluster_centroids, image=im0)
+                for t in self._history:
+                    # extract features from history
+                    feature_vector = TrackedObject.downscale_feature(trajectoryNet.feature_extraction(t, feature_version="7"))
+                    self._logger.debug(f"Feature vectors: {feature_vector}")
+                    # predict trajectories
+                    if feature_vector is not None:
+                        predictions = trajectoryNet.predict(feature_vector.reshape(1, -1))
+                        self._logger.debug(f"Predictions: {predictions}")
+                        # draw predictions
+                        trajectoryNet.draw_prediction(
+                            trackedObject=t, predicted_cluster=predictions[0,0], cluster_centers=cluster_centroids, image=im0)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):

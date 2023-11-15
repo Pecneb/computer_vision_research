@@ -578,7 +578,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     Y[:, clr] = mdl.predict_proba(X_)[:, 1]
         return Y
 
-    def predict(self, X: np.ndarray, top: int = 1, centroids: dict = None):
+    def predict(self, X: np.ndarray, top: int = 1, classes: np.ndarray = None, centroids: dict = None):
         """
         Predict class labels for samples in X.
 
@@ -609,7 +609,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         if centroids is not None:
             class_proba = self.predict_proba(X=X, centroids=centroids)
         else:
-            class_proba = self.predict_proba(X=X)
+            if classes is not None:
+                class_proba = self.predict_proba(X=X, classes=classes)
+            else:
+                class_proba = self.predict_proba(X=X)
         # Sort to ascending order.
         prediction_result = np.argsort(class_proba)
 

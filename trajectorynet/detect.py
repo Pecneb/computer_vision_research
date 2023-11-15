@@ -7,7 +7,7 @@ def get_args():
     parser = ArgumentParser(description='Detect objects in a video.')
     # region general arguments
     parser.add_argument('--video', type=str, required=True, help='Path to video file.')
-    parser.add_argument('--outdir', type=str, required=True, help='Path to output video file.')
+    parser.add_argument('--outdir', type=str, help='Path to output video file.')
     parser.add_argument('--database', action='store_true', default=False, help='Save results to database.')
     parser.add_argument('--joblib', action='store_true', default=True, help='Save results to database.')
     # endregion
