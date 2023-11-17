@@ -2496,11 +2496,11 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     print("Clustering done in %d s" % (time.time() - start))
     # run clustering on cluster exit points centroids
     start = time.time()
-    reduced_labels, _, _, _, centroids_labels = kmeans_mse_clustering(tracks_labeled,
+    reduced_labels, _, _, _, pooled_centroids_labels = kmeans_mse_clustering(tracks_labeled,
                                                                       cluster_labels,
                                                                       n_jobs=n_jobs,
                                                                       mse_threshold=mse_threshold)
-    print("Clustered exit centroids: {}".format(centroids_labels))
+    print("Clustered exit centroids: {}".format(pooled_centroids_labels))
     print("Exit points clusters: {}".format(np.unique(reduced_labels)))
     print("Exit point clustering done in %d s" % (time.time() - start))
 
@@ -2719,14 +2719,15 @@ def calculate_metrics_exitpoints(dataset: str or List[str],
     for m in models_to_benchmark:
         start = time.time()
         clf_ovr = OneVSRestClassifierExtended(estimator=models[m](
-            **parameters[0][m]), n_jobs=n_jobs, centroid_labels=centroids_labels, centroid_coordinates=pooled_cluster_centers)
+            **parameters[0][m]), n_jobs=n_jobs, centroid_labels=labels, centroid_coordinates=cluster_centers, 
+            pooled_coordinates=pooled_cluster_centers, pooled_labels=pooled_centroids_labels)
         clf_ovr.fit(X_train, y_train)
         # predict probabilities
         y_pred = clf_ovr.predict(X_test)
         y_pred_proba = clf_ovr.predict_proba(X_test)
         # convert y_pred to cluster centroid labels
-        y_pred_reduced = np.array([centroids_labels[y] for y in y_pred])
-        y_pred_proba_reduced = clf_ovr.predict_proba(X_test, centroids_labels)
+        y_pred_reduced = np.array([pooled_centroids_labels[y] for y in y_pred])
+        y_pred_proba_reduced = clf_ovr.predict_proba(X_test, pooled_centroids_labels)
         print("Classifier %s trained in %d s" % (m, time.time() - start))
         # evaluate based on original clusters
         balanced_accuracy = balanced_accuracy_score(y_test, y_pred)

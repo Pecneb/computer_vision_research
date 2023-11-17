@@ -313,7 +313,7 @@ class DeepSORT(object):
         Length of history 
     _history : List
         History list, which is used to store TrackedObject objects.
-    
+
     Methods
     -------
     ini_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric 
@@ -478,7 +478,7 @@ class TrajectoryNet:
         feature_vectors : np.ndarray
             Feature vector.
         """
-        return self._model.predict(feature_vector, 1, self._model.centroid_labels)
+        return self._model.predict_proba(feature_vector)
 
     @staticmethod
     def feature_extraction(trajectory: TrackedObject, feature_version: Literal["1", "7"]) -> np.ndarray:
@@ -511,10 +511,11 @@ class TrajectoryNet:
             Output image.
         """
         for i, cluster in enumerate(cluster_centroids):
-            cv2.circle(image, (int(cluster[0]), int(cluster[1])), 10, (0, 0, 255), 3)
+            cv2.circle(image, (int(cluster[0]), int(
+                cluster[1])), 10, (0, 0, 255), 3)
 
     @staticmethod
-    def draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray) -> np.ndarray:
+    def draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray, color: Tuple = (0, 255, 0), thickness: int = 3) -> np.ndarray:
         """Draw predictions on image.
 
         Parameters
@@ -529,9 +530,34 @@ class TrajectoryNet:
         np.ndarray
             Output image.
         """
-        #TODO draw line from detection coordinate to cluster center
-        cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(cluster_centers[predicted_cluster][0]), int(cluster_centers[predicted_cluster][1])), (0, 255, 0), 3)
-        
+        # TODO draw line from detection coordinate to cluster center
+        cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
+            cluster_centers[predicted_cluster][0]), int(cluster_centers[predicted_cluster][1])), color, thickness)
+
+    @staticmethod
+    def draw_top_k_prediction(trackedObject: TrackedObject, predictions: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray, k: int = 3, thickness: int = 3) -> np.ndarray:
+        """Draw top k predictions on image.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Predictions.
+        image : np.ndarray
+            Image to draw on.
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
+        """
+        top_k = np.argsort(predictions)[-k:]
+        for i in top_k:
+            if i == top_k[-1]:
+                cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
+                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0,255,0), thickness)
+            else:
+                cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
+                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0,0,255), thickness)
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -612,30 +638,11 @@ class Detector:
     >>> detector.run(yolo, deepSort, show=True)
     """
 
-    def __init__(self, source: str, outdir: Optional[str] = None, model: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
-        # region init logger
-        self._logger = getLogger("Pipeline_Logger")
-        _logHandler = StreamHandler()
-        if debug:
-            self._logger.setLevel(DEBUG)
-            _logHandler.setLevel(DEBUG)
-        else:
-            self._logger.setLevel(INFO)
-            _logHandler.setLevel(INFO)
-        _formatter = Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        _logHandler.setFormatter(_formatter)
-        self._logger.addHandler(_logHandler)
-        # endregion
-
+    def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
+        self._init_logger(debug=debug)
         self._source = Path(source)
-        # self._logger.debug(f"Video source: {self._source}")
-        if outdir is not None:
-            self._outdir = Path(outdir).absolute()
-            self._logger.debug(f"Output directory: {self._outdir}")
-        else:
-            self._outdir = self._source.parent
-
+        self._init_output_directory(path=outdir)
+        self._init_video_writer()
         self._dataset = LoadImages(self._source, img_size=640, stride=32)
         self._logger.debug(f"Files: {self._dataset.files}")
         if database:
@@ -651,11 +658,67 @@ class Detector:
             self._joblibbuffers = [None] * len(self._dataset.files)
         self._logger.debug(f"Joblib buffers: {self._joblibbuffers}")
         self._history = []
-        if model is not None:
-            self._model = load_model(model)
-            self._logger.info(f"Loaded model: {self._model}")
+
+    def _init_logger(self, debug: bool = False) -> None:
+        """Init logger.
+
+        Parameters
+        ----------
+        debug : bool, optional
+            Debug flag, by default False
+
+        Returns
+        -------
+        None
+        """
+        self._logger = getLogger("Pipeline_Logger")
+        _logHandler = StreamHandler()
+        if debug:
+            self._logger.setLevel(DEBUG)
+            _logHandler.setLevel(DEBUG)
         else:
-            self._model = None
+            self._logger.setLevel(INFO)
+            _logHandler.setLevel(INFO)
+        _formatter = Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        _logHandler.setFormatter(_formatter)
+        self._logger.addHandler(_logHandler)
+
+    def _init_output_directory(self, path: Optional[str] = None) -> None:
+        """Init output directory.
+
+        Parameters
+        ----------
+        path : Path
+            Path to output directory.
+
+        Returns
+        -------
+        None
+        """
+        if path is not None:
+            self._outdir = Path(path)
+        else:
+            self._outdir = self._source.parent
+        if not self._outdir.exists():
+            self._outdir.mkdir(parents=True)
+        self._record_path = self._outdir.joinpath("runs")
+        if not self._record_path.exists():
+            self._record_path.mkdir(parents=True)
+        self._logger.debug(f"Output directory: {path}")
+        self._logger.debug(f"Record path: {self._record_path}")
+    
+    def _init_video_writer(self) -> None:
+        """Init video capture.
+
+        Returns
+        -------
+        cv2.VideoCapture
+            Video capture object.
+        """
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        n_runs = len(list(self._record_path.glob("*.mp4")))
+        # self._capture = cv2.VideoWriter(filename=self._record_path.joinpath("run_{}.mp4".format(n_runs)), fourcc=fourcc, fps=30)
 
     @staticmethod
     def generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]] = None, suffix: str = ".joblib", logger: Optional[Logger] = None) -> Path:
@@ -758,15 +821,20 @@ class Detector:
                     cluster_centroids=cluster_centroids, image=im0)
                 for t in self._history:
                     # extract features from history
-                    feature_vector = TrackedObject.downscale_feature(trajectoryNet.feature_extraction(t, feature_version="7"))
+                    feature_vector = TrackedObject.downscale_feature(
+                        trajectoryNet.feature_extraction(t, feature_version="1"))
                     self._logger.debug(f"Feature vectors: {feature_vector}")
                     # predict trajectories
                     if feature_vector is not None:
-                        predictions = trajectoryNet.predict(feature_vector.reshape(1, -1))
-                        self._logger.debug(f"Predictions: {predictions}")
+                        predictions = trajectoryNet.predict(
+                            feature_vector.reshape(1, -1))
+                        self._logger.debug(np.argsort(predictions))
+                        self._logger.debug(f"Predictions: {predictions.shape}")
                         # draw predictions
-                        trajectoryNet.draw_prediction(
-                            trackedObject=t, predicted_cluster=predictions[0,0], cluster_centers=cluster_centroids, image=im0)
+                        # trajectoryNet.draw_prediction(
+                        #     trackedObject=t, predicted_cluster=predictions[0, 0], cluster_centers=cluster_centroids, image=im0)
+                        trajectoryNet.draw_top_k_prediction(
+                            trackedObject=t, predictions=predictions[0], cluster_centers=cluster_centroids, image=im0, k=2)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):

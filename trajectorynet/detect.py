@@ -31,7 +31,7 @@ def main():
     args = get_args()
     yolo = Yolov7(weights=args.yolo_model, conf_thres=args.score, iou_thres=args.iou, half=args.half, device=args.device, debug=True)
     deepSort = DeepSORT(args.max_age)
-    detector = Detector(source=args.video, outdir=args.outdir, database=args.database, joblib=args.joblib, model=args.model)
+    detector = Detector(source=args.video, outdir=args.outdir, database=args.database, joblib=args.joblib)
     predictor = TrajectoryNet(model=args.model, debug=True)
     detector.run(yolo, deepSort, predictor, show=args.show)
 

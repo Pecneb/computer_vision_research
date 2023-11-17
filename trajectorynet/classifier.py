@@ -326,7 +326,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         List of centroid coordinates.
     """
 
-    def __init__(self, estimator, tracks=None, n_jobs=16, centroid_labels=None, centroid_coordinates=None):
+    def __init__(self, estimator, tracks=None, n_jobs=16, centroid_labels=None, centroid_coordinates=None, pooled_labels=None, pooled_coordinates=None):
         """
         Initialize a TrajectoryNet classifier.
 
@@ -347,6 +347,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         self.tracks = tracks
         self.centroid_labels = centroid_labels
         self.centroid_coordinates = centroid_coordinates
+        self.pooled_labels = pooled_labels
+        self.pooled_coordinates = pooled_coordinates
         self.verbose = False
         self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
@@ -740,3 +742,38 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         map_ = tp/len(y_test)
 
         return map_
+
+class OneVsRestClassifierWrapper(OneVsRestClassifier):
+    """Wraps the OneVsRestClassifier class from scikit-learn to store additional information about the dataset.
+
+    Parameters
+    ----------
+    estimator: classifier object
+        A regressor or a classifier that implements fit. When a classifier is passed, decision_function will be used
+        in priority and it will fallback to predict_proba if it is not available. When a regressor is passed, predict is used.
+    n_jobs: int
+        Number of processes to run. Default n_jobs value is 16.
+    verbose: int
+        Verbosity level. Default verbosity level is 0.
+    cluster_centroids: np.ndarray
+        The centroids of the clusters. The x,y koordinates of the centroids.
+    pooled_cluster_centroids: np.ndarray
+        The centroids of the pooled clusters, the x,y koordinates of the centroids.
+    pooled_classes: np.ndarray
+        The pooler mask for the original classes. for example pooled_classes = [0, 0, 0, 1, 1, 1, 2, 2, 2] can be a mask of the original classes like [0, 1, 2, 3, 4, 5, 6, 7, 8].
+
+    Attributes
+    ----------
+    cluster_centroids: np.ndarray
+        The centroids of the clusters. The x,y koordinates of the centroids.
+    pooled_cluster_centroids: np.ndarray
+        The centroids of the pooled clusters, the x,y koordinates of the centroids.
+    pooled_classes: np.ndarray
+        The pooler mask for the original classes. for example pooled_classes = [0, 0, 0, 1, 1, 1, 2, 2, 2] can be a mask of the original classes like [0, 1, 2, 3, 4, 5, 6, 7, 8].
+    """
+
+    def __init__(self, estimator, n_jobs=16, verbose=0, cluster_centroids: np.ndarray = None, pooled_cluster_centroids: np.ndarray = None, pooled_classes: np.ndarray = None):
+        super().__init__(estimator=estimator, n_jobs=n_jobs, verbose=verbose)
+        self.cluster_centroids = cluster_centroids        
+        self.pooled_cluster_centroids = pooled_cluster_centroids
+        self.pooled_classes = pooled_classes
