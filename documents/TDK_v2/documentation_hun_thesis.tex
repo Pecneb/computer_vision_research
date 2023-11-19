@@ -19,33 +19,33 @@
 \usepackage{booktabs}
 
 
-% \newcommand{\firstpage}{
-% \thispagestyle{empty}
-% \vspace*{5mm}
-% \begin{center}
-%     {\Large Széchenyi István Egyetem\\}
-%     {\Large Gépészmérnöki, Informatikai és Villamosmérnöki Kar}
-% \end{center}
-% \vspace{35mm}
-% \begin{center}
-%     {\huge \bf DIPLOAMUNKA}
-% \end{center}
-% \vspace{35mm}
-% \begin{center}
-%     {\huge Péter Bence Gábor}
-% \end{center}
-% \vspace{3mm}
-% \begin{center}
-%    {\LARGE Mérnökinformatika BSc}
-% \end{center}
-% \vspace{35mm}
-% \begin{center}
-%    {\LARGE 2023}
-% \end{center}
-% {\small A gerincen:}\newline
-% \noindent\framebox[16cm]{Péter Bence Gábor\ 2023\ Nyilvános\ \hfill}
-% \newpage
-% }
+\newcommand{\firstpage}{
+\thispagestyle{empty}
+\vspace*{5mm}
+\begin{center}
+    {\Large Széchenyi István Egyetem\\}
+    {\Large Gépészmérnöki, Informatikai és Villamosmérnöki Kar}
+\end{center}
+\vspace{35mm}
+\begin{center}
+    {\huge \bf DIPLOAMUNKA}
+\end{center}
+\vspace{35mm}
+\begin{center}
+    {\huge Péter Bence Gábor}
+\end{center}
+\vspace{3mm}
+\begin{center}
+   {\LARGE Mérnök informatikus BSc szak}
+\end{center}
+\vspace{35mm}
+\begin{center}
+   {\LARGE 2023}
+\end{center}
+{\small A gerincen:}\newline
+\noindent\framebox[16cm]{Péter Bence Gábor\ 2023\ Nyilvános\ \hfill}
+\newpage
+}
 
 
 \bibstyle{ieeetr}
@@ -56,7 +56,7 @@
 
 \begin{document}
 
-% \firstpage{}
+\firstpage{}
 
 \begin{titlepage}
     \begin{center}
@@ -82,7 +82,7 @@
         \end{center}
         \vspace{10mm}
         \begin{center}
-            {\LARGE Mérnökinformatikus BSc 7. félév}
+            {\LARGE Mérnök informatikus BSc szak}
         \end{center}
         \vspace{10mm}
         \begin{center}
@@ -135,10 +135,13 @@
 %     %\url{https://www.github.com/Pecneb/computer_vision_research}
 % \end{abstract}
 
-%\begin{abstract}
-%    Intelligent Transportation Systems (ITS) are gaining ground in various fields nowadays, and the analysis of traffic junctions is a frequent area of application for these systems. Our goal is to automate and accelerate the analysis of traffic junctions using computer vision and machine learning. The fundamental ideas, the developed framework, and the solutions to emerging problems in the research can be used in practice to prevent accidents, filter out misbehaviors, and support traffic control systems.
-%    In the research, we present a trajectory classification method that analyzes the movement of vehicles passing through traffic junctions using object detection and object tracking. Based on their movement, it clusters trajectories and provides predictions for the exit points of newly entering vehicles using machine learning. We used our own video database, which we created in six different traffic junctions, for the method. Among the tested clustering methods (OPTICS, BIRCH, KMeans, DBSCAN), the OPTICS algorithm proved to be the best for clustering trajectories. We compared several different classification methods to achieve the most accurate prediction, including KNN, SVM, GP, DT, GNB, MLP, and SGD. Among the procedures presented in the study, KNN achieved the most accurate result of 90\%.
-%\end{abstract}
+\newpage
+\renewcommand{\abstractname}{}
+\begin{abstract}
+    \noindent \begin{center}\textbf{Abstract}\end{center} \par
+    \vspace{10pt}
+    Intelligent transportation systems (ITS) are increasingly gaining importance nowadays, and they are being applied in various fields. Traffic node analysis is a popular topic in ITS applications. Our goal is to automate and accelerate traffic node analysis using machine vision and machine learning techniques. The research results, developed framework, and solutions to emerging problems can be used in practice to prevent accidents, detect aggressive driving, and support traffic management systems. We introduce a trajectory classification method that analyzes the movement of vehicles passing through traffic nodes using object detection and tracking. The algorithm clusters the trajectories based on their motion patterns. By adjusting the parameters of the clustering algorithm, we can achieve different levels of route separation. These routes serve as input to the classifier algorithm, which predicts the output points of incoming vehicles in real-time after training. The OPTICS clustering algorithm proved to be the most effective in our case. Using the endpoint of the routes clustered by OPTICS, we can further refine the classification with an algorithm we developed that uses the KMeans algorithm as a foundation. The methods we developed for real-time prediction of traffic routes achieved the highest accuracy in our evaluations, using the SVM, KNN, and Decision Tree classification algorithms. Additionally, our developed framework is suitable for traffic counting and generating traffic statistics, providing valuable information for transportation engineers.
+\end{abstract}
 
 \newpage
 
@@ -277,51 +280,58 @@ A DeepSORT algoritmus előnye, hogy nagyon stabil és pontos objektumkövetést 
 \end{figure}
 
 \newpage
-\section{Adathalmazok kialakítása}
+\section{Keretrendszer implementációja}
 A kutatás során saját adathalmazok kialakítására volt szükség. Az adatok begyűjtésére és eltárolására saját alkalmazást és keretrendszert
 fejlesztettünk ki. A szoftver keretrendszert python nyelven írtuk meg, a forráskód ezen a linken megtatlálható \url{http://github.com/Pecneb/computer_vision_research}.
 A fejlesztés során a következő programkönyvtárakat használtuk OpenCV \cite{opencv_library}, Numpy \cite{harris2020array}, Pandas \cite{reback2020pandas},
 Scikit-Learn \cite{scikit-learn}, Matplotlib \cite{Hunter:2007}, SQLite \cite{sqlite2020hipp}, Joblib \cite{joblib_library}. Az adathalmazokat SQLite adatbázisban és
-joblib fájlokban tároltuk el. Azért döntöttünk így, hogy két féle módon is eltároljuk az adathalmazokat, mert az SQL adatbázist univerzálisan
-bármilyen adatbáziskezelővel, vagy más programnyelvvel be lehet olvasni, viszont a joblib fájlokat sokkal gyorsabban be lehet töletni pythonnal.
+joblib fájlokban tároltuk el. 
+\paragraph{OpenCV} A videók feldolgozásához és a képkockák feldolgozásához használtuk az OpenCV könyvtárat. Az OpenCV egy nyílt forráskódú programkönyvtár, amelyet a gépi látás és a gépi tanulás alkalmazásokhoz fejlesztettek ki. Az OpenCV-t C++ nyelven írták, de támogatja a Python, Java és MATLAB programozási nyelveket is. Az OpenCV-t a BSD licenc alatt terjesztik, és szabadon használható és módosítható.
+\paragraph{Numpy} A Numpy egy Python könyvtár, amelyet a tudományos számításokhoz fejlesztettek ki. A Numpy-t C és Fortran nyelveken írták. A Numpy-t a tudományos számításokhoz, például a mátrixműveletekhez, a mátrixok létrehozásához és a lineáris algebrai műveletekhez használják.
+\paragraph{Pandas} A Pandas egy Python könyvtár, amelyet a nagy teljesítményű adatelemzéshez és adatmanipulációhoz fejlesztettek ki. Numpy könyvtárra épül.
+\paragraph{Scikit-Learn} A Scikit-Learn egy Python könyvtár, amelyet a gépi tanuláshoz fejlesztettek ki. A Scikit-Learn a Numpy és a SciPy könyvtárakra épül.
+\paragraph{Matplotlib} A Matplotlib egy Python könyvtár, amelyet a képek és grafikonok megjelenítéséhez fejlesztettek ki. A Matplotlib-et a Numpy könyvtárra építették.
+\paragraph{SQLite} Az SQLite egy nyílt forráskódú relációs adatbázis-kezelő rendszer, amelyet a beágyazott adatbázisokhoz fejlesztettek ki. Az SQLite-t C nyelven írták.
+\paragraph{Joblib} A Joblib egy Python könyvtár, amelyet a Python objektumok hatékony szerializálásához és deszerializálásához, számításigényes feladatok paralellizálására fejlesztettek ki. A Joblib-et a Numpy könyvtárra építették.
 
+\newpage
 \subsection{Adatstruktúra}
 Az adatstruktúrát SQL schema-ként, és python osztály-ként is definiáltuk.
-% \begin{minted}{sql}
-% CREATE TABLE IF NOT EXISTS objects (
-%             objID INTEGER PRIMARY KEY NOT NULL,
-%             label TEXT NOT NULL
-%         );
-% CREATE TABLE IF NOT EXISTS detections (
-%             objID INTEGER NOT NULL,
-%             frameNum INTEGER NOT NULL,
-%             confidence REAL NOT NULL,
-%             x REAL NOT NULL,
-%             y REAL NOT NULL,
-%             width REAL NOT NULL,
-%             height REAL NOT NULL,
-%             vx REAL NOT NULL,
-%             vy REAL NOT NULL,
-%             ax REAL NOT NULL,
-%             ay REAL NOT NULL,
-%             vx_c REAL NOT NULL,
-%             vy_c REAL NOT NULL,
-%             ax_c REAL NOT NULL,
-%             ay_c REAL NOT NULL,
-%             FOREIGN KEY(objID) REFERENCES objects(objID)
-%         );
-% CREATE TABLE IF NOT EXISTS metadata (
-%             historyDepth INTEGER NOT NULL,
-%             yoloVersion TEXT NOT NULL,   
-%             device TEXT NOT NULL,
-%             imgsize INTEGER NOT NULL,
-%             stride INTEGER NOT NULL,
-%             confidence_threshold REAL NOT NULL,
-%             iou_threshold REAL NOT NULL,
-%             k_velocity REAL NOT NULL,
-%             k_acceleration REAL NOT NULL
-%         );
-% \end{minted}
+\begin{minted}{sql}
+CREATE TABLE IF NOT EXISTS objects (
+            objID INTEGER PRIMARY KEY NOT NULL,
+            label TEXT NOT NULL
+        );
+CREATE TABLE IF NOT EXISTS detections (
+            objID INTEGER NOT NULL,
+            frameNum INTEGER NOT NULL,
+            confidence REAL NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            width REAL NOT NULL,
+            height REAL NOT NULL,
+            vx REAL NOT NULL,
+            vy REAL NOT NULL,
+            ax REAL NOT NULL,
+            ay REAL NOT NULL,
+            vx_c REAL NOT NULL,
+            vy_c REAL NOT NULL,
+            ax_c REAL NOT NULL,
+            ay_c REAL NOT NULL,
+            FOREIGN KEY(objID) REFERENCES objects(objID)
+        );
+CREATE TABLE IF NOT EXISTS metadata (
+            historyDepth INTEGER NOT NULL,
+            yoloVersion TEXT NOT NULL,   
+            device TEXT NOT NULL,
+            imgsize INTEGER NOT NULL,
+            stride INTEGER NOT NULL,
+            confidence_threshold REAL NOT NULL,
+            iou_threshold REAL NOT NULL,
+            k_velocity REAL NOT NULL,
+            k_acceleration REAL NOT NULL
+        );
+\end{minted}
 Minden követett objektum egyedi azonosítóval lett ellátva. Az objektumhoz tartozó detektálások külön táblába lettek kiszervezve,
 ahol az \textit{objID} idegen kulccsal kapcsoljuk az \textit{objektumok} táblához. Egy objektumhoz az egyedi azonosítón kívül
 tartozik egy \textit{label}, amit a YOLO objektum detektálótól kap, ez lehet pl. autó, személy, teherautó, stb. Az objektumokhoz
@@ -333,6 +343,7 @@ amik a deepSORT által kalkulált értékek, így még külön a koordinátákb�
 Ezek mellett még a konfigurációs adatokat is külön táblában tároljuk, hogy később meg lehessen ismételni a detektálást.
 A koordinátákat a videó méretének megfelelően leskálázzuk 0 - 1 értékek köré. Ha a videókép szélesség \begin{math}w\end{math}, magasság \begin{math}h\end{math},
 akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koordináták
+\newpage
 \begin{equation}x = \frac{x_0}{w} \cdot r, y = \frac{y_0}{w} \cdot r\end{equation}
 \begin{equation}v_x = \frac{v_{x_0}}{w} \cdot r, v_y = \frac{v_{y_0}}{w} \cdot r\end{equation}
 \begin{equation}a_x = \frac{a_{x_0}}{w} \cdot r, a_y = \frac{a_{y_0}}{w} \cdot r\end{equation}
@@ -346,16 +357,49 @@ de később átváltottunk a jobb pontosságot és sebességet ígérő 7-es ver
 % YOLO 4-es verzióját, C-ben implementálták. Hogy fel tudjuk használni, írnunk kellett egy python API-t, amit meg tudtunk hívni a
 % detektáló programunkban.
 \subsubsection{YOLOv7}
-A Yolov7 pythonban azon belül is pytorch-ban van implementálv. Hogy használni tudjuk saját API-t kellett fejlesztenünk hozzá.
-Az API-nk része a képek előfeldolgozása, beadása a neurális hálózatba majd utófeldolgozása, hogy emberileg értelmezhető detektálásokat
+A Yolov7 pythonban azon belül is pytorch-ban van implementálv. Hogy használni tudjam saját API-t kellett fejlesztenem hozzá.
+Az API része a képek előfeldolgozása, beadása a neurális hálózatba majd utófeldolgozása, hogy emberileg értelmezhető detektálásokat
 kapjunk. (lásd \ref{fig:Yolov7chart}).
+Yolov7 felhasználásához objektum orientált megközelítést használtam. Egy Yolov7 osztályt hoztam létre, hogy elvégezze a detektálási feleadaokat,
+és könnyen olvasható és használható legyen.
 \subsection{Objektumkövetés}
 Ahhoz, hogy trajektóriák alapján tudjunk szabályosságokat felismerni a forgalomban, pontos objektumkövetésre volt szükségünk. Eleinte
 saját objektumkövető algoritmust használtunk, ami deketálások euklideszi távolsága alapján próbálta meg követni az objektumokat.
 Ezzel az volt a gond, hogy hosszabb kitakarás után nem találta meg az objektumot, így egy új objektumnak számított, ami a kép
 közepéből bukkant fel. Ennek a problémának a kiküszöbölésére próbáltuk ki a DeepSORT algoritmust.
 \subsubsection{DeepSORT}
-A DeepSORT algoritmus pythonban implementált változatát integráltuk a mi programunkba.
+A DeepSORT algoritmus pythonban implementált változatát integráltuk a mi programunkba. Yolo-hoz hasonlóan egy oszályként implementáltam az objektumkövetési
+interface-t.
+
+\subsection{Implementáció dokumentálása}
+A programok dokumentálására a Sphinx \cite{brandl2021sphinx} keretrendszert használtuk. A Sphinx egy dokumentációs generátor, amely a megfelelően dokumentált
+Python kódból (ezalatt a Python nyelvhez tartozó dokumentációs sztringeket értjük) HTML és Latex dokumentációt készít. Egy ilyen dokumentációs sztringre példa.
+\begin{minted}{python}
+   def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
+    """
+    Create 4D feature vectors from tracks.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array of feature vectors.
+
+    Notes
+    -----
+    The enter and exit coordinates are put in one vector, creating 4D vectors.
+    v = [enterX, enterY, exitX, exitY]
+    """
+    featureVectors = np.array([np.array(
+        [obj.history[0].X, obj.history[0].Y, obj.history[-1].X, obj.history[-1].Y])
+        for obj in tqdm.tqdm(trackedObjects, desc="Feature vectors.")])
+    return featureVectors 
+\end{minted}
+
 
 \newpage
 \section{Klaszterezés}
@@ -366,7 +410,7 @@ megtalálni az egymáshoz közeli, hasonló trajektóriákat.
 \subsection{Adattisztítás}
 A klaszterezés előtt a nyers adatokat fel kell dolgoznunk, hogy az esetleges hibás, zajos detektálások, trajektóriák miatt
 kapjunk fals klasztereket. Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakarások miatt
-a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három szűrő algoritmust futtattam 
+a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három szűrő algoritmust futtattam
 az adathalmazon. Elsőnek a trajektóriák belépő és kilépő pontjainak az euklideszi távolsága alapján szűrtünk. Ezzel a szűréssel a zajos, félbeszakadt trajektóriákat szűrjük ki.
 Majd a kép széleit meghatározzuk min-max kiválasztással, és azokat a trajektóriákat választjuk ki, amiknek a szélektől meghatározott
 távolságra vannak a belépő és kilépő pontjaik. Erre azért van szükség, mert ha belegondolunk, lehet hogy a kép egyik szélén valami eltakarja az utat pl. egy ház, és akkor az autók belépési pontjai a kép közepétől indulnak, ami nem jelenti azt, hogy az egy zajos, hibás trajektória, hanem ez a kereszteződés egy sajátossága.
@@ -402,6 +446,10 @@ A következő képeken láthatók a klaszterek szűrés előtt és után (lásd 
     \caption{Klaszterezés szűrő}
     \label{fig: Klaszterezés szűrő3}
 \end{figure}
+
+\subsubsection{Yolov7 paraméterek}
+A Yolo-nak főbb paraméterei a konfidencia és az IoU (Intersection over Union). A konfidencia azt jelenti, hogy a neurális hálózat mennyire biztos abban, hogy az adott objektumot azonosította. 
+Az IoU pedig azt jelenti, hogy a neurális hálózat mennyire biztos az objektum helyzetében. Ezen paraméterek finomhangolásával is javítani lehet a zajos detektálásokon és trajektóriákon.
 
 \subsection{Feature vektorok}
 Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y], de a kifejlesztett szűrő hatékonyab-bnak bizonyult, és a kevesebb dimenzió is előnyt jelent, ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
@@ -841,7 +889,7 @@ A pontosság méréséhez el kell választanunk egy teszt adatahalmazt a tanít�
 akkor tökéletes pontosságot kapnánk eredményül. Ezt \emph{Overfitting}-nek hívják. A szétválasztást egy általunk implementált algoritmus végzi, ami véletlen szám generátort használ a
 minták kiválasztásához. Az algoritmusnak meg lehet adni paraméterként a tanító adathalmaz méretét, és egy \emph{seed} értéket, ami azért fontos, hogy meg
 lehessen ismételni a szétválasztást.
-\subsubsection{Cross Validation}
+\subsubsection{Cross Validation - Kereszt validáció}
 A túltanítás elkerülése érdekében, alkalmaztunk egy elterjedt metódust a cross-validációt. A cross validáció egy olyan metódus, ahol a tanító adathalmazt
 $k$ részre osztják, ebből a $k$ részből egyet kiválasztanak validációra, így keletkezik egy tanító és validáló adathalmaz. A tanító adathalmazon betanítanak
 egy modellt, aminek a pontosságát megmérik a validáló adathalmazon. Ezt az algoritmust $k$-szor ismétlik meg, úgy hogy minden rész egyszer legyen validáló
@@ -852,7 +900,8 @@ Hogy meggyőződjünk arról, hogy biztosan nem tanítottuk túl a modellünket,
 cross-validáció alatt tanításra. Ezzel a méréssel bebizonyosodhatunk róla, hogy a modellünkben nincsen bias. A teszthalmazos mérés eredményeit a \ref{table:2}., \ref{table:4} és \ref{table:5}.
 táblázatban mutatjuk be.
 \subsubsection{Modellek tárolása}
-A betanított modelleket joblib file-ként tároltuk el, amit később python-nal tudunk betölteni.
+A betanított modelleket joblib file-ként tároltam el, amit később python-nal tudunk betölteni. Azért döntöttem a joblib mellett, mert a scikit-learn könyvtár
+is ezt használja, és ezt ajánlják modeljeik eltárolásához.
 
 \newpage
 \section{Valós idejű alkalmazás}
