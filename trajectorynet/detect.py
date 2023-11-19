@@ -30,10 +30,10 @@ def get_args():
 def main():
     args = get_args()
     yolo = Yolov7(weights=args.yolo_model, conf_thres=args.score, iou_thres=args.iou, half=args.half, device=args.device, debug=True)
-    deepSort = DeepSORT(args.max_age)
+    deepSort = DeepSORT(historyDepth=args.max_age, debug=True)
     detector = Detector(source=args.video, outdir=args.outdir, database=args.database, joblib=args.joblib)
     predictor = TrajectoryNet(model=args.model, debug=True)
-    detector.run(yolo, deepSort, predictor, show=args.show)
+    detector.run(yolo, deepSort, predictor, show=args.show, k=2)
 
     
 if __name__ == '__main__':

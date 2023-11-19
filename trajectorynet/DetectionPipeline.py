@@ -25,10 +25,9 @@ from functools import lru_cache
 import cv2
 import numpy as np
 import torch
-from classifier import OneVSRestClassifierExtended
+from classifier import OneVsRestClassifierWrapper
 from dataManagementClasses import Detection as DarknetDetection
 from dataManagementClasses import TrackedObject
-from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection as DeepSORTDetection
 from deep_sort.deep_sort.nn_matching import NearestNeighborDistanceMetric
 from deep_sort.deep_sort.tracker import Tracker
@@ -36,7 +35,7 @@ from joblib import dump
 from masker import masker
 from torch import nn
 from utility.databaseLogger import logObject
-from utility.models import load_model
+from utility.models import load_model, mask_predictions
 from utility.plots import plot_one_cluster, plot_one_prediction
 from yolov7.models.common import Conv
 from yolov7.models.experimental import Ensemble
@@ -467,7 +466,7 @@ class TrajectoryNet:
         _logHandler.setFormatter(_formatter)
         self._logger.addHandler(_logHandler)
 
-        self._model: OneVSRestClassifierExtended = load_model(model)
+        self._model: OneVsRestClassifierWrapper = load_model(model)
         self._logger.debug(f"Model: {self._model}")
 
     def predict(self, feature_vector: np.ndarray) -> np.ndarray:
@@ -551,17 +550,18 @@ class TrajectoryNet:
             Output image.
         """
         top_k = np.argsort(predictions)[-k:]
+        print(predictions[top_k])
         for i in top_k:
             if i == top_k[-1]:
                 cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
-                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0,255,0), thickness)
+                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0, 255, 0), thickness)
             else:
                 cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
-                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0,0,255), thickness)
+                    cluster_centers[i][0]), int(cluster_centers[i][1])), (0, 0, 255), thickness)
 
     @staticmethod
     @lru_cache(maxsize=128)
-    def upscale_koordinate(p1, p2, shape: Tuple[int, int, int]) -> Tuple[int, int]:
+    def upscale_koordinate(pt1, pt2, shape: Tuple[int, int, int]) -> Tuple[int, int]:
         """Upscale koordinate from 0-1 range to image size.
 
         Parameters
@@ -579,7 +579,20 @@ class TrajectoryNet:
             Upscaled koordinate.
         """
         aspect_ratio = shape[1]/shape[0]
-        return (p1*shape[1])/aspect_ratio, p2*shape[0]
+        return (pt1*shape[1])/aspect_ratio, pt2*shape[0]
+
+    @staticmethod
+    def draw_history(trackedObject: TrackedObject, image: np.ndarray, color: Tuple = (0, 0, 255), thickness: int = 3) -> np.ndarray:
+        """Draw trajectory history on image.
+
+        Parameters
+        ----------
+        trackedObject : TrackedObject
+            Tracked object.
+        """
+        for i in range(len(trackedObject.history)-1):
+            cv2.line(image, (int(trackedObject.history[i].X), int(trackedObject.history[i].Y)), (int(
+                trackedObject.history[i+1].X), int(trackedObject.history[i+1].Y)), thickness=thickness, color=color)
 
 
 class Detector:
@@ -707,7 +720,7 @@ class Detector:
             self._record_path.mkdir(parents=True)
         self._logger.debug(f"Output directory: {path}")
         self._logger.debug(f"Record path: {self._record_path}")
-    
+
     def _init_video_writer(self) -> None:
         """Init video capture.
 
@@ -777,7 +790,7 @@ class Detector:
                     label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
 
-    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: TrajectoryNet = None, show: bool = False):
+    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: TrajectoryNet = None, show: bool = False, feature_version: Literal["1", "7"] = "7", k: int = 1):
         """Run detection pipeline.
 
         Parameters
@@ -796,7 +809,8 @@ class Detector:
         # previous_path = None
         _, _, im0s, _ = next(iter(self._dataset))
         cluster_centroids = np.array([trajectoryNet.upscale_koordinate(
-            coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.centroid_coordinates])
+            coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.cluster_centroids])
+        pooled_mask = trajectoryNet._model.pooled_classes
         self._logger.debug(f"Cluster centroids: {cluster_centroids}")
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
@@ -822,23 +836,27 @@ class Detector:
                 for t in self._history:
                     # extract features from history
                     feature_vector = TrackedObject.downscale_feature(
-                        trajectoryNet.feature_extraction(t, feature_version="1"))
+                        trajectoryNet.feature_extraction(t, feature_version=feature_version))
                     self._logger.debug(f"Feature vectors: {feature_vector}")
                     # predict trajectories
                     if feature_vector is not None:
                         predictions = trajectoryNet.predict(
                             feature_vector.reshape(1, -1))
-                        self._logger.debug(np.argsort(predictions))
-                        self._logger.debug(f"Predictions: {predictions.shape}")
+                        self._logger.debug(f"Predictions: {predictions}")
+                        # pool predictions
+                        predictions = mask_predictions(
+                            predictions, pooled_mask)
+                        self._logger.debug(f"Predictions: {predictions}")
                         # draw predictions
-                        # trajectoryNet.draw_prediction(
-                        #     trackedObject=t, predicted_cluster=predictions[0, 0], cluster_centers=cluster_centroids, image=im0)
                         trajectoryNet.draw_top_k_prediction(
-                            trackedObject=t, predictions=predictions[0], cluster_centers=cluster_centroids, image=im0, k=2)
+                            trackedObject=t, predictions=predictions[0], cluster_centers=cluster_centroids, image=im0, k=k)
+                    trajectoryNet.draw_history(t, im0, thickness=1)
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
+            if cv2.waitKey(1) == ord('p'):
+                cv2.waitKey(0)
         for i, buf in enumerate(self._joblibbuffers):
             self._logger.debug(
                 f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
