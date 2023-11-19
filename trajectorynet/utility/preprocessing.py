@@ -3,6 +3,8 @@ import logging
 import numpy as np
 import tqdm
 
+from itertools import filterfalse
+
 
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     """Calculate euclidean distance of 2D vectors.
@@ -30,12 +32,13 @@ def filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects: 
     Returns:
         list: list of returned filtered tracks 
     """
-    filteredTracks = []
-    for obj in tqdm.tqdm(trackedObjects, desc="False positive filtering."):
-        d = euclidean_distance(
-            obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y)
-        if d > threshold:
-            filteredTracks.append(obj)
+    filteredTracks = list(filterfalse(lambda obj: euclidean_distance(
+        obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y) < threshold, trackedObjects))
+    # for obj in tqdm.tqdm(trackedObjects, desc="False positive filtering."):
+    #     d = euclidean_distance(
+    #         obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y)
+    #     if d > threshold:
+    #         filteredTracks.append(obj)
     return filteredTracks
 
 
@@ -66,16 +69,13 @@ def search_min_max_coordinates(trackedObjects: list):
     Returns:
         tuple: tuple consisting of min x,y and max x,y coordinates 
     """
-    max_y = 0
-    min_y = 9999
-    max_x = 0
-    min_x = 9999
-    coord = np.array([]).reshape((0, 2))
-    X = np.array([])
-    Y = np.array([])
-    for obj in tqdm.tqdm(trackedObjects, desc="Looking for min max values."):
-        X = np.append(X, obj.history_X)
-        Y = np.append(Y, obj.history_Y)
+    # X = np.array([])
+    # Y = np.array([])
+    X = np.concatenate([o.history_X for o in trackedObjects], axis=None)
+    Y = np.concatenate([o.history_Y for o in trackedObjects], axis=None)
+    # for obj in tqdm.tqdm(trackedObjects, desc="Looking for min max values."):
+    #     X = np.append(X, obj.history_X)
+    #     Y = np.append(Y, obj.history_Y)
     min_x = np.min(X)
     max_x = np.max(X)
     min_y = np.min(Y)

@@ -4,9 +4,12 @@ import numpy as np
 import tqdm
 from icecream import ic
 from scipy.signal import savgol_filter
+from joblib import Parallel, delayed, Memory
 
 ic.disable()
 
+
+memory = Memory(location="cache", verbose=0)
 
 class FeatureVector(object):
     """Class representing a feature vector.
@@ -369,6 +372,7 @@ class FeatureVector(object):
                                                    trackedObjects[j].history[i+step].frameID, len(trackedObjects[j].history), trackedObjects[j]])
         return np.array(featureVectors), np.array(new_labels), np.array(new_pooled_labels), np.array(track_history_metadata)
 
+    # @memory.cache
     @staticmethod
     def factory_7(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray] = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate feature vectors from the histories of trajectories.
@@ -404,7 +408,7 @@ class FeatureVector(object):
                 continue
             for j in range(0, t.history_X.shape[0]-max_stride, max_stride):
                 # midx = j + (3*stride // 4) - 1
-                end_idx = j + stride - 1
+                # end_idx = j + stride - 1
                 feature_vector = FeatureVector._7(
                     x=t.history_X[j:j+max_stride],
                     y=t.history_Y[j:j+max_stride],
@@ -426,6 +430,65 @@ class FeatureVector(object):
                 #     trackedObjects[i].history[end_idx].frameID, len(trackedObjects[i].history), trackedObjects[i]])
                 metadata.append([None, None, None, None, trackedObjects[i]])
         return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels), np.array(metadata)
+    
+    
+
+    @staticmethod
+    def factory_7_fast(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray] = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.int8), n_jobs: int = -1) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Generate feature vectors from the histories of trajectories.
+        Make feature vectors from the whole trajectory, with a stride of max_stride.
+        Faster implementation using joblib.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            Tracked objects.
+        labels : np.ndarray
+            Labels.
+        pooled_labels : np.ndarray
+            Pooled labels.
+        max_stride : int
+            Maximum stride length.
+        weights : Optional[np.ndarray], optional
+            Weight vector, by default None
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Feature vectors, corresponding labels and pooled labels.
+        """
+        # weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
+        X_feature_vectors = np.array([])
+        y_new_labels = np.array([])
+        y_new_pooled_labels = np.array([])
+        def append_feature_vectors(feature_vector: np.ndarray, label: int, pooled_label: int):
+            nonlocal X_feature_vectors, y_new_labels, y_new_pooled_labels
+            if X_feature_vectors.shape == (0,):
+                X_feature_vectors = np.array(feature_vector).reshape(
+                    (-1, feature_vector.shape[0]))
+            else:
+                X_feature_vectors = np.append(
+                    X_feature_vectors, np.array([feature_vector]), axis=0)
+            y_new_labels = np.append(y_new_labels, label)
+            y_new_pooled_labels = np.append(y_new_pooled_labels, pooled_label)
+        def append_labels(label: int, pooled_label: int):
+            nonlocal y_new_labels, y_new_pooled_labels
+            y_new_labels = np.append(y_new_labels, label)
+            y_new_pooled_labels = np.append(y_new_pooled_labels, pooled_label)
+        with Parallel(n_jobs=8, max_nbytes=1e6, require="sharedmem") as parallel:
+            for i, t in tqdm.tqdm(enumerate(trackedObjects), desc="Features for classification.", total=len(trackedObjects)):
+                stride = max_stride
+                if stride > t.history_X.shape[0]:
+                    continue
+                parallel(delayed(append_feature_vectors)(FeatureVector._7(
+                    x=t.history_X[j:j+max_stride],
+                    y=t.history_Y[j:j+max_stride],
+                    vx=t.history_VX_calculated[j:j+max_stride],
+                    vy=t.history_VY_calculated[j:j+max_stride],
+                    weights=weights
+                ), labels[i], pooled_labels[i]) for j in range(0, t.history_X.shape[0]-max_stride, max_stride))
+                # parallel(delayed(append_labels)(labels[i], pooled_labels[i]) for _ in range(0, t.history_X.shape[0]-max_stride, max_stride))
+        return np.array(X_feature_vectors), np.array(y_new_labels, dtype=int), np.array(y_new_pooled_labels)
 
     @staticmethod
     def factory_7_SG(trackedObjects: List, labels: np.ndarray, pooled_labels: np.ndarray, max_stride: int, weights: Optional[np.ndarray] = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32), window_length: int = 7, polyorder: int = 2) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
