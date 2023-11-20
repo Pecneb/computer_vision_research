@@ -94,6 +94,19 @@ class Yolov7(object):
         Random colors for each class/label
     half : bool
         If half True half precision (float16) is used, this means faster inference but lower precision
+    
+    Methods
+    -------
+    _load(weights: str, imgsz: int = 640, batch_size: int = 1, device: str = "cuda") -> nn.Module
+        Load weights into memory.
+    preprocess(img0: np.ndarray) -> np.ndarray
+        Preprocess raw image for inference.
+    postprocess(pred: torch.Tensor, im0: np.ndarray, im: np.ndarray, show: bool = True) -> List
+        Run NMS on infer output, then rescale them and create a vector with [label, conf, bbox]
+    warmup()
+        Warm up model.
+    infer(img: np.ndarray) -> Tuple[torch.Tensor, np.ndarray]
+        Run inference on input images.
 
     """
 
@@ -283,8 +296,6 @@ class DeepSORT(object):
     ----------
     source : Union[int, str], optional
         Video source, can be webcam number, video path, directory path containing videos, by default 0
-    history_length : int, optional
-        Length of history, the detections to hold in buffer, by default 30
     output : Optional[str], optional
         Output directory, by default None
     max_cosine_distance : float, optional
@@ -293,15 +304,15 @@ class DeepSORT(object):
         Max intersection over union distance, by default 0.7
     nn_budget : float, optional
         Maximum size of the appearence descriptor gallery, by default 100
+    historyDepth : int, optional
+        Length of history, by default 30
+    debug : bool, optional
+        Debug flag, by default True
 
     Attributes
     ----------
     source : Union[int, str]
         Video source, can be webcam number, video path, directory path containing videos
-    history_length : int
-        Length of history, the detections to hold in buffer
-    output : Optional[str]
-        Output directory
     max_cosine_distance : float
         Gating threshold for cosine distance metric (object appearance)
     max_iou_distance : float
@@ -310,12 +321,10 @@ class DeepSORT(object):
         Maximum size of the appearence descriptor gallery
     historyDepth : int
         Length of history 
-    _history : List
-        History list, which is used to store TrackedObject objects.
-
+    
     Methods
     -------
-    ini_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric 
+    init_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric 
         Deepsort metric factory.
     tracker_factory(metric: NearestNeighborDistanceMetric, max_iou_distance: float, historyDepth: int) -> Tracker
         Create tracker object.
@@ -452,6 +461,42 @@ class DeepSORT(object):
 
 
 class TrajectoryNet:
+    """
+    A class representing the TrajectoryNet model for predicting trajectories.
+
+    Parameters
+    ----------
+    model : str
+        Path to the model file.
+    debug : bool, optional
+        Flag indicating whether to enable debug mode, by default False.
+
+    Attributes
+    ----------
+    _logger : Logger
+        Logger object.
+    _model : OneVsRestClassifierWrapper
+        Loaded model.
+    
+    Methods
+    -------
+    predict(feature_vector: np.ndarray) -> np.ndarray
+        Predict trajectories.
+    feature_extraction(trajectory: TrackedObject, feature_version: Literal["1", "7"]) -> np.ndarray
+        Extract features from history.
+    draw_clusters(cluster_centroids: np.ndarray, image: np.ndarray) -> np.ndarray
+        Draw exit clusters on image.
+    draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray, color: Tuple = (0, 255, 0), thickness: int = 3) -> np.ndarray
+        Draw predictions on image.
+    draw_top_k_prediction(trackedObject: TrackedObject, predictions: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray, k: int = 3, thickness: int = 3) -> np.ndarray
+        Draw top k predictions on image.
+    upscale_coordinate(pt1, pt2, shape: Tuple[int, int, int]) -> Tuple[int, int]
+        Upscale coordinate from 0-1 range to image size.
+    draw_history(trackedObject: TrackedObject, image: np.ndarray, color: Tuple = (0, 0, 255), thickness: int = 3) -> np.ndarray
+        Draw trajectory history on image.
+    
+    """
+
     def __init__(self, model: str, debug: bool = False):
         self._logger = getLogger("TrajectoryNet_Logger")
         _logHandler = StreamHandler()
@@ -470,23 +515,37 @@ class TrajectoryNet:
         self._logger.debug(f"Model: {self._model}")
 
     def predict(self, feature_vector: np.ndarray) -> np.ndarray:
-        """Predict trajectories.
+        """
+        Predict trajectories.
 
         Parameters
         ----------
-        feature_vectors : np.ndarray
+        feature_vector : np.ndarray
             Feature vector.
+
+        Returns
+        -------
+        np.ndarray
+            Predicted trajectories.
         """
         return self._model.predict_proba(feature_vector)
 
     @staticmethod
     def feature_extraction(trajectory: TrackedObject, feature_version: Literal["1", "7"]) -> np.ndarray:
-        """Extract features from history.
+        """
+        Extract features from history.
 
         Parameters
         ----------
         trajectory : TrackedObject
             Trajectory object.
+        feature_version : Literal["1", "7"]
+            Version of the feature extraction algorithm.
+
+        Returns
+        -------
+        np.ndarray
+            Extracted features.
         """
         if feature_version == "1":
             return trajectory.feature_v1()
@@ -495,12 +554,13 @@ class TrajectoryNet:
 
     @staticmethod
     def draw_clusters(cluster_centroids: np.ndarray, image: np.ndarray) -> np.ndarray:
-        """Draw exit clusters on image.
+        """
+        Draw exit clusters on image.
 
         Parameters
         ----------
         cluster_centroids : np.ndarray
-            Cluster x,y kooridnates.
+            Cluster x,y coordinates.
         image : np.ndarray
             Image to draw on.
 
@@ -515,34 +575,51 @@ class TrajectoryNet:
 
     @staticmethod
     def draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray, color: Tuple = (0, 255, 0), thickness: int = 3) -> np.ndarray:
-        """Draw predictions on image.
+        """
+        Draw predictions on image.
 
         Parameters
         ----------
-        predictions : np.ndarray
-            Predictions.
+        trackedObject : TrackedObject
+            Tracked object.
+        predicted_cluster : int
+            Index of the predicted cluster.
+        cluster_centers : np.ndarray
+            Cluster centers.
         image : np.ndarray
             Image to draw on.
+        color : Tuple, optional
+            Color of the line, by default (0, 255, 0).
+        thickness : int, optional
+            Thickness of the line, by default 3.
 
         Returns
         -------
         np.ndarray
             Output image.
         """
-        # TODO draw line from detection coordinate to cluster center
         cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
             cluster_centers[predicted_cluster][0]), int(cluster_centers[predicted_cluster][1])), color, thickness)
 
     @staticmethod
     def draw_top_k_prediction(trackedObject: TrackedObject, predictions: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray, k: int = 3, thickness: int = 3) -> np.ndarray:
-        """Draw top k predictions on image.
+        """
+        Draw top k predictions on image.
 
         Parameters
         ----------
+        trackedObject : TrackedObject
+            Tracked object.
         predictions : np.ndarray
             Predictions.
+        cluster_centers : np.ndarray
+            Cluster centers.
         image : np.ndarray
             Image to draw on.
+        k : int, optional
+            Number of top predictions to draw, by default 3.
+        thickness : int, optional
+            Thickness of the line, by default 3.
 
         Returns
         -------
@@ -561,34 +638,47 @@ class TrajectoryNet:
 
     @staticmethod
     @lru_cache(maxsize=128)
-    def upscale_koordinate(pt1, pt2, shape: Tuple[int, int, int]) -> Tuple[int, int]:
-        """Upscale koordinate from 0-1 range to image size.
+    def upscale_coordinate(pt1, pt2, shape: Tuple[int, int, int]) -> Tuple[int, int]:
+        """
+        Upscale coordinate from 0-1 range to image size.
 
         Parameters
         ----------
-        p1 : float
-            Koordinate x.
-        p2 : float
-            Koordinate y.
+        pt1 : float
+            Coordinate x.
+        pt2 : float
+            Coordinate y.
         shape : Tuple[int, int, int]
             Image shape.
 
         Returns
         -------
         Tuple[int, int]
-            Upscaled koordinate.
+            Upscaled coordinate.
         """
         aspect_ratio = shape[1]/shape[0]
         return (pt1*shape[1])/aspect_ratio, pt2*shape[0]
 
     @staticmethod
     def draw_history(trackedObject: TrackedObject, image: np.ndarray, color: Tuple = (0, 0, 255), thickness: int = 3) -> np.ndarray:
-        """Draw trajectory history on image.
+        """
+        Draw trajectory history on image.
 
         Parameters
         ----------
         trackedObject : TrackedObject
             Tracked object.
+        image : np.ndarray
+            Image to draw on.
+        color : Tuple, optional
+            Color of the line, by default (0, 0, 255).
+        thickness : int, optional
+            Thickness of the line, by default 3.
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
         """
         for i in range(len(trackedObject.history)-1):
             cv2.line(image, (int(trackedObject.history[i].X), int(trackedObject.history[i].Y)), (int(
@@ -635,6 +725,12 @@ class Detector:
 
     Methods
     -------
+    _init_logger(debug: bool = False) -> None
+        Init logger.
+    _init_output_directory(path: Optional[str] = None) -> None
+        Init output directory.
+    _init_video_writer() -> None
+        Init video capture.
     generate_db_path(source: Union[str, Path], outdir: Optional[Union[str, Path]] = None, suffix: str = ".joblib", logger: Optional[Logger] = None) -> Path
         Generate output path name from source and output directory path.
     filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"]) -> List[DarknetDetection]
@@ -808,7 +904,7 @@ class Detector:
         yolo.warmup()  # warm up yolo model
         # previous_path = None
         _, _, im0s, _ = next(iter(self._dataset))
-        cluster_centroids = np.array([trajectoryNet.upscale_koordinate(
+        cluster_centroids = np.array([trajectoryNet.upscale_coordinate(
             coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.cluster_centroids])
         pooled_mask = trajectoryNet._model.pooled_classes
         self._logger.debug(f"Cluster centroids: {cluster_centroids}")

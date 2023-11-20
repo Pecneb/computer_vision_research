@@ -74,7 +74,8 @@
         \end{center}
         \vspace{10mm}
         \begin{center}
-            {\huge \bf Gépi látás és gépi tanulás alapú közlekedési csomópont elemzés}
+            % {\huge \bf Gépi látás és gépi tanulás alapú közlekedési csomópont elemzés}
+            {\huge \bf Járművek trajektóriáinak előrejelzése machine learning modellekkel}
         \end{center}
         \vspace{10mm}
         \begin{center}
@@ -280,7 +281,7 @@ A DeepSORT algoritmus előnye, hogy nagyon stabil és pontos objektumkövetést 
 \end{figure}
 
 \newpage
-\section{Keretrendszer implementációja}
+\section{Adathalmaz kialakítása és feldolgozása}
 A kutatás során saját adathalmazok kialakítására volt szükség. Az adatok begyűjtésére és eltárolására saját alkalmazást és keretrendszert
 fejlesztettünk ki. A szoftver keretrendszert python nyelven írtuk meg, a forráskód ezen a linken megtatlálható \url{http://github.com/Pecneb/computer_vision_research}.
 A fejlesztés során a következő programkönyvtárakat használtuk OpenCV \cite{opencv_library}, Numpy \cite{harris2020array}, Pandas \cite{reback2020pandas},
@@ -371,9 +372,35 @@ közepéből bukkant fel. Ennek a problémának a kiküszöbölésére próbált
 A DeepSORT algoritmus pythonban implementált változatát integráltuk a mi programunkba. Yolo-hoz hasonlóan egy oszályként implementáltam az objektumkövetési
 interface-t.
 
+\newpage
+\subsection{Objektum Orientált Implementáció}
+Az objektum detektálási és követése pipeline-t egy objektum orientált megközelítéssel valósítottam meg. A programban 4 fő osztályt hoztam létre. A osztály architektúra diagramja \ref{ClassDiagram} ábrán látható.
+A részletes implementációs dokumentáció a mellékletben található. A forráskód pedig a korábban említett github oldalon található \url{http://github.com/Pecneb/computer_vision_research}.
+\paragraph{Yolov7} osztály felelős a képek előfeldolgozásáért, az objektumok detektálásálért, majd utófeldolgozásáért.
+\paragraph{DeepSORT} osztály felelős a detektálások követéséért, és a trajektóriák kialakításáért.
+\paragraph{TrajectoryNet} osztály kezeli az általunk tanított gépi tanulási modelleket, a feature vektorok előállítását és osztályozást.
+\paragraph{Detector} osztály fogja össze az előbb felsorolt osztályokat. Inicializálja a bemeneti és kimeneti adatokat. Végig itertál a videó képkockáin és futtatja a detektáló és követő algoritmusokat.
+\paragraph{Detector \textit{run()}} metódusban implementáltam az objektum detektálás, követés és trajektória predikciós pipeline-t (lásd \ref{fig:ComponentDiagram}).
+
+\begin{figure}[H]
+    \includegraphics[width=1\columnwidth]{ClassArchitectureDiagram.png}
+    \caption{Osztály diagram}
+    \label{fig:ClassDiagram}
+\end{figure}
+
+
+\begin{figure}[H]
+    \includegraphics[width=1\columnwidth]{ComponentDiagramDetection.png}
+    \caption{Komponens diagram}
+    \label{fig:ComponentDiagram}
+\end{figure}
+
+
+\newpage
 \subsection{Implementáció dokumentálása}
 A programok dokumentálására a Sphinx \cite{brandl2021sphinx} keretrendszert használtuk. A Sphinx egy dokumentációs generátor, amely a megfelelően dokumentált
 Python kódból (ezalatt a Python nyelvhez tartozó dokumentációs sztringeket értjük) HTML és Latex dokumentációt készít. Egy ilyen dokumentációs sztringre példa.
+
 \begin{minted}{python}
    def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
     """
@@ -410,16 +437,18 @@ megtalálni az egymáshoz közeli, hasonló trajektóriákat.
 \subsection{Adattisztítás}
 A klaszterezés előtt a nyers adatokat fel kell dolgoznunk, hogy az esetleges hibás, zajos detektálások, trajektóriák miatt
 kapjunk fals klasztereket. Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakarások miatt
-a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három szűrő algoritmust futtattam
-az adathalmazon. Elsőnek a trajektóriák belépő és kilépő pontjainak az euklideszi távolsága alapján szűrtünk. Ezzel a szűréssel a zajos, félbeszakadt trajektóriákat szűrjük ki.
-Majd a kép széleit meghatározzuk min-max kiválasztással, és azokat a trajektóriákat választjuk ki, amiknek a szélektől meghatározott
+a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három általam implementált szűrő algoritmust használtam  
+az adathalmazon. 
+\paragraph{Trajektória hossz} Elsőnek a trajektóriák belépő és kilépő pontjainak az euklideszi távolsága alapján szűrtünk. Ezzel a szűréssel a zajos, félbeszakadt trajektóriákat szűrjük ki.
+\paragraph{Relatív szélekhez képesti távolság} Majd a kép széleit meghatározzuk min-max kiválasztással, és azokat a trajektóriákat választjuk ki, amiknek a szélektől meghatározott
 távolságra vannak a belépő és kilépő pontjaik. Erre azért van szükség, mert ha belegondolunk, lehet hogy a kép egyik szélén valami eltakarja az utat pl. egy ház, és akkor az autók belépési pontjai a kép közepétől indulnak, ami nem jelenti azt, hogy az egy zajos, hibás trajektória, hanem ez a kereszteződés egy sajátossága.
 \subsubsection{DeepSORT pontatlanság}
 Kutatásunk során azt tapasztaltuk, hogy a DeepSORT és a YOLO pontatlanságai felerősítik egymást. A YOLO hajlamos néha táblákat
 vagy rendőrlámpákat autóknak nézni, és ekkor a DeepSORT is elkezdi követni. Egy olyan hibáját is felfedeztük a DeepSORT-nak, hogy
 egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni a
-paramétereit, ami nem bizonyult akkora javulásnak, ezért utólagos szűréssel kellett korrigálnunk ezt a hibát. Az algoritmus végig
-iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak, akkor eldobjuk a trajektóriát.
+paramétereit, ami nem bizonyult akkora javulásnak, ezért utólagos szűréssel kellett korrigálnunk ezt a hibát. 
+\paragraph{Áttapadásos zaj szűrése} Az algoritmus végig iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak, akkor eldobjuk a trajektóriát.
+Ez azért szükséges, mert a DeepSORT képes egymás közeli objektumokat összekeverni, és egyik objektumról a másikra áttapadni, ami hibás trajektóriákat eredményez.
 A következő képeken láthatók a klaszterek szűrés előtt és után (lásd \ref{fig: Klaszterezés szűrő} \ref{fig: Klaszterezés szűrő2} \ref{fig: Klaszterezés szűrő3}), ahol a bal oldali oszlop reprezentálja a szűrés előtti klasztereket, a jobb oldali oszlop pedig a szűrés utáni klasztereket.
 
 \begin{figure}[htbp]
