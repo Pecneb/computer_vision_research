@@ -1,0 +1,28 @@
+##################################################################
+# Configuration file
+#   you can:
+#       Add new parameter
+#       Modify parameter (create a backup, or a 
+#                         commented version from the older one)
+#
+#   you cannot:
+#     delete any line
+#     comment all version of a parameter
+#
+#
+##################################################################
+
+# database: /media/aron/D/Work/phd/video_dataset/Bellevue_Bellevue_NE8th/research_data/Bellevue_Bellevue_NE8th__2017-09-10_18-08-23.joblib
+database: /media/aron/D/Work/phd/video_dataset/Bellevue_Bellevue_NE8th/research_data/test
+
+
+
+video: /media/aron/D/Work/phd/video_dataset/Bellevue_Bellevue_NE8th/Bellevue_Bellevue_NE8th__2017-09-10_18-08-23.mp4
+
+
+
+visualize_detection: True
+
+
+
+model: 1

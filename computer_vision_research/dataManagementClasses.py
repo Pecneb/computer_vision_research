@@ -94,7 +94,7 @@ class TrackedObject():
     history_AY_calculated : ndarray
         the acceleration of dimension Y calculated from the history_VY_calculated numpy array
     isMoving: bool
-        a boolean value, that tells if the object is moving or not
+        a boolean value, that tells if the object is moving or not, based on the last few detections
     time_since_update : int
         the number of frames since the last detection of the object
     max_age : int
