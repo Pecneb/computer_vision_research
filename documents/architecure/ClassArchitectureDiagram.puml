@@ -1,0 +1,64 @@
+@startuml ClassArchitectureDiagram
+class Yolov7 {
+  _logger : Logger
+  device : Device
+  model : PytorchModel
+  stride : int
+  imgsz : int
+  conf_thres : float
+  iou_thres : float
+  names : List
+  colors : List
+  half : bool
+  _load(str, int, int, str)
+  preprocess(ndarray)
+  postprocess(Tensor, ndarray, ndarray, bool)
+  warmup()
+  infer(ndarray)
+}
+
+class DeepSORT {
+  source : Union[int, str]
+  max_cosine_distance : float
+  max_iou_distance : float
+  nn_budget : float
+  historyDepth : int
+  init_tracker_metric(float, float, str)
+  tracker_factory(NearestNeighborDistanceMetric, float, int)
+  update_history(List, List, List, str)
+}
+
+class TrajectoryNet {
+  _logger : Logger
+  _model : OneVsRestClassifierWrapper
+  precict(ndarray)
+  feature_extraction(TrackedObject, Literal)
+  draw_clusters(ndarray, ndarray)
+  draw_prediction(TrackedObject, int, ndarray, ndarray, Tuple, int)
+  draw_top_k_prediction(TrackedObject, ndarray, ndarray, ndarray, int, int)
+  upscale_coordinate(Tuple, Tuple, Tuple)
+  draw_history(TrackedObject, ndarray, Tuple, int)
+}
+
+class Detector {
+  _source : Path
+  _outdir : Path
+  _model : Model
+  _dataset : LoadImages
+  _database : Path
+  _joblib : Path
+  _joblibbuffer : List
+  _history : List
+  _init_logger(bool)
+  _init_output_directory(str)
+  _init_video_writer()
+  generate_db_path(Union[str, Path], Union[str, Path], str, logger)
+  filter_objects(List, int, List)
+  run(Yolov7, DeepSORT, TrajectoryNet, bool)
+}
+
+Detector o-- Yolov7
+Detector o-- DeepSORT
+Detector o-- TrajectoryNet
+
+@enduml

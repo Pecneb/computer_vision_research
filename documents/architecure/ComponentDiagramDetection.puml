@@ -1,0 +1,37 @@
+@startuml
+node "Detector" {
+  interface video_input as in
+  interface video_output as out
+  interface history_old as history_old
+  interface history_updated as history_updated
+  node Yolov7 {
+    component preprocess
+    component infer
+    component postprocess
+  }
+  node DeepSORT {
+    component update_history
+  }
+  node TrajectoryNet {
+    component draw_clusters
+    component feature_extraction
+    component downscale_features
+    component predict
+    component draw_top_k_prediction
+    component draw_history
+  }
+  in --> preprocess
+  preprocess -> infer
+  infer -> postprocess
+  postprocess --> history_old
+  history_old -> update_history
+  update_history --> history_updated
+  history_updated --> draw_clusters
+  draw_clusters -> feature_extraction
+  feature_extraction --> downscale_features
+  downscale_features -> predict
+  predict -> draw_top_k_prediction
+  draw_top_k_prediction -> draw_history
+  draw_history --> out
+}
+@enduml
