@@ -17,18 +17,16 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from joblib import Parallel, delayed
 import numpy as np
-from sklearn.base import ClassifierMixin, BaseEstimator
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.utils import validation
+from joblib import Parallel, delayed
 from sklearn import multiclass
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.multiclass import check_is_fitted
-from sklearn.preprocessing import StandardScaler
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.multiclass import (OneVsRestClassifier, _partial_fit_binary,
+                                check_is_fitted)
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
+from sklearn.utils import validation
 from sklearn.utils.multiclass import _check_partial_fit_first_call
-from sklearn.multiclass import _partial_fit_binary
-from sklearn.base import clone
+
 
 class BinaryClassifier(ClassifierMixin, BaseEstimator):
     """Base Binary Classifier
@@ -59,14 +57,13 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
     models : scikit-learn classifier
         Sklearn Classifiers fitted as binary Classifiers.
     """
-    #trackData: list 
-    #X_: np.ndarray
-    #y_: np.ndarray
-    #class_labels_: np.ndarray
-    #label_mtx_: np.ndarray
-    #models_: list
+    # trackData: list
+    # X_: np.ndarray
+    # y_: np.ndarray
+    # class_labels_: np.ndarray
+    # label_mtx_: np.ndarray
+    # models_: list
 
-    
     def __init__(self, trackData: list, classifier: ClassifierMixin, classifier_argv: dict = None):
         """Constructor of the BinaryClassifier.
 
@@ -81,14 +78,15 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         self.trackData = trackData
         self.classifier = classifier
         self.classifier_argv = classifier_argv
-    
+
     def __make_class_labels_(self):
         """Private method of Binary Classifier
         Fills class_labels_ attribute. This is the set of labels made from the list of labels.
         Each label exist once in this attribute.
         """
-        self.classes_ = np.array(list(set(self.y)), dtype=int).reshape((1, len(set(self.y))))
-    
+        self.classes_ = np.array(list(set(self.y)), dtype=int).reshape(
+            (1, len(set(self.y))))
+
     def __make_label_mtx_(self):
         """Private method of Binary Classifier
 
@@ -98,24 +96,26 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         class 2  [0,1,0,0]] if label is class 2 then 1, 0 otherwise
         Every row corresponds to its class label, and every column is a label, that can be 1 or 0.
         """
-        self.label_mtx_ = np.zeros((self.classes_.shape[0], self.y_.shape[0]), dtype=int)
+        self.label_mtx_ = np.zeros(
+            (self.classes_.shape[0], self.y_.shape[0]), dtype=int)
         for i in range(self.classes_.shape[0]):
             for j in range(self.y_.shape[0]):
                 if self.y_[j] == self.classes_[i]:
                     self.label_mtx_[i, j] = 1
                 else:
                     self.label_mtx_[i, j] = 0
-    
+
     def __init_models(self):
         """Initialize self.models_ with sklearn classifiers
         """
         self.models_ = []
         for clr in self.classes_:
             if self.classifier_argv is not None:
-                self.models_.append(self.classifier().set_params(**self.classifier_argv))
+                self.models_.append(
+                    self.classifier().set_params(**self.classifier_argv))
             else:
                 self.models_.append(self.classifier())
-    
+
     def fit(self, X: np.ndarray, y: np.ndarray):
         """Fit sklearn classifier models with given dataset X and class labels y.
 
@@ -132,24 +132,24 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             Returns self. Fitted model.
         """
 
-        #if X is None and y is None:
+        # if X is None and y is None:
         #    for clr, mdl in zip(self.class_labels_[0], self.models_):
         #        mdl.fit(self.X, self.label_mtx_[clr])
-        #else:
+        # else:
 
         # Check that X and y have correct shape
-        X, y = validation.check_X_y(X, y) 
+        X, y = validation.check_X_y(X, y)
         # Store the classes seen during fit
         self.classes_ = multiclass.unique_labels(y)
         # Class labels can only be integers
         self.classes_ = self.classes_.astype(int)
-        
+
         self.X_ = X
         self.y_ = y
-        
+
         # Create label matrix shape (n_classes, n_samples)
         self.__make_label_mtx_()
-        
+
         self.__init_models()
 
         # Fit every classifier
@@ -158,7 +158,7 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
 
         # Return fitted classifier
         return self
-    
+
     def predict_proba(self, X: np.ndarray):
         """Return predicted probabilities of dataset X
 
@@ -176,7 +176,7 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             class_proba[:, clr] = mdl.predict_proba(X)[:, 1]
         return class_proba
 
-    def predict(self, X: np.ndarray,  threshold: np.float32 = 0.5, top:int=1):
+    def predict(self, X: np.ndarray,  threshold: np.float32 = 0.5, top: int = 1):
         """Return predicted top labels of dataset  X
 
         Args:
@@ -187,10 +187,11 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             np.ndarray: lists of prediction result class labels, lenght=top
         """
         if top > len(self.classes_):
-            print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+            print(
+                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
         class_proba = self.predict_proba(X=X)
         # print(class_proba)
-        #print(class_proba.shape)
+        # print(class_proba.shape)
         prediction_result = np.argsort(class_proba)
         # print(prediction_result)
         top_pred_res = np.zeros(prediction_result.shape)
@@ -202,11 +203,11 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
                     top_pred_res[i,oszlop] = prediction_result[i,oszlop]
         """
         # print(prediction_result[:,-top:])
-        return prediction_result[:,-top:]
-        #return top_pred_res[:,-top:]
+        return prediction_result[:, -top:]
+        # return top_pred_res[:,-top:]
 
-    
-    #TODO validation on each class
+    # TODO validation on each class
+
     def validate(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32):
         """Validate trained models.
         Args:
@@ -217,19 +218,21 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []
         balanced_accuracy = []
-        for j in self.classes_: 
-            tp = 0 # True positive --> predicting true and it is really true 
-            fn = 0 # False negative (type II error) --> predicting false, although its true 
-            tn = 0 # True negative --> predicting false and it is really false
-            fp = 0 # False positive (type I error) --> predicting true, although it is false
+        for j in self.classes_:
+            tp = 0  # True positive --> predicting true and it is really true
+            # False negative (type II error) --> predicting false, although its true
+            fn = 0
+            tn = 0  # True negative --> predicting false and it is really false
+            # False positive (type I error) --> predicting true, although it is false
+            fp = 0
             for i, _y_test in enumerate(y_test):
                 if _y_test == j:
-                    if predict_proba_results[i, j]>= threshold:
+                    if predict_proba_results[i, j] >= threshold:
                         tp += 1
                     else:
                         fn += 1
-                else: 
-                    if predict_proba_results[i, j]< threshold:
+                else:
+                    if predict_proba_results[i, j] < threshold:
                         tn += 1
                     else:
                         fp += 1
@@ -245,12 +248,12 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             tp = tp/len(y_test)
             tn = tn/len(y_test)
             fn = fn/len(y_test)
-            fp = fp/len(y_test) 
+            fp = fp/len(y_test)
             accuracy_vector.append(tp+tn)
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, top: int=1):
+    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, top: int = 1):
         """Validate trained models.
         Args:
             X_test (np.ndarray): Validation dataset of shape( n_samples, n_features ). 
@@ -258,23 +261,25 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             threshold (np.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
         predict_results = self.predict(X_test, threshold=threshold, top=top)
-        #print(predict_results)
-        #print(predict_results.shape)
+        # print(predict_results)
+        # print(predict_results.shape)
         accuracy_vector = []
         balanced_accuracy = []
-        tp = 0 # True positive --> predicting true and it is really true 
-        fn = 0 # False negative (type II error) --> predicting false, although its true 
-        tn = 0 # True negative --> predicting false and it is really false
-        fp = 0 # False positive (type I error) --> predicting true, although it is false
+        tp = 0  # True positive --> predicting true and it is really true
+        # False negative (type II error) --> predicting false, although its true
+        fn = 0
+        tn = 0  # True negative --> predicting false and it is really false
+        # False positive (type I error) --> predicting true, although it is false
+        fp = 0
         for i, _y_test in enumerate(y_test):
             # print(_y_test in predict_results[i])
             if _y_test in predict_results[i]:
                 tp += 1
             else:
-                fp +=1
-        #print(tp, len(y_test))
+                fp += 1
+        # print(tp, len(y_test))
         map_ = tp/len(y_test)
-        #print(map_)
+        # print(map_)
         return map_
 
 
@@ -298,10 +303,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         decision_function will be used in priority and it will fallback to :term`predict_proba` 
         if it is not available. When a regressor is passed, predict is used.
     tracks : list
-    
+
     """
 
-    def __init__(self, estimator, tracks = None, n_jobs=16, centroid_labels = None, centroid_coordinates = None):
+    def __init__(self, estimator, tracks=None, n_jobs=16, centroid_labels=None, centroid_coordinates=None):
         """_summary_
 
         Parameters
@@ -318,12 +323,12 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Default n_jobs value is 16.
         """
         self.tracks = tracks
-        self.centroid_labels = centroid_labels 
+        self.centroid_labels = centroid_labels
         self.centroid_coordinates = centroid_coordinates
         self.verbose = False
         self.n_jobs = n_jobs
         super().__init__(estimator, n_jobs=n_jobs)
-    
+
     def fit(self, X, y, centroids: dict = None, scale: bool = False):
         """Fit underlying estimators.
         If centroids dictionary are given,
@@ -366,11 +371,11 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
                     self.estimator,
-                    np.array([np.append(x, [centroids[i][0] - x[0], 
-                                            centroids[i][1] - x[1], 
-                                            centroids[i][0] - x[2], 
-                                            centroids[i][1] - x[3], 
-                                            centroids[i][0] - x[4], 
+                    np.array([np.append(x, [centroids[i][0] - x[0],
+                                            centroids[i][1] - x[1],
+                                            centroids[i][0] - x[2],
+                                            centroids[i][1] - x[3],
+                                            centroids[i][0] - x[4],
                                             centroids[i][1] - x[5]]) for x in X_]),
                     column,
                     classes=[
@@ -400,7 +405,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             self.feature_names_in_ = self.estimators_[0].feature_names_in_
 
         return self
-    
+
     def partial_fit(self, X, y, classes=None, centroids=None):
         """Partially fit underlying estimators.
 
@@ -435,7 +440,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                         self.estimator
                     )
                 )
-            self.estimators_ = [clone(self.estimator) for _ in range(self.n_classes_)]
+            self.estimators_ = [clone(self.estimator)
+                                for _ in range(self.n_classes_)]
 
             # A sparse LabelBinarizer, with sparse_output=True, has been
             # shown to outperform or match a dense label binarizer in all
@@ -447,7 +453,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         if len(np.setdiff1d(y, self.classes_)):
             raise ValueError(
                 (
-                    "Mini-batch contains {0} while classes " + "must be subset of {1}"
+                    "Mini-batch contains {0} while classes " +
+                    "must be subset of {1}"
                 ).format(np.unique(y), self.classes_)
             )
 
@@ -463,7 +470,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         if hasattr(self.estimators_[0], "n_features_in_"):
             self.n_features_in_ = self.estimators_[0].n_features_in_
 
-        return self      
+        return self
 
     def predict_proba(self, X: np.ndarray, classes: np.ndarray = None, centroids: dict = None, scale: bool = False):
         """Return predicted probabilities of dataset X.
@@ -489,18 +496,18 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             X_ = self.scaler_.transform(X)
         else:
             X_ = X.copy()
-        if classes is not None: 
+        if classes is not None:
             Y = np.zeros((X.shape[0], classes.shape[0]))
         else:
             Y = np.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
             if centroids is not None:
                 Y[:, clr] = mdl.predict_proba(np.array([np.append(x, [
-                    centroids[clr][0] - x[0], 
-                    centroids[clr][1] - x[1], 
-                    centroids[clr][0] - x[2], 
-                    centroids[clr][1] - x[3], 
-                    centroids[clr][0] - x[4], 
+                    centroids[clr][0] - x[0],
+                    centroids[clr][1] - x[1],
+                    centroids[clr][0] - x[2],
+                    centroids[clr][1] - x[3],
+                    centroids[clr][0] - x[4],
                     centroids[clr][1] - x[5]
                 ]) for x in X_]))[:, 1]
             else:
@@ -508,12 +515,12 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     predictions = mdl.predict_proba(X_)[:, 1]
                     for i in range(Y.shape[0]):
                         if predictions[i] > Y[i, classes[clr]]:
-                            Y[i, classes[clr]] = predictions[i] 
+                            Y[i, classes[clr]] = predictions[i]
                 else:
                     Y[:, clr] = mdl.predict_proba(X_)[:, 1]
-        return Y 
+        return Y
 
-    def predict(self, X: np.ndarray, top:int=1, centroids: dict = None):
+    def predict(self, X: np.ndarray, top: int = 1, centroids: dict = None):
         """Return predicted top labels of dataset X in ascending order.
 
         Parameters
@@ -535,7 +542,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         X = validation.check_array(X, ensure_2d=True)
 
         if top > len(self.classes_):
-            print("PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+            print(
+                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
             raise ValueError
 
         # Get probability for all classes.
@@ -545,10 +553,10 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             class_proba = self.predict_proba(X=X)
         # Sort to ascending order.
         prediction_result = np.argsort(class_proba)
-        
-        #top_pred_res = np.zeros(prediction_result.shape)
-        return prediction_result[:,-top:]
-        #return top_pred_res[:,-top:]
+
+        # top_pred_res = np.zeros(prediction_result.shape)
+        return prediction_result[:, -top:]
+        # return top_pred_res[:,-top:]
 
     def validate(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, centroids: dict = None):
         """Validate trained models.
@@ -575,19 +583,21 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             predict_proba_results = self.predict_proba(X_test)
         accuracy_vector = []
         balanced_accuracy = []
-        for j in self.classes_: 
-            tp = 0 # True positive --> predicting true and it is really true 
-            fn = 0 # False negative (type II error) --> predicting false, although its true 
-            tn = 0 # True negative --> predicting false and it is really false
-            fp = 0 # False positive (type I error) --> predicting true, although it is false
+        for j in self.classes_:
+            tp = 0  # True positive --> predicting true and it is really true
+            # False negative (type II error) --> predicting false, although its true
+            fn = 0
+            tn = 0  # True negative --> predicting false and it is really false
+            # False positive (type I error) --> predicting true, although it is false
+            fp = 0
             for i, _y_test in enumerate(y_test):
                 if _y_test == j:
-                    if predict_proba_results[i, j]>= threshold:
+                    if predict_proba_results[i, j] >= threshold:
                         tp += 1
                     else:
                         fn += 1
-                else: 
-                    if predict_proba_results[i, j]< threshold:
+                else:
+                    if predict_proba_results[i, j] < threshold:
                         tn += 1
                     else:
                         fp += 1
@@ -603,12 +613,12 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             tp = tp/len(y_test)
             tn = tn/len(y_test)
             fn = fn/len(y_test)
-            fp = fp/len(y_test) 
+            fp = fp/len(y_test)
             accuracy_vector.append(tp+tn)
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, top: int=1, centroids: dict = None):
+    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, top: int = 1, centroids: dict = None):
         """Validate trained models.
 
         Parameters
@@ -624,20 +634,23 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Parameter for predict() method, that returns the top n predictions.
         """
         if centroids is not None:
-            predict_results = self.predict(X_test, top=top, centroids=centroids)
+            predict_results = self.predict(
+                X_test, top=top, centroids=centroids)
         else:
             predict_results = self.predict(X_test, top=top)
 
-        tp = 0 # True positive --> predicting true and it is really true 
-        fn = 0 # False negative (type II error) --> predicting false, although its true 
-        tn = 0 # True negative --> predicting false and it is really false
-        fp = 0 # False positive (type I error) --> predicting true, although it is false
+        tp = 0  # True positive --> predicting true and it is really true
+        # False negative (type II error) --> predicting false, although its true
+        fn = 0
+        tn = 0  # True negative --> predicting false and it is really false
+        # False positive (type I error) --> predicting true, although it is false
+        fp = 0
 
         for i, _y_test in enumerate(y_test):
             if _y_test in predict_results[i]:
                 tp += 1
             else:
-                fp +=1
+                fp += 1
 
         map_ = tp/len(y_test)
 

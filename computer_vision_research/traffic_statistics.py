@@ -19,34 +19,53 @@
 """
 import argparse
 import logging
-import time
 import os
-import tqdm
-import cv2
-import numpy as np
+import time
 from pathlib import Path
-from matplotlib import pyplot as plt
-import seaborn as sns
-from sklearn.cluster import OPTICS
 from typing import List
 
-from clustering import clustering_on_feature_vectors
+import cv2
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import tqdm
+from clustering import (calc_cluster_centers, clustering_on_feature_vectors,
+                        make_4D_feature_vectors, upscale_cluster_centers)
 from dataManagementClasses import TrackedObject
+from matplotlib import pyplot as plt
+from sklearn.cluster import OPTICS
 from utility.dataset import load_dataset
 from utility.preprocessing import filter_trajectories
-from utils.cluster import calc_cluster_centers, upscale_cluster_centers, make_4D_feature_vectors
+
 sns.set_theme()
 
-logging.basicConfig(level=logging.INFO)
-
 def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: str, bg_img: str):
-    """Plot histogram about traffic flow.
+    """
+    Generate a histogram and heatmap of the traffic dataset.
 
-    Args:
-        dataset (List[TrackedObject]): Trajectory dataset. 
-        output (str): Output directory path, where plots will be saved.
-                      If output is None, plots will not be saved. 
-        bg_img (str): Background image of the heatmap like plot.
+    Parameters
+    ----------
+    dataset : List[TrackedObject]
+        A list of TrackedObject instances representing the traffic dataset.
+    labels : np.ndarray
+        An array of labels for the dataset.
+    output : str
+        The output directory for the generated figures.
+    bg_img : str
+        The path to the background image to use for the heatmap.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    This function generates two figures:
+    1. A histogram of the traffic dataset, with each class represented by a different color.
+    2. A heatmap of the traffic dataset, with each class represented by a different arrow.
+
+    The figures are saved to the specified output directory, if provided, and displayed on screen.
+
     """
     from matplotlib import colors
     if output is not None:
@@ -57,12 +76,13 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     Y = labels
     enter_cluster_center = calc_cluster_centers(X, Y, False)
     exit_cluster_center = calc_cluster_centers(X, Y, True)
-    fig1, ax1 = plt.subplots(1,1,figsize=(15,10))
+    fig1, ax1 = plt.subplots(1, 1, figsize=(15, 10))
     ax1.set_title(f"{output} clusters histogram")
     classes = np.array(list(set(Y)))
-    N, bins, patches = ax1.hist(Y, classes.shape[0], range=(classes.min()-0.5, classes.max()+0.5), edgecolor="black", align="mid", rwidth=0.7)
+    N, bins, patches = ax1.hist(Y, classes.shape[0], range=(
+        classes.min()-0.5, classes.max()+0.5), edgecolor="black", align="mid", rwidth=0.7)
     print(N, bins, patches)
-    if len(classes)==1:
+    if len(classes) == 1:
         fracs = np.array([1.0])
     else:
         fracs = N / N.max()
@@ -70,10 +90,11 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     cmap = plt.cm.jet
     scalarMap = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     for thisfrac, thispatch in zip(fracs, patches):
-        #TODO more vivid colors
-        color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
+        # TODO more vivid colors
+        color = plt.cm.jet(norm(thisfrac))  # jet colors seem to be nice
         thispatch.set_facecolor(color)
-    fig1.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax1, location='right')
+    fig1.colorbar(plt.cm.ScalarMappable(
+        norm, plt.cm.jet), ax=ax1, location='right')
     ax1.set_xlabel("Csoportok", fontdict={"fontsize": 20})
     ax1.set_ylabel("Autók száma", fontdict={"fontsize": 20})
     if output is not None:
@@ -81,7 +102,7 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         fig1.savefig(fig1Name)
         logging.info(f"Fig1: \"{fig1Name}\"")
     if bg_img is not None:
-        fig2, ax2 = plt.subplots(1,1,figsize=(15,10))
+        fig2, ax2 = plt.subplots(1, 1, figsize=(15, 10))
         ax2.set_title(f"{output} cluster heatmap")
         # Load background image, and make it a bit transparent
         bgImg = cv2.imread(bg_img)
@@ -90,23 +111,29 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
         bgImg = bgImg.astype(np.uint8)
         mp = ax2.imshow(bgImg)
         # Upscale cluster centers to the size of the background image
-        upscaled_enters = upscale_cluster_centers(enter_cluster_center, bgImg.shape[1], bgImg.shape[0])
-        upscaled_exits = upscale_cluster_centers(exit_cluster_center, bgImg.shape[1], bgImg.shape[0])
+        upscaled_enters = upscale_cluster_centers(
+            enter_cluster_center, bgImg.shape[1], bgImg.shape[0])
+        upscaled_exits = upscale_cluster_centers(
+            exit_cluster_center, bgImg.shape[1], bgImg.shape[0])
         # Plot cluster vectors
         for p, q, thisfrac, cls in zip(upscaled_enters, upscaled_exits, fracs, classes):
             print(p, q, thisfrac, cls)
-            color = plt.cm.jet(norm(thisfrac)) # jet colors seem to be nice
+            color = plt.cm.jet(norm(thisfrac))  # jet colors seem to be nice
             colorVal = scalarMap.to_rgba(thisfrac)
             xx = np.vstack((p[0], q[0]))
             yy = np.vstack((p[1], q[1]))
-            #ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
-            ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1], color=colorVal, width=1, head_width=10)
-            #ax2.annotate(f"{cls}", (p[0], p[1]), color="black", fontsize=10, fontweigth=3)
-            #ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10, fontweigth=1)
+            # ax2.plot(xx, yy, color=color, marker='o', linestyle='-')
+            ax2.arrow(p[0], p[1], q[0]-p[0], q[1]-p[1],
+                      color=colorVal, width=1, head_width=10)
+            # ax2.annotate(f"{cls}", (p[0], p[1]), color="black", fontsize=10, fontweigth=3)
+            # ax2.annotate(f"{cls}", (p[0], p[1]), color="white", fontsize=10, fontweigth=1)
             # Slide the text a bit to the direction of the arrow
-            vec = 0.7 * (np.array([q[0],q[1]]) - np.array([p[0],p[1]])) + np.array([p[0],p[1]])
-            ax2.text(vec[0], vec[1], f"{cls}", color=colorVal, backgroundcolor="white", fontsize=14)
-        fig2.colorbar(plt.cm.ScalarMappable(norm, plt.cm.jet), ax=ax2, location='bottom')
+            vec = 0.7 * (np.array([q[0], q[1]]) -
+                         np.array([p[0], p[1]])) + np.array([p[0], p[1]])
+            ax2.text(vec[0], vec[1], f"{cls}", color=colorVal,
+                     backgroundcolor="white", fontsize=14)
+        fig2.colorbar(plt.cm.ScalarMappable(
+            norm, plt.cm.jet), ax=ax2, location='bottom')
         if output is not None:
             fig2Name = os.path.join(output, "clusters.png")
             fig2.savefig(fig2Name)
@@ -114,13 +141,44 @@ def trafficHistogram(dataset: List[TrackedObject], labels: np.ndarray, output: s
     plt.show()
     plt.close()
 
-def hourlyHistorgram(hourlyLabels, classes, output):
+
+def hourlyHistorgram(hourlyLabels: np.ndarray, classes: list, output: str) -> None:
+    """
+    Plot a histogram of hourly traffic data and save the figure to a file.
+
+    Parameters
+    ----------
+    hourlyLabels : np.ndarray
+        An array of hourly traffic data.
+    classes : list
+        A list of class labels for the traffic data.
+    output : str
+        The output directory to save the histogram figure.
+
+    Returns
+    -------
+    None
+    """
     sns.displot(data=hourlyLabels)
     plt.show()
     plt.savefig(Path(output).joinpath("hourlyHistogram.png"))
     plt.close()
 
+
 def extractHourlyData(dataset: List[TrackedObject]):
+    """
+    Extracts hourly data from a list of TrackedObject instances.
+
+    Parameters
+    ----------
+    dataset : List[TrackedObject]
+        A list of TrackedObject instances.
+
+    Returns
+    -------
+    hourlyData : numpy.ndarray
+        A 2D numpy array of hourly data, where each row represents an hour and each column represents a TrackedObject instance.
+    """
     fps = 30
     fph = fps*60*60
     maxFrameNum = np.array([t.history[0].frameID for t in dataset]).max()
@@ -133,94 +191,110 @@ def extractHourlyData(dataset: List[TrackedObject]):
         hourlyData[actHour, counter[actHour]] = dataset[i]
     return hourlyData
 
-def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
-    """Plot table about hourly traffic flow.
 
-    Args:
-        paths (list): List of paths to the input files. 
-        hourlyTracks (list): List of tracked objects for each hour. 
-        hourlyLabels (list): List of labels for each hour.
-        classes (list): List of classes. 
-        output (str): Output directory path, where plots will be saved.
+def hourlyTable(paths, hourlyTracks, hourlyLabels, classes, output):
     """
-    import pandas as pd
+    Generate hourly statistics table and heatmaps.
+
+    Parameters
+    ----------
+    paths : list of str
+        List of file paths.
+    hourlyTracks : list of numpy.ndarray
+        List of numpy arrays containing tracks for each hour.
+    hourlyLabels : list of numpy.ndarray
+        List of numpy arrays containing labels for each hour.
+    classes : list of int
+        List of classes to count.
+    output : str
+        Output directory path.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    This function generates a pandas DataFrame containing hourly counts of vehicles for each class,
+    and saves it to an Excel file. It also generates three heatmaps: one with absolute counts,
+    one normalized by row, and one normalized by column. These heatmaps are saved as PNG files.
+
+    """
     sns.set(font_scale=1.5)
     hours = np.arange(len(paths))
     rows = ["{}-{}".format(i, i+1) for i in hours]
-    #titles = [Path(p).stem for p in paths]
     df = pd.DataFrame()
-    # set row names
     df = df.set_axis(labels=rows, axis=0)
-    # count vehicles in each hour for each class
     hourlyCount = np.zeros(shape=(len(hourlyTracks), len(classes)))
     for i, tracks, labels in zip(range(len(hourlyTracks)), hourlyTracks, hourlyLabels):
         for t, l in zip(tracks, labels):
             if l >= 0:
-                hourlyCount[i, l]+=1
-    # set column names
+                hourlyCount[i, l] += 1
     for cls in classes:
-        df[cls] = np.array(hourlyCount[:, cls],dtype=int)
+        df[cls] = np.array(hourlyCount[:, cls], dtype=int)
     cols = ["Csoport {}".format(i) for i in classes]
     df = df.set_axis(labels=cols, axis=1)
-    # normalize by max of each row
     df_hourly_heatmap = (df.T - df.T.min()) / (df.T.max() - df.T.min())
     df_hourly_heatmap = df_hourly_heatmap.T
-    # normalize by max of each column
     df_clusterly_heatmap = (df - df.min()) / (df.max() - df.min())
-    print(df)
-    print(df_hourly_heatmap)
-    print(df_clusterly_heatmap)
-    # Save to excel
     with pd.ExcelWriter(Path(output).joinpath("hourly_statistics_table.xlsx")) as writer:
         df.to_excel(writer, sheet_name="Hourly_Cluster_Stats")
-    # Absolute values
-    fig, ax = plt.subplots(figsize=(25,15))
-    ax = sns.heatmap(df, annot=True, annot_kws={"size":20}, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
-    #ax.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
-    ax.set_xlabel("Csoport (db)", fontdict={"size":20})
-    ax.set_ylabel("Időszak (óra)", fontdict={"size":20})
+    fig, ax = plt.subplots(figsize=(25, 15))
+    ax = sns.heatmap(df, annot=True, annot_kws={
+                     "size": 20}, fmt="d", linecolor="black", linewidths=1, cmap="Reds")
+    ax.set_xlabel("Csoport (db)", fontdict={"size": 20})
+    ax.set_ylabel("Időszak (óra)", fontdict={"size": 20})
     ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, va="center")
     ax.set_title("Abszolút értékek")
-    # Normalized by row
-    fig2, ax2 = plt.subplots(figsize=(25,15))
-    ax2 = sns.heatmap(df_hourly_heatmap, annot=True, annot_kws={"size":20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
-    #ax2.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
-    ax2.set_xlabel("Csoport (db)", fontdict={"size":20})
-    ax2.set_ylabel("Időszak (óra)", fontdict={"size":20})
+    fig2, ax2 = plt.subplots(figsize=(25, 15))
+    ax2 = sns.heatmap(df_hourly_heatmap, annot=True, annot_kws={
+                      "size": 20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
+    ax2.set_xlabel("Csoport (db)", fontdict={"size": 20})
+    ax2.set_ylabel("Időszak (óra)", fontdict={"size": 20})
     ax2.set_xticklabels(ax2.get_xticklabels(), rotation=0)
     ax2.set_yticklabels(ax2.get_yticklabels(), rotation=0, va="center")
     ax2.set_title("Normalizált oránkénti értékek")
-    # Normalized by column
-    fig3, ax3 = plt.subplots(figsize=(25,15))
-    ax3 = sns.heatmap(df_clusterly_heatmap, annot=True, annot_kws={"size":20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
-    #ax3.set(xlabel="Csoport (db)", ylabel="Időszak (óra)", kwargs={"size":20})
-    ax3.set_xlabel("Csoport (db)", fontdict={"size":20})
-    ax3.set_ylabel("Időszak (óra)", fontdict={"size":20})
+    fig3, ax3 = plt.subplots(figsize=(25, 15))
+    ax3 = sns.heatmap(df_clusterly_heatmap, annot=True, annot_kws={
+                      "size": 20}, fmt=".4f", linecolor="black", linewidths=1, cmap="Reds")
+    ax3.set_xlabel("Csoport (db)", fontdict={"size": 20})
+    ax3.set_ylabel("Időszak (óra)", fontdict={"size": 20})
     ax3.set_xticklabels(ax3.get_xticklabels(), rotation=0)
     ax3.set_yticklabels(ax3.get_yticklabels(), rotation=0, va="center")
     ax3.set_title("Normalizált irányonkénti értékek")
-    # Save figures
     fig.savefig(Path(output).joinpath("heatmap_abs.png"))
     fig2.savefig(Path(output).joinpath("heatmap_hourly_norm.png"))
     fig3.savefig(Path(output).joinpath("heatmap_cluster_norm.png"))
     plt.close()
 
-def printSamplesToExcel(tracks, output, n_samples=10):
-    """Print sample trajectories to excel file.
 
-    Args:
-        tracks (list): List of tracked objects.
-        output (str): Output directory path, where plots will be saved.
+def printSamplesToExcel(tracks, output, n_samples=10):
     """
-    import pandas as pd
-    data = {"Normalizált belépő X": [], "Normalizált belépő Y": [], "Normalizált kilépő X": [], "Normalizált kilépő Y": []}
+    Write a sample of the tracks to an Excel file.
+
+    Parameters
+    ----------
+    tracks : list
+        A list of Track objects.
+    output : str
+        The path to the output directory.
+    n_samples : int, optional
+        The number of samples to write to the Excel file. Default is 10.
+
+    Returns
+    -------
+    None
+    """
+    data = {"Normalizált belépő X": [], "Normalizált belépő Y": [],
+            "Normalizált kilépő X": [], "Normalizált kilépő Y": []}
     indexes = []
     df = pd.DataFrame(data=data)
     for i, t in enumerate(tracks):
         if i >= n_samples:
             break
-        df.loc[-1] = [t.history_X[0], t.history_Y[0], t.history_X[-1], t.history_Y[-1]]
+        df.loc[-1] = [t.history_X[0], t.history_Y[0],
+                      t.history_X[-1], t.history_Y[-1]]
         df.index = df.index + 1
         indexes.append("Trajektória {}".format(t.objID))
     df.index = indexes
@@ -229,7 +303,28 @@ def printSamplesToExcel(tracks, output, n_samples=10):
     with pd.ExcelWriter(Path(output).joinpath("sample_trajectories.xlsx")) as writer:
         df.to_excel(writer, sheet_name="Sample_Trajectories")
 
+
 def trafficHistogramModule(args):
+    """
+    Generate a traffic histogram from a dataset of vehicle trajectories.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Command-line arguments parsed by argparse.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    This function loads a dataset of vehicle trajectories, filters the trajectories
+    if specified, extracts 4D feature vectors from the trajectories, clusters the
+    feature vectors using OPTICS, and generates a traffic histogram from the resulting
+    labels and filtered trajectories.
+
+    """
     logging.info("Traffic histogram module started")
     start = time.time()
     tracks = load_dataset(args.database[0])
@@ -239,7 +334,7 @@ def trafficHistogramModule(args):
         tracks_filtered = tracks
     X = make_4D_feature_vectors(tracks_filtered)
     _, labels = clustering_on_feature_vectors(
-        X, OPTICS, 
+        X, OPTICS,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
         xi=args.xi,
@@ -247,21 +342,37 @@ def trafficHistogramModule(args):
     )
     Y = labels[labels > -1]
     X = tracks_filtered[labels > -1]
-    trafficHistogram(tracks_filtered, 
-                     Y,
-                     args.output,
-                     args.bg_img,
-                     min_samples=args.min_samples,
-                     max_eps=args.max_eps,
-                     xi=args.xi,
-                     p=args.p_norm)
-    logging.info(f"Traffic histogram module ran for {time.time()-start} seconds")
+    trafficHistogram(dataset=tracks_filtered,
+                     labels=Y,
+                     output=args.output,
+                     bg_img=args.bg_img)
+    logging.info(
+        f"Traffic histogram module ran for {time.time()-start} seconds")
+
 
 def hourlyStatisticsModule(args):
+    """
+    Compute hourly traffic statistics.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Namespace object containing the command line arguments.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    This function computes hourly traffic statistics by clustering tracked objects
+    and generating histograms of the resulting clusters. The resulting statistics
+    are saved to disk in various formats.
+
+    """
     logging.info("Traffic hourly statistics module started")
     start = time.time()
-
-    tracksHourly = [] 
+    tracksHourly = []
     labelsHourly = []
     datasets = []
     datasetPath = Path(args.database[0])
@@ -296,19 +407,24 @@ def hourlyStatisticsModule(args):
     for tracks in tracksHourly:
         dataset = np.append(dataset, tracks, axis=0)
     printSamplesToExcel(dataset, args.output)
-    uidSamples = np.arange(start=1, stop=len(dataset)+1) # generate unique ids for all the tracks
-    uidHourly = np.zeros(shape=(len(tracksHourly),len(dataset)), dtype=int) # create the hourly uid matrix
-    uidHourly[0,:len(tracksHourly[0])] = uidSamples[0:len(tracksHourly[0])] # init first row of uid matrix
-    if uidHourly.shape[0] > 1: # if there is more than 1 hour to analyze do this
-        for i in range(1, uidHourly.shape[0]): # insert uids to the corresponding hours
-            end = np.array([len(tracksHourly[j]) for j in range(i+1)],dtype=int).sum()
-            begin = np.array([len(tracksHourly[j]) for j in range(i)],dtype=int).sum()
-            uidHourly[i,:len(tracksHourly[i])] = uidSamples[begin:end]
-
+    # generate unique ids for all the tracks
+    uidSamples = np.arange(start=1, stop=len(dataset)+1)
+    # create the hourly uid matrix
+    uidHourly = np.zeros(shape=(len(tracksHourly), len(dataset)), dtype=int)
+    uidHourly[0, :len(tracksHourly[0])] = uidSamples[0:len(
+        tracksHourly[0])]  # init first row of uid matrix
+    if uidHourly.shape[0] > 1:  # if there is more than 1 hour to analyze do this
+        # insert uids to the corresponding hours
+        for i in range(1, uidHourly.shape[0]):
+            end = np.array([len(tracksHourly[j])
+                           for j in range(i+1)], dtype=int).sum()
+            begin = np.array([len(tracksHourly[j])
+                             for j in range(i)], dtype=int).sum()
+            uidHourly[i, :len(tracksHourly[i])] = uidSamples[begin:end]
     feature_vectors = make_4D_feature_vectors(dataset)
     cls, labels = clustering_on_feature_vectors(
-        X=feature_vectors, 
-        estimator=OPTICS, 
+        X=feature_vectors,
+        estimator=OPTICS,
         n_jobs=args.n_jobs,
         min_samples=args.min_samples,
         max_eps=args.max_eps,
@@ -319,28 +435,29 @@ def hourlyStatisticsModule(args):
     X = dataset[labels > -1]
     uidSamplesClustered = uidSamples[labels > -1]
     classes = list(set(Y))
-    print(f"Classes: {classes}") # print classes resulting from clustering
-
+    print(f"Classes: {classes}")  # print classes resulting from clustering
     trafficHistogram(X, Y,
-                    args.output,
-                    args.bg_img)
-
+                     args.output,
+                     args.bg_img)
     uidHourlyClustered = np.zeros_like(uidHourly, dtype=int)
-    tracksHourlyClustered = np.zeros_like(uidHourly,dtype=int).astype(object)
-    labelsHourlyClustered = np.ones_like(uidHourly,dtype=int)*-1
+    tracksHourlyClustered = np.zeros_like(uidHourly, dtype=int).astype(object)
+    labelsHourlyClustered = np.ones_like(uidHourly, dtype=int)*-1
     for i in range(len(uidHourly)):
         for j in tqdm.tqdm(range(len(np.trim_zeros(uidHourly[i], 'b')))):
             for k in range(len(uidSamplesClustered)):
-                if uidHourly[i,j]==uidSamplesClustered[k]:
-                    uidHourlyClustered[i,j] = uidSamplesClustered[k]
-                    labelsHourlyClustered[i,j] = labels[k]
-                    tracksHourlyClustered[i,j] = dataset[k]
+                if uidHourly[i, j] == uidSamplesClustered[k]:
+                    uidHourlyClustered[i, j] = uidSamplesClustered[k]
+                    labelsHourlyClustered[i, j] = labels[k]
+                    tracksHourlyClustered[i, j] = dataset[k]
                     break
     print(tracksHourlyClustered.shape)
     print(labelsHourlyClustered.shape)
-    hourlyTable(datasets, tracksHourlyClustered, labelsHourlyClustered, classes, args.output)
+    hourlyTable(datasets, tracksHourlyClustered,
+                labelsHourlyClustered, classes, args.output)
     # hourlyHistorgram(labelsHourlyClustered, classes, args.output)
-    logging.info(f"Traffic hourly statistics module ran for {time.time()-start} seconds")
+    logging.info(
+        f"Traffic hourly statistics module ran for {time.time()-start} seconds")
+
 
 def trafficStatisticTable(args):
     logging.info("Traffic histogram module started")
@@ -350,34 +467,51 @@ def trafficStatisticTable(args):
         tracks_filtered = filter_trajectories(tracks, 0.7)
     else:
         tracks_filtered = tracks
-   #TODO statistical table about clusters
+   # TODO statistical table about clusters
+
 
 def main():
     argparser = argparse.ArgumentParser("Traffic statistics plotter")
-    argparser.add_argument("-db", "--database", nargs='+', help="Database path.")
-    argparser.add_argument("-o", "--output", help="Output directory path of the plots.")
-    argparser.add_argument("--filtered", action="store_true", default=False, help="If dataset is already filtered use this flag.")
-    argparser.add_argument("--n_jobs", type=int, default=16, help="Number of processed to run.")
-    subParser = argparser.add_subparsers(help="Plot statistical data about the traffic data collected in runtime.")
+    argparser.add_argument("-db", "--database",
+                           nargs='+', help="Database path.")
+    argparser.add_argument(
+        "-o", "--output", help="Output directory path of the plots.")
+    argparser.add_argument("--filtered", action="store_true", default=False,
+                           help="If dataset is already filtered use this flag.")
+    argparser.add_argument("--n_jobs", type=int, default=16,
+                           help="Number of processed to run.")
+    subParser = argparser.add_subparsers(
+        help="Plot statistical data about the traffic data collected in runtime.")
 
-    clusterHistogram = subParser.add_parser("histogram", help="Plot histogram of clusters.")
-    clusterHistogram.add_argument("--min_samples", default=20, type=int, help="OPTICS min samples param.")
-    clusterHistogram.add_argument("--max_eps", type=float, default=0.2, help="OPTICS max epsilon distance param.")
-    clusterHistogram.add_argument("--xi", type=float, default=0.15, help="OPTICS xi param.")
-    clusterHistogram.add_argument("--p_norm", type=int, default=2, help="OPTICS p norm param.")
+    clusterHistogram = subParser.add_parser(
+        "histogram", help="Plot histogram of clusters.")
+    clusterHistogram.add_argument(
+        "--min_samples", default=20, type=int, help="OPTICS min samples param.")
+    clusterHistogram.add_argument(
+        "--max_eps", type=float, default=0.2, help="OPTICS max epsilon distance param.")
+    clusterHistogram.add_argument(
+        "--xi", type=float, default=0.15, help="OPTICS xi param.")
+    clusterHistogram.add_argument(
+        "--p_norm", type=int, default=2, help="OPTICS p norm param.")
     clusterHistogram.add_argument("--bg_img", help="Background image path.")
     clusterHistogram.set_defaults(func=trafficHistogramModule)
 
-    hourlyClusterStats = subParser.add_parser("hourly", help="Plot hourly statistic.")
-    hourlyClusterStats.add_argument("--min_samples", default=20, type=int, help="OPTICS min samples param.")
-    hourlyClusterStats.add_argument("--max_eps", type=float, default=0.2, help="OPTICS max epsilon distance param.")
-    hourlyClusterStats.add_argument("--xi", type=float, default=0.15, help="OPTICS xi param.")
-    hourlyClusterStats.add_argument("--p_norm", type=int, default=2, help="OPTICS p norm param.")
+    hourlyClusterStats = subParser.add_parser(
+        "hourly", help="Plot hourly statistic.")
+    hourlyClusterStats.add_argument(
+        "--min_samples", default=20, type=int, help="OPTICS min samples param.")
+    hourlyClusterStats.add_argument(
+        "--max_eps", type=float, default=0.2, help="OPTICS max epsilon distance param.")
+    hourlyClusterStats.add_argument(
+        "--xi", type=float, default=0.15, help="OPTICS xi param.")
+    hourlyClusterStats.add_argument(
+        "--p_norm", type=int, default=2, help="OPTICS p norm param.")
     hourlyClusterStats.add_argument("--bg_img", help="Background image path.")
     hourlyClusterStats.set_defaults(func=hourlyStatisticsModule)
 
     args = argparser.parse_args()
     args.func(args)
+
 
 if __name__ == "__main__":
     main()

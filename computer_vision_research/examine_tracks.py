@@ -1,5 +1,7 @@
 ### Third Party ###
+import os
 from argparse import ArgumentParser
+
 import cv2
 import numpy as np
 from scipy.signal import savgol_filter
@@ -20,6 +22,7 @@ DEBUG = True if os.getenv("DEBUG") else False
 if not DEBUG:
     ic.disable()
 
+
 def upscalebbox(bbox, fwidth, fheight):
     """Upscale normalized coordinates to the video's frame size.
     The downscaling method was: X = X * fwidth / (fwidth/fheight), 
@@ -34,11 +37,12 @@ def upscalebbox(bbox, fwidth, fheight):
     """
     ratio = fwidth / fheight
     X, Y, W, H = bbox
-    X = (X * fwidth) / ratio 
+    X = (X * fwidth) / ratio
     W = (W * fwidth) / ratio
-    Y = Y * fheight 
-    H = H * fheight 
+    Y = Y * fheight
+    H = H * fheight
     return X, Y, W, H
+
 
 def bbox2points(bbox):
     """
@@ -51,6 +55,7 @@ def bbox2points(bbox):
     ymin = int(round(y - (h / 2)))
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
+
 
 def drawbbox(detection: Detection, image: np.ndarray):
     """Draw bounding box of an object to the given image.
@@ -65,18 +70,20 @@ def drawbbox(detection: Detection, image: np.ndarray):
         detection.Y,
         detection.Width,
         detection.Height
-        )
+    )
     ret_img = image.copy()
     bboxUpscaled = upscalebbox(bbox, image.shape[1], image.shape[0])
     left, top, right, bottom = bbox2points(bboxUpscaled)
-    cv2.rectangle(ret_img, (left, top), (right, bottom), (0,255,0), 1)
-    cv2.putText(ret_img, "{}".format(detection.label,), #float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
+    cv2.rectangle(ret_img, (left, top), (right, bottom), (0, 255, 0), 1)
+    cv2.putText(ret_img, "{}".format(detection.label,),  # float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
                 (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                (0,255,0), 2)
+                (0, 255, 0), 2)
     return ret_img
+
 
 def database_is_joblib(path: str):
     return path.split('.')[-1] == "joblib"
+
 
 def draw_trajectory(img, track: TrackedObject, upscale: bool = True, actual_detection_id: int = None):
     linesize = 2
@@ -95,17 +102,21 @@ def draw_trajectory(img, track: TrackedObject, upscale: bool = True, actual_dete
     
     
     ret_img = img.copy()
-    pts = np.column_stack((X, Y)).astype(int) 
-    cv2.polylines(ret_img, [pts], False, (0,255,0))
+    pts = np.column_stack((X, Y)).astype(int)
+    cv2.polylines(ret_img, [pts], False, (0, 255, 0))
     for i in range(X.shape[0]):
         if i == 0:
-            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,255,0), -1)
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])),
+                       linesize, (0, 255, 0), -1)
         elif i == X.shape[0]-1:
-            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,0,255), -1)
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])),
+                       linesize, (0, 0, 255), -1)
         elif i == X.shape[0]//2:
-            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (0,255,255), -1)
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])),
+                       linesize, (0, 255, 255), -1)
         else:
-            cv2.circle(ret_img, (int(X[i]), int(Y[i])), linesize, (255,0,0), -1)
+            cv2.circle(ret_img, (int(X[i]), int(Y[i])),
+                       linesize, (255, 0, 0), -1)
     if actual_detection_id is not None:
         cv2.circle(ret_img, (int(X[actual_detection_id]), int(Y[actual_detection_id])), linesize+1, (255,255,0), -1)
     return ret_img
@@ -246,6 +257,7 @@ def next_frame_id(i_frame: int, max_i: int):
         return -1
     return ret_i
 
+
 def previous_frame_id(i_frame: int, min_i: int):
     """If actial frame id is larger than minimum id,
     then return previous frame id, -1 otherwise.
@@ -262,16 +274,18 @@ def previous_frame_id(i_frame: int, min_i: int):
         return -1
     return ret_i
 
+
 def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray):
     aspect_ratio = img.shape[1] / img.shape[0]
     print("\nDetection number: {:3} X: {:10.6f}, Y: {:10.6f}, VX: {:10.6f}, VY: {:10.6f}, AX: {:10.6f}, AY: {:10.6f}".format(
         i_det,
-        obj.history_X[i_det] * img.shape[1] / aspect_ratio, 
-        obj.history_Y[i_det] * img.shape[0], 
-        obj.history_VX_calculated[i_det] * img.shape[1] / aspect_ratio, 
-        obj.history_VY_calculated[i_det] * img.shape[0], 
-        obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio, 
+        obj.history_X[i_det] * img.shape[1] / aspect_ratio,
+        obj.history_Y[i_det] * img.shape[0],
+        obj.history_VX_calculated[i_det] * img.shape[1] / aspect_ratio,
+        obj.history_VY_calculated[i_det] * img.shape[0],
+        obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio,
         obj.history_AY_calculated[i_det] * img.shape[0]))
+
 
 def make_feature_vectors(track: TrackedObject, max_history_len: int = 30) -> np.ndarray:
     feature_vectors = []
@@ -283,12 +297,13 @@ def make_feature_vectors(track: TrackedObject, max_history_len: int = 30) -> np.
         ic(middle_idx)
         ic(i)
         feature_vectors.append(np.array([track.history_X[first_idx], track.history_Y[first_idx],
-                                track.history_VX_calculated[first_idx], track.history_VY_calculated[first_idx],
-                                track.history_X[middle_idx], track.history_Y[middle_idx],
-                                track.history_X[i], track.history_Y[i],
-                                track.history_VX_calculated[i], track.history_VY_calculated[i]]))
+                                         track.history_VX_calculated[first_idx], track.history_VY_calculated[first_idx],
+                                         track.history_X[middle_idx], track.history_Y[middle_idx],
+                                         track.history_X[i], track.history_Y[i],
+                                         track.history_VX_calculated[i], track.history_VY_calculated[i]]))
         frame_number.append(track.history[i].frameID)
     return np.array(feature_vectors), np.array(frame_number)
+
 
 def examine_tracks(args):
     if not database_is_joblib(args.database):
@@ -306,7 +321,8 @@ def examine_tracks(args):
         act_start_frame = video.get(cv2.CAP_PROP_POS_FRAMES)+1
         frame_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
         frame_width = video.get(cv2.CAP_PROP_FRAME_WIDTH)
-        centroids_upscaled = upscale_cluster_centers(model.centroid_coordinates, frame_width, frame_height)
+        centroids_upscaled = upscale_cluster_centers(
+            model.centroid_coordinates, frame_width, frame_height)
 
         if act_start_frame == start_frame:
             window_name = f"Object ID{tracks[i_track].objID}"
@@ -336,20 +352,24 @@ def examine_tracks(args):
 
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
                     print_object_info(tracks[i_track], i_det, frame)
-                    frame_traj = draw_trajectory(frame, tracks[i_track], actual_detection_id=i_det)
+                    frame_traj = draw_trajectory(
+                        frame, tracks[i_track], actual_detection_id=i_det)
                     frame_traj = drawbbox(
                         tracks[i_track].history[i_det],
                         frame_traj
                     )
                     if fv is not None:
-                        #TODO actual feature vector, not last
-                        pred_proba = model.predict_proba(fv.reshape(1, -1), classes=model.centroid_labels)
-                        pred = np.argsort(pred_proba)[:, -1:] # -args.top_k:]
+                        # TODO actual feature vector, not last
+                        pred_proba = model.predict_proba(
+                            fv.reshape(1, -1), classes=model.centroid_labels)
+                        pred = np.argsort(pred_proba)[:, -1:]  # -args.top_k:]
                         pred = pred.reshape((-1))
                         ic(pred)
                         ic(pred_proba)
-                        fv_upscaled = tracks[i_track].upscale_feature(fv, frame_width, frame_height)
-                        draw_prediction_line(frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
+                        fv_upscaled = tracks[i_track].upscale_feature(
+                            fv, frame_width, frame_height)
+                        draw_prediction_line(
+                            frame_traj, centroids_upscaled, pred[0], (fv_upscaled[-4], fv_upscaled[-3]))
 
                     i_det += 1
                 else:
@@ -359,14 +379,16 @@ def examine_tracks(args):
 
                 i_frame += 1
 
-                key_2 =cv2.waitKey(0)
-                if  key_2 == ord('s'):
+                key_2 = cv2.waitKey(0)
+                if key_2 == ord('s'):
                     continue
                 if key_2 == ord('r'):
                     if i_det - 1 >= 0:
-                        i_det -= 2 
-                        video.set(cv2.CAP_PROP_POS_FRAMES, tracks[i_track].history[i_det].frameID-1)
-                        i_frame = tracks[i_track].history[i_det].frameID - tracks[i_track].history[0].frameID
+                        i_det -= 2
+                        video.set(cv2.CAP_PROP_POS_FRAMES,
+                                  tracks[i_track].history[i_det].frameID-1)
+                        i_frame = tracks[i_track].history[i_det].frameID - \
+                            tracks[i_track].history[0].frameID
                     continue
                 if key_2 == ord('b') or key_2 == ord('q') or key_2 == ord('n'):
                     break
@@ -556,6 +578,7 @@ def visualize_detection(args):
 
             
 
+
 def main():
     argparser = ArgumentParser(
         prog="Program to examine trajectories individually.\n"
@@ -595,6 +618,7 @@ def main():
         visualize_detection(args)
     else:
         examine_tracks(args)
+
 
 if __name__ == "__main__":
     main()
