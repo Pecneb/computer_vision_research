@@ -601,3 +601,4 @@ if __name__ == "__main__":
 
 # hosszu terminal command helyett config file-be rakni a argumentumokat 
 # trajektória szűrés majd tanítás és kiértékelés újrafuttatása az eddigi legjobb eredményt adóval kezdve
+# asdasd
