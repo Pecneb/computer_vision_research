@@ -2,8 +2,7 @@
 
 ## ## Predicting trajectories of objects
 
-#### Table of Contents  
-1. [Table of Contents  
+#### Table of Contents
 1. [Abstract](#abstract)  
 2. [Darknet](#darknet)
    - [YOLOV7](#yolov7)

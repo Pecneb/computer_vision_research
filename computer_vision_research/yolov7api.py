@@ -35,8 +35,8 @@ STRIDE = 32
 DEVICE = "0" 
 CLASSIFY = False 
 AUGMENT = True
-CONF_THRES = 0.60
-IOU_THRES = 0.60
+CONF_THRES = 0.40
+IOU_THRES = 0.50
 CLASSES = None
 
 from GPUtil import showUtilization as gpu_usage

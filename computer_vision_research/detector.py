@@ -100,9 +100,9 @@ def printDetections(detections):
     """
     for obj in detections:
         # bbox: x, y, w, h
-        print("Class: {}, Confidence: {}, Position: {}".format(obj[0], obj[1], obj[2]))
+        print("Class: {}, Confidence: {}, Position: {}\n".format(obj[0], obj[1], obj[2]))
 
-def getTargets(detections, frameNum, targetNames=['car, person']):
+def getTargets(detections, frameNum, targetNames=['car', 'person', 'truck']):
     """Function to extract detected objects from the detections, that labels are given in the targetNames argument
 
     Args:
