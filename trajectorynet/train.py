@@ -201,14 +201,14 @@ def main():
     confusion_matrix_display.ax_.set_title("Confusion Matrix")
     logger.debug(f"Confusion matrix: {confusion_matrix_display}")
     confusion_matrix_display.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix.png")) 
+        os.path.join(args.output, "confusion_matrix.png"))
     confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
         y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled)
     confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
     logger.debug(
         f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
     confusion_matrix_display_pooled.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix_pooled.png")) 
+        os.path.join(args.output, "confusion_matrix_pooled.png"))
     # save model with additional data about dataset
     estimator.cluster_centroids = cluster_centers
     estimator.pooled_cluster_centroids = cluster_centers_pooled

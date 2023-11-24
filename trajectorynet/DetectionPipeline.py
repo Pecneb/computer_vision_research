@@ -25,6 +25,7 @@ from functools import lru_cache
 import cv2
 import numpy as np
 import torch
+from scipy.signal import savgol_filter
 from classifier import OneVsRestClassifierWrapper
 from dataManagementClasses import Detection as DarknetDetection
 from dataManagementClasses import TrackedObject
@@ -94,7 +95,7 @@ class Yolov7(object):
         Random colors for each class/label
     half : bool
         If half True half precision (float16) is used, this means faster inference but lower precision
-    
+
     Methods
     -------
     _load(weights: str, imgsz: int = 640, batch_size: int = 1, device: str = "cuda") -> nn.Module
@@ -321,7 +322,7 @@ class DeepSORT(object):
         Maximum size of the appearence descriptor gallery
     historyDepth : int
         Length of history 
-    
+
     Methods
     -------
     init_tracker_metric(max_cosine_distance: float, nn_budget: float, metric: str = "cosine") -> NearestNeighborDistanceMetric 
@@ -477,7 +478,7 @@ class TrajectoryNet:
         Logger object.
     _model : OneVsRestClassifierWrapper
         Loaded model.
-    
+
     Methods
     -------
     predict(feature_vector: np.ndarray) -> np.ndarray
@@ -494,7 +495,7 @@ class TrajectoryNet:
         Upscale coordinate from 0-1 range to image size.
     draw_history(trackedObject: TrackedObject, image: np.ndarray, color: Tuple = (0, 0, 255), thickness: int = 3) -> np.ndarray
         Draw trajectory history on image.
-    
+
     """
 
     def __init__(self, model: str, debug: bool = False):
@@ -572,6 +573,8 @@ class TrajectoryNet:
         for i, cluster in enumerate(cluster_centroids):
             cv2.circle(image, (int(cluster[0]), int(
                 cluster[1])), 10, (0, 0, 255), 3)
+            cv2.putText(image, str(i), (int(cluster[0]), int(
+                cluster[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     @staticmethod
     def draw_prediction(trackedObject: TrackedObject, predicted_cluster: int, cluster_centers: np.ndarray, image: np.ndarray, color: Tuple = (0, 255, 0), thickness: int = 3) -> np.ndarray:
@@ -600,6 +603,8 @@ class TrajectoryNet:
         """
         cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
             cluster_centers[predicted_cluster][0]), int(cluster_centers[predicted_cluster][1])), color, thickness)
+        cv2.putText(image, str(predicted_cluster), (int(trackedObject.X), int(
+            trackedObject.Y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     @staticmethod
     def draw_top_k_prediction(trackedObject: TrackedObject, predictions: np.ndarray, cluster_centers: np.ndarray, image: np.ndarray, k: int = 3, thickness: int = 3) -> np.ndarray:
@@ -627,11 +632,12 @@ class TrajectoryNet:
             Output image.
         """
         top_k = np.argsort(predictions)[-k:]
-        print(predictions[top_k])
         for i in top_k:
             if i == top_k[-1]:
                 cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
                     cluster_centers[i][0]), int(cluster_centers[i][1])), (0, 255, 0), thickness)
+                cv2.putText(image, str(top_k[-1]), (int(trackedObject.X), int(
+                    trackedObject.Y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
             else:
                 cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
                     cluster_centers[i][0]), int(cluster_centers[i][1])), (0, 0, 255), thickness)
@@ -683,6 +689,33 @@ class TrajectoryNet:
         for i in range(len(trackedObject.history)-1):
             cv2.line(image, (int(trackedObject.history[i].X), int(trackedObject.history[i].Y)), (int(
                 trackedObject.history[i+1].X), int(trackedObject.history[i+1].Y)), thickness=thickness, color=color)
+
+    @staticmethod
+    def draw_velocity_vector(trackedObject: TrackedObject, image: np.ndarray, color: Tuple = (0, 0, 255), thickness: int = 3) -> np.ndarray:
+        """
+        Draw velocity vector on image.
+
+        Parameters
+        ----------
+        trackedObject : TrackedObject
+            Tracked object.
+        image : np.ndarray
+            Image to draw on.
+        color : Tuple, optional
+            Color of the line, by default (0, 0, 255).
+        thickness : int, optional
+            Thickness of the line, by default 3.
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
+        """
+        # if trackedObject.history_X.shape[0] >= 5:
+        # vx = savgol_filter(trackedObject.history_X, 5, 2, 1)[-1] * 2
+        # vy = savgol_filter(trackedObject.history_Y, 5, 2, 1)[-1] * 2
+        cv2.line(image, (int(trackedObject.X), int(trackedObject.Y)), (int(
+            trackedObject.X + trackedObject.VX * 3), int(trackedObject.Y + trackedObject.VY * 3)), thickness=thickness, color=color)
 
 
 class Detector:
@@ -940,18 +973,19 @@ class Detector:
                             feature_vector.reshape(1, -1))
                         self._logger.debug(f"Predictions: {predictions}")
                         # pool predictions
-                        predictions = mask_predictions(
-                            predictions, pooled_mask)
-                        self._logger.debug(f"Predictions: {predictions}")
+                        # predictions = mask_predictions(
+                        #     predictions, pooled_mask)
+                        # self._logger.debug(f"Predictions: {predictions}")
                         # draw predictions
                         trajectoryNet.draw_top_k_prediction(
                             trackedObject=t, predictions=predictions[0], cluster_centers=cluster_centroids, image=im0, k=k)
                     trajectoryNet.draw_history(t, im0, thickness=1)
+                    trajectoryNet.draw_velocity_vector(t, im0, color=(255,255,255))
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 break
-            if cv2.waitKey(1) == ord('p'):
+            elif cv2.waitKey(1) == ord('p'):
                 cv2.waitKey(0)
         for i, buf in enumerate(self._joblibbuffers):
             self._logger.debug(
@@ -966,4 +1000,4 @@ if __name__ == "__main__":
     det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/short_ones/",  # Bellevue_116th_NE12th__2017-09-11_11-08-33.mp4",
                    outdir="./research_data/short_test_videos/", database=False, joblib=True, debug=True)
     # model="/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Preprocessed_threshold_0.7_enter-exit-distance_0.1/models/SVM_7.joblib")
-    det.run(yolo=yolo, deepSort=deepSort, show=True)
+    det.run(yolo=yolo, deepSort=deepSort, show=True, k=3)

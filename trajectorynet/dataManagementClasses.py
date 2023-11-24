@@ -71,7 +71,6 @@ class Detection:
         Returns True if the given Detection object is equal to this Detection object, False otherwise.
     """
     label: str
-
     confidence: float
     X: float
     Y: float
@@ -127,7 +126,7 @@ class Detection:
 
 
 @dataclass
-class TrackedObject():
+class TrackedObject:
     """
     A class representing a tracked object in a video.
 

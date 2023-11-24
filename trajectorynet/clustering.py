@@ -1850,7 +1850,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
 def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> Tuple[np.ndarray, KMeans, int, float]:
     """
     Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
-    
+
     Parameters:
     -----------
     X : np.ndarray
@@ -1861,7 +1861,7 @@ def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_th
         Number of processes to run. Defaults to 10.
     mse_threshold : float, optional
         The mean squared error threshold of min search. Defaults to 0.5.
-    
+
     Returns:
     --------
     Tuple[np.ndarray, KMeans, int, float]

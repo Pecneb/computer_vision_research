@@ -43,8 +43,6 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
 
     Attributes
     ----------
-         Attributes
-    ----------
     X_ : ndarray, shape (n_samples, n_features)
         The input passed during :meth:`fit`.
     y_ : ndarray, shape (n_samples,)
@@ -167,7 +165,7 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         X : np.ndarray shape (n_samples, n_features)
 
         Returns:
-        np.ndarray : shape (n_samples, n_classes_) 
+        np.ndarray : shape (n_samples, n_classes) 
             Prediction probabilities of 
         """
         X = validation.check_array(X, ensure_2d=True)
@@ -713,7 +711,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         Examples
         --------
-        >>> classifier = TrajectoryNetClassifier()
+        >>> classifier = OneVsRestClassifierExtended()
         >>> X_test = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         >>> y_test = np.array([0, 1, 2])
         >>> map_score = classifier.validate_predictions(X_test, y_test)
@@ -742,6 +740,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         map_ = tp/len(y_test)
 
         return map_
+
 
 class OneVsRestClassifierWrapper(OneVsRestClassifier):
     """Wraps the OneVsRestClassifier class from scikit-learn to store additional information about the dataset.
@@ -774,6 +773,6 @@ class OneVsRestClassifierWrapper(OneVsRestClassifier):
 
     def __init__(self, estimator, n_jobs=16, verbose=0, cluster_centroids: np.ndarray = None, pooled_cluster_centroids: np.ndarray = None, pooled_classes: np.ndarray = None):
         super().__init__(estimator=estimator, n_jobs=n_jobs, verbose=verbose)
-        self.cluster_centroids = cluster_centroids        
+        self.cluster_centroids = cluster_centroids
         self.pooled_cluster_centroids = pooled_cluster_centroids
         self.pooled_classes = pooled_classes
