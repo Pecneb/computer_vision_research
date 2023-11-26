@@ -118,6 +118,7 @@ def save_trajectories(trajectories: Union[List, np.ndarray], output: Union[str, 
     _filename = Path(output) / f"{classifier}_{name}.joblib"
     return joblib.dump(trajectories, filename=_filename)
 
+
 def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     """Load a dataset from a file or a directory.
 

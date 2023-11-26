@@ -4,12 +4,14 @@ from classifier import OneVsRestClassifierWrapper
 from utility.dataset import load_dataset
 from utility.models import save_model, mask_labels
 from utility.featurevector import FeatureVector
+from utility.preprocessing import filter_trajectories
+from utility.plots import plot_cross_validation_data
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.cluster import OPTICS
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, KFold
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 import numpy as np
 import argparse
@@ -52,6 +54,11 @@ def get_arguments() -> argparse.Namespace:
     main_parser = argparse.ArgumentParser(description="Train a model")
     main_parser.add_argument("--dataset", type=str,
                              required=True, help="Path to dataset")
+    main_parser.add_argument("--enter-exit-threshold", type=float, default=0.4)
+    main_parser.add_argument(
+        "--edge-distance-threshold", type=float, default=0.7)
+    main_parser.add_argument(
+        "--detection-distance-threshold", type=float, default=0.01)
     main_parser.add_argument("--model", type=str, required=True,
                              choices=["SVM", "KNN", "DT"], help="Model to train")
     main_parser.add_argument("--output", type=str,
@@ -94,10 +101,10 @@ def make_classifier(model: str, n_jobs: int = -1, **estimator_args) -> OneVsRest
         If an unknown model is given as input raise ValueError
     """
     if model == "SVM":
-        classifier = SVC(kernel="rbf", gamma="scale",
+        classifier = SVC(C=1, kernel="rbf", gamma="scale",
                          probability=True, max_iter=30000)
     elif model == "KNN":
-        classifier = KNeighborsClassifier(n_neighbors=5, n_jobs=n_jobs)
+        classifier = KNeighborsClassifier(n_neighbors=7, n_jobs=n_jobs)
     elif model == "DT":
         classifier = DecisionTreeClassifier()
     else:
@@ -139,6 +146,8 @@ def main():
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
     dataset = load_dataset(args.dataset)
+    dataset = filter_trajectories(dataset, threshold=args.edge_distance_threshold,
+                                  enter_exit_dist=args.enter_exit_threshold, detectionDistanceFiltering=False)
     logger.debug(len(dataset))
     # extract enter and exit points of trajectories
     feature_vectors_clustering = make_4D_feature_vectors(dataset)
@@ -169,6 +178,13 @@ def main():
     X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
         X, Y, Y_pooled, test_size=0.2, random_state=42)
     logger.debug(f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}")
+    # plot cross validation data
+    if args.cross_validation:
+        logger.debug("Plotting cross validation data")
+        fig, ax = plt.subplots()
+        cv = KFold(n_splits=5)
+        plot_cross_validation_data(cv, X_train, Y_train, ax, n_splits=5)
+        fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
     # for now generate only version 1 feature vectors
     X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
         X_train, Y_train, Y_pooled_train, version=args.feature_vector_version)
