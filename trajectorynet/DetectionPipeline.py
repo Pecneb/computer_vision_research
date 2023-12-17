@@ -980,7 +980,8 @@ class Detector:
                         trajectoryNet.draw_top_k_prediction(
                             trackedObject=t, predictions=predictions[0], cluster_centers=cluster_centroids, image=im0, k=k)
                     trajectoryNet.draw_history(t, im0, thickness=1)
-                    trajectoryNet.draw_velocity_vector(t, im0, color=(255,255,255))
+                    trajectoryNet.draw_velocity_vector(
+                        t, im0, color=(255, 255, 255))
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
