@@ -1509,7 +1509,7 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
         thres += thres_interval
 
 
-def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
+def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, param_search: bool = False, **estkwargs):
     """
     Perform clustering on 4D feature vectors of tracked objects in a given database.
 
@@ -1533,6 +1533,8 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     -------
     None
     """
+    # Initialize parameter generator
+    params = estkwargs["params"]
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -1545,14 +1547,28 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     while thres <= filter_threshold[1]:
         filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
         if len(filteredTrackedObjects) > 0:
-            clustering_on_4D_feature_vectors(
-                estimator=estimator,
-                trackedObjects=filteredTrackedObjects,
-                outdir=outdir,
-                n_jobs=n_jobs,
-                filter_threshold=thres,
-                **estkwargs
-            )
+            try:
+                if param_search:
+                    for p in params:
+                        clustering_on_4D_feature_vectors(
+                            estimator=estimator,
+                            trackedObjects=filteredTrackedObjects,
+                            outdir=outdir,
+                            n_jobs=n_jobs,
+                            filter_threshold=thres,
+                            **p
+                        )
+                else:
+                    clustering_on_4D_feature_vectors(
+                        estimator=estimator,
+                        trackedObjects=filteredTrackedObjects,
+                        outdir=outdir,
+                        n_jobs=n_jobs,
+                        filter_threshold=thres,
+                        **estkwargs
+                    )
+            except Exception as e:
+                print(e)
         print(200 * '\n', '[', (progress-2) * '=', '>',
               int(max_progress-progress) * ' ', ']', flush=True)
         progress += 1
@@ -1837,7 +1853,7 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
         ax.scatter(np.array(X), 1-np.array(Y), s=0.5)
         ax.grid(visible=True)
         ax.set_xlim(left=0.0, right=2.0)
-        ax.set_ylim(bottom=0.0, top=2.0)
+        ax.set_ylim(bottom=0.0, top=1.0)
         ax.set_title(label=f"cluster {aoi_l}")
         ax.legend(["Enter points", "Exit points",
                   "Center of mass of exit points"])
@@ -2025,17 +2041,40 @@ def submodule_optics(args):
                 p=args.p_norm
             )
         elif args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=OPTICS,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                min_samples=args.min_samples,
-                max_eps=args.max_eps,
-                xi=args.xi,
-                min_cluster_size=args.min_cluster_size,
-                p=args.p_norm
-            )
+            if args.param_search:
+                def param_generator():
+                    min_samples = [5, 10, 20, 50, 100, 200, 500]
+                    max_eps = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, np.inf]
+                    xi = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+                    for ms in min_samples:
+                        for eps in max_eps:
+                            for x in xi:
+                                yield {"min_samples": ms, "max_eps": eps, "xi": x}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=OPTICS,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    min_samples=args.min_samples,
+                    max_eps=args.max_eps,
+                    xi=args.xi,
+                    min_cluster_size=args.min_cluster_size,
+                    p=args.p_norm,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=OPTICS,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    min_samples=args.min_samples,
+                    max_eps=args.max_eps,
+                    xi=args.xi,
+                    min_cluster_size=args.min_cluster_size,
+                    p=args.p_norm
+                )
         elif args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=OPTICS,
@@ -2228,6 +2267,8 @@ def main():
                                "then min_cluster_size = max_samples.")
     optics_parser.add_argument("-p", "--p-norm", type=int, default=2,
                                help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    optics_parser.add_argument("--param-search", action="store_true",
+                               default=False, help="Use this flag to run parameter search.")
     optics_parser.set_defaults(func=submodule_optics)
 
     birch_parser = subparser.add_parser("birch", help="Birch clustering.")
