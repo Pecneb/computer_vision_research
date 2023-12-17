@@ -1,12 +1,5 @@
-Usage
-=====
-
-Installation
-------------
-
-Install Anaconda environment manager
-------------------------------------
-
+Getting Started
+===============
 
 Prerequisites
 -------------

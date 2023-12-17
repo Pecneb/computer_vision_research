@@ -6,7 +6,13 @@
 Welcome to TrajectoryNet's documentation!
 =========================================
 
-**TrajectoryNet** is a Python package for trajectory prediction.
+Welcome to TrajectoryNet's documentation!
+=========================================
+
+This documentation contains the user and developer documentation for TrajectoryNet.
+The framework is designed to be a pipeline for trajectory prediction for traffic control systems.
+It is based on the paper **"Járművek trajektóriáinak előrejelzése machine learning modellekkel" by Bence Gábor Péter and Dr. CSc András Horváth**.
+The framework is developed by Bence Gábor Péter. It is written in Python and tested on Linux Ubuntu.
 
 .. toctree::
    :maxdepth: 4
