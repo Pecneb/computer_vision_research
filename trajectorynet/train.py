@@ -12,7 +12,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.cluster import OPTICS
 from sklearn.model_selection import cross_val_score, KFold
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay, RocCurveDisplay
 import numpy as np
 import argparse
 import sys
@@ -133,7 +133,7 @@ def generate_feature_vectors(X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray,
     """
     if version == "1":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1(
-            trackedObjects=X, label=Y, pooled_labels=Y_pooled, k=6)
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6)
     elif version == "7":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
             trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30)
@@ -178,13 +178,13 @@ def main():
     X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
         X, Y, Y_pooled, test_size=0.2, random_state=42)
     logger.debug(f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}")
-    # plot cross validation data
-    if args.cross_validation:
-        logger.debug("Plotting cross validation data")
-        fig, ax = plt.subplots()
-        cv = KFold(n_splits=5)
-        plot_cross_validation_data(cv, X_train, Y_train, ax, n_splits=5)
-        fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
+    # # plot cross validation data
+    # if args.cross_validation:
+    #     logger.debug("Plotting cross validation data")
+    #     fig, ax = plt.subplots()
+    #     cv = KFold(n_splits=5)
+    #     plot_cross_validation_data(cv, X_train, Y_train, ax, n_splits=5)
+    #     fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
     # for now generate only version 1 feature vectors
     X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
         X_train, Y_train, Y_pooled_train, version=args.feature_vector_version)
@@ -197,14 +197,20 @@ def main():
     logger.debug(f"Estimator: {estimator}")
     # run cross validation
     if args.cross_validation:
+        logger.debug("Plotting cross validation data")
+        fig, ax = plt.subplots()
+        cv = KFold(n_splits=5)
+        plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
+        fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
         scores = cross_val_score(estimator, X_fv_train,
-                                 Y_fv_train, cv=5, scoring="balanced_accuracy")
+                                 Y_fv_train, cv=cv, scoring="balanced_accuracy")
         logger.info(
             f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}")
     # train classifier and evaluate on test set
     estimator = make_classifier(args.model)
     estimator.fit(X_fv_train, Y_fv_train)
     Y_predicted = estimator.predict(X_fv_test)
+    Y_score = estimator.predict_proba(X_fv_test)
     score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
     logger.info(f"Balanced Test score: {score}")
     Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
