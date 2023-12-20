@@ -1,5 +1,10 @@
 import warnings
-from clustering import make_4D_feature_vectors, clustering_on_feature_vectors, kmeans_mse_clustering, calc_cluster_centers
+from clustering import (
+    make_4D_feature_vectors,
+    clustering_on_feature_vectors,
+    kmeans_mse_clustering,
+    calc_cluster_centers,
+)
 from classifier import OneVsRestClassifierWrapper
 from utility.dataset import load_dataset
 from utility.models import save_model, mask_labels
@@ -12,7 +17,12 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.cluster import OPTICS
 from sklearn.model_selection import cross_val_score, KFold
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay, RocCurveDisplay
+from sklearn.metrics import (
+    balanced_accuracy_score,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    RocCurveDisplay,
+)
 import numpy as np
 import argparse
 import sys
@@ -52,37 +62,63 @@ def init_logger() -> Logger:
 
 def get_arguments() -> argparse.Namespace:
     main_parser = argparse.ArgumentParser(description="Train a model")
-    main_parser.add_argument("--dataset", type=str,
-                             required=True, help="Path to dataset")
+    main_parser.add_argument(
+        "--dataset", type=str, required=True, help="Path to dataset"
+    )
     main_parser.add_argument("--enter-exit-threshold", type=float, default=0.4)
+    main_parser.add_argument("--edge-distance-threshold", type=float, default=0.7)
+    main_parser.add_argument("--detection-distance-threshold", type=float, default=0.01)
     main_parser.add_argument(
-        "--edge-distance-threshold", type=float, default=0.7)
+        "--model",
+        type=str,
+        required=True,
+        choices=["SVM", "KNN", "DT"],
+        help="Model to train",
+    )
     main_parser.add_argument(
-        "--detection-distance-threshold", type=float, default=0.01)
-    main_parser.add_argument("--model", type=str, required=True,
-                             choices=["SVM", "KNN", "DT"], help="Model to train")
-    main_parser.add_argument("--output", type=str,
-                             required=True, help="Path to save model")
-    main_parser.add_argument("--feature-vector-version", choices=["1", "7"], default="1",
-                             help="Version of feature vector to use.")
+        "--output", type=str, required=True, help="Path to save model"
+    )
     main_parser.add_argument(
-        "--min-samples", type=int, default=100, help="Minimum number of samples in a cluster.")
-    main_parser.add_argument("--xi", type=float, default=0.05,
-                             help="Minimum difference between reachability distances.")
+        "--feature-vector-version",
+        choices=["1", "1_SY", "7"],
+        default="1",
+        help="Version of feature vector to use.",
+    )
     main_parser.add_argument(
-        "--max-eps", type=float, default=0.15, help="Maximum reachability distance.")
+        "--min-samples",
+        type=int,
+        default=100,
+        help="Minimum number of samples in a cluster.",
+    )
     main_parser.add_argument(
-        "--mse", type=float, default=0.2, help="Mean square error.")
-    main_parser.add_argument("--n-jobs", type=int, default=-1,
-                             help="Number of jobs to run in parallel.")
-    main_parser.add_argument("--cross-validation", action="store_true", default=False,
-                             help="Run cross validation.")
+        "--xi",
+        type=float,
+        default=0.05,
+        help="Minimum difference between reachability distances.",
+    )
+    main_parser.add_argument(
+        "--max-eps", type=float, default=0.15, help="Maximum reachability distance."
+    )
+    main_parser.add_argument(
+        "--mse", type=float, default=0.2, help="Mean square error."
+    )
+    main_parser.add_argument(
+        "--n-jobs", type=int, default=-1, help="Number of jobs to run in parallel."
+    )
+    main_parser.add_argument(
+        "--cross-validation",
+        action="store_true",
+        default=False,
+        help="Run cross validation.",
+    )
 
     arguments = main_parser.parse_args()
     return arguments
 
 
-def make_classifier(model: str, n_jobs: int = -1, **estimator_args) -> OneVsRestClassifierWrapper:
+def make_classifier(
+    model: str, n_jobs: int = -1, **estimator_args
+) -> OneVsRestClassifierWrapper:
     """Create OneVsRestClassifier with specified model
 
     Parameters
@@ -101,8 +137,9 @@ def make_classifier(model: str, n_jobs: int = -1, **estimator_args) -> OneVsRest
         If an unknown model is given as input raise ValueError
     """
     if model == "SVM":
-        classifier = SVC(C=1, kernel="rbf", gamma="scale",
-                         probability=True, max_iter=30000)
+        classifier = SVC(
+            C=1, kernel="rbf", gamma="scale", probability=True, max_iter=30000
+        )
     elif model == "KNN":
         classifier = KNeighborsClassifier(n_neighbors=7, n_jobs=n_jobs)
     elif model == "DT":
@@ -112,7 +149,9 @@ def make_classifier(model: str, n_jobs: int = -1, **estimator_args) -> OneVsRest
     return OneVsRestClassifierWrapper(classifier, n_jobs=n_jobs, verbose=1)
 
 
-def generate_feature_vectors(X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray, version: str = "1") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_feature_vectors(
+    X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray, version: str = "1"
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate feature vectors from X, Y and Y_pooled
 
     Parameters
@@ -133,10 +172,16 @@ def generate_feature_vectors(X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray,
     """
     if version == "1":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1(
-            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6)
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6
+        )
+    elif version == "1_SY":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SY(
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6, scale_y=1.5
+        )
     elif version == "7":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
-            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30)
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30
+        )
     return X_fv, Y_fv, Y_pooled_fv
 
 
@@ -146,16 +191,25 @@ def main():
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
     dataset = load_dataset(args.dataset)
-    dataset = filter_trajectories(dataset, threshold=args.edge_distance_threshold,
-                                  enter_exit_dist=args.enter_exit_threshold, detectionDistanceFiltering=False)
+    dataset = filter_trajectories(
+        dataset,
+        threshold=args.edge_distance_threshold,
+        enter_exit_dist=args.enter_exit_threshold,
+        detectionDistanceFiltering=False,
+    )
     logger.debug(len(dataset))
     # extract enter and exit points of trajectories
     feature_vectors_clustering = make_4D_feature_vectors(dataset)
     logger.debug(len(feature_vectors_clustering))
     # cluster trajectories using OPTICS
     t0 = perf_counter()
-    _, labels = clustering_on_feature_vectors(feature_vectors_clustering, OPTICS, min_samples=args.min_samples,
-                                              xi=args.xi, max_eps=args.max_eps)
+    _, labels = clustering_on_feature_vectors(
+        feature_vectors_clustering,
+        OPTICS,
+        min_samples=args.min_samples,
+        xi=args.xi,
+        max_eps=args.max_eps,
+    )
     logger.debug(f"Clustering took {perf_counter() - t0} seconds")
     # get class labels
     classes = np.unique(labels)
@@ -166,18 +220,22 @@ def main():
     logger.debug(f"X: {X.shape}, Y: {Y.shape}")
     # pool classes
     Y_pooled, _, _, _, pooled_classes = kmeans_mse_clustering(
-        X, Y, n_jobs=args.n_jobs, mse_threshold=args.mse)
-    logger.debug(
-        f"Y_pooled: {Y_pooled.shape}, pooled_classes: {pooled_classes}")
+        X, Y, n_jobs=args.n_jobs, mse_threshold=args.mse
+    )
+    logger.debug(f"Y_pooled: {Y_pooled.shape}, pooled_classes: {pooled_classes}")
     # calculate cluster centroids
     cluster_centers = calc_cluster_centers(X, Y)
     cluster_centers_pooled = calc_cluster_centers(X, Y_pooled)
     logger.debug(
-        f"cluster_centers: {cluster_centers.shape}, cluster_centers_pooled: {cluster_centers_pooled.shape}")
+        f"cluster_centers: {cluster_centers.shape}, cluster_centers_pooled: {cluster_centers_pooled.shape}"
+    )
     # split dataset into train and test sets
     X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
-        X, Y, Y_pooled, test_size=0.2, random_state=42)
-    logger.debug(f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}")
+        X, Y, Y_pooled, test_size=0.2, random_state=42
+    )
+    logger.debug(
+        f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}"
+    )
     # # plot cross validation data
     # if args.cross_validation:
     #     logger.debug("Plotting cross validation data")
@@ -187,11 +245,14 @@ def main():
     #     fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
     # for now generate only version 1 feature vectors
     X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
-        X_train, Y_train, Y_pooled_train, version=args.feature_vector_version)
+        X_train, Y_train, Y_pooled_train, version=args.feature_vector_version
+    )
     X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
-        X_test, Y_test, Y_pooled_test, version=args.feature_vector_version)
+        X_test, Y_test, Y_pooled_test, version=args.feature_vector_version
+    )
     logger.debug(
-        f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}")
+        f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
+    )
     # create classifier
     estimator = make_classifier(args.model)
     logger.debug(f"Estimator: {estimator}")
@@ -202,10 +263,12 @@ def main():
         cv = KFold(n_splits=5)
         plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
         fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
-        scores = cross_val_score(estimator, X_fv_train,
-                                 Y_fv_train, cv=cv, scoring="balanced_accuracy")
+        scores = cross_val_score(
+            estimator, X_fv_train, Y_fv_train, cv=cv, scoring="balanced_accuracy"
+        )
         logger.info(
-            f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}")
+            f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
+        )
     # train classifier and evaluate on test set
     estimator = make_classifier(args.model)
     estimator.fit(X_fv_train, Y_fv_train)
@@ -215,28 +278,36 @@ def main():
     logger.info(f"Balanced Test score: {score}")
     Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
     pooled_score = balanced_accuracy_score(
-        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled)
+        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+    )
     logger.info(f"Balanced Pooled Test score: {pooled_score}")
     # calculate confusion matrix
     confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
-        y_true=Y_fv_test, y_pred=Y_predicted)
+        y_true=Y_fv_test, y_pred=Y_predicted
+    )
     confusion_matrix_display.ax_.set_title("Confusion Matrix")
     logger.debug(f"Confusion matrix: {confusion_matrix_display}")
     confusion_matrix_display.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix.png"))
+        os.path.join(args.output, "confusion_matrix.png")
+    )
     confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
-        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled)
+        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+    )
     confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
-    logger.debug(
-        f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
+    logger.debug(f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
     confusion_matrix_display_pooled.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix_pooled.png"))
+        os.path.join(args.output, "confusion_matrix_pooled.png")
+    )
     # save model with additional data about dataset
     estimator.cluster_centroids = cluster_centers
     estimator.pooled_cluster_centroids = cluster_centers_pooled
     estimator.pooled_classes = pooled_classes
-    save_model(savedir=args.output, classifier_type=args.model,
-               model=estimator, version=args.feature_vector_version)
+    save_model(
+        savedir=args.output,
+        classifier_type=args.model,
+        model=estimator,
+        version=args.feature_vector_version,
+    )
 
 
 if __name__ == "__main__":
