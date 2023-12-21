@@ -1,3 +1,9 @@
+# Y coordinate scaling comparison
+
+## V1 scaling factor 1.5
+
+## V7 weights 1, 1.5, 100, 150, 2, 3, 200, 300
+
 |    | classifier   | version   |   balanced_test_score (percent) |   balanced_pooled_test_score (percent) |   time (s) |
 |---:|:-------------|:----------|--------------------------------:|---------------------------------------:|-----------:|
 |  0 | KNN          | 1         |                         95.3102 |                                96.0973 |   0.320985 |
