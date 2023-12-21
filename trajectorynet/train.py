@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 from logging import DEBUG, INFO, Logger, StreamHandler, getLogger
 from typing import Union, Tuple
 from time import perf_counter
+import pandas as pd
 
 
 cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -70,6 +71,7 @@ def get_arguments() -> argparse.Namespace:
     main_parser.add_argument("--detection-distance-threshold", type=float, default=0.01)
     main_parser.add_argument(
         "--model",
+        nargs="+",
         type=str,
         required=True,
         choices=["SVM", "KNN", "DT"],
@@ -80,7 +82,8 @@ def get_arguments() -> argparse.Namespace:
     )
     main_parser.add_argument(
         "--feature-vector-version",
-        choices=["1", "1_SY", "7"],
+        nargs="+",
+        choices=["1", "1_SY", "7", "7_SY"],
         default="1",
         help="Version of feature vector to use.",
     )
@@ -182,6 +185,10 @@ def generate_feature_vectors(
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
             trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30
         )
+    elif version == "7_SY":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30, weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300])
+        )
     return X_fv, Y_fv, Y_pooled_fv
 
 
@@ -223,6 +230,7 @@ def main():
         X, Y, n_jobs=args.n_jobs, mse_threshold=args.mse
     )
     logger.debug(f"Y_pooled: {Y_pooled.shape}, pooled_classes: {pooled_classes}")
+    logger.info(f"Pooled classes: {pooled_classes}")
     # calculate cluster centroids
     cluster_centers = calc_cluster_centers(X, Y)
     cluster_centers_pooled = calc_cluster_centers(X, Y_pooled)
@@ -244,71 +252,92 @@ def main():
     #     plot_cross_validation_data(cv, X_train, Y_train, ax, n_splits=5)
     #     fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
     # for now generate only version 1 feature vectors
-    X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
-        X_train, Y_train, Y_pooled_train, version=args.feature_vector_version
+    # create dataframes for results
+    results = pd.DataFrame(
+        columns=[
+            "classifier",
+            "version",
+            "balanced_test_score (percent)",
+            "balanced_pooled_test_score (percent)",
+            "time (s)",
+        ]
     )
-    X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
-        X_test, Y_test, Y_pooled_test, version=args.feature_vector_version
-    )
-    logger.debug(
-        f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
-    )
-    # create classifier
-    estimator = make_classifier(args.model)
-    logger.debug(f"Estimator: {estimator}")
-    # run cross validation
-    if args.cross_validation:
-        logger.debug("Plotting cross validation data")
-        fig, ax = plt.subplots()
-        cv = KFold(n_splits=5)
-        plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
-        fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
-        scores = cross_val_score(
-            estimator, X_fv_train, Y_fv_train, cv=cv, scoring="balanced_accuracy"
+    for v in args.feature_vector_version:
+        X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
+            X_train, Y_train, Y_pooled_train, version=v
         )
-        logger.info(
-            f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
+        X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
+            X_test, Y_test, Y_pooled_test, version=v
         )
-    # train classifier and evaluate on test set
-    estimator = make_classifier(args.model)
-    estimator.fit(X_fv_train, Y_fv_train)
-    Y_predicted = estimator.predict(X_fv_test)
-    Y_score = estimator.predict_proba(X_fv_test)
-    score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
-    logger.info(f"Balanced Test score: {score}")
-    Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
-    pooled_score = balanced_accuracy_score(
-        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
-    )
-    logger.info(f"Balanced Pooled Test score: {pooled_score}")
-    # calculate confusion matrix
-    confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
-        y_true=Y_fv_test, y_pred=Y_predicted
-    )
-    confusion_matrix_display.ax_.set_title("Confusion Matrix")
-    logger.debug(f"Confusion matrix: {confusion_matrix_display}")
-    confusion_matrix_display.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix.png")
-    )
-    confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
-        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
-    )
-    confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
-    logger.debug(f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
-    confusion_matrix_display_pooled.figure_.savefig(
-        os.path.join(args.output, "confusion_matrix_pooled.png")
-    )
-    # save model with additional data about dataset
-    estimator.cluster_centroids = cluster_centers
-    estimator.pooled_cluster_centroids = cluster_centers_pooled
-    estimator.pooled_classes = pooled_classes
-    save_model(
-        savedir=args.output,
-        classifier_type=args.model,
-        model=estimator,
-        version=args.feature_vector_version,
-    )
-
+        logger.debug(
+            f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
+        )
+        for m in args.model:
+            # create classifier
+            estimator = make_classifier(m)
+            logger.debug(f"Estimator: {estimator}")
+            # run cross validation
+            if args.cross_validation:
+                logger.debug("Plotting cross validation data")
+                fig, ax = plt.subplots()
+                cv = KFold(n_splits=5)
+                plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
+                fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
+                scores = cross_val_score(
+                    estimator, X_fv_train, Y_fv_train, cv=cv, scoring="balanced_accuracy"
+                )
+                logger.info(
+                    f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
+                )
+            # train classifier and evaluate on test set
+            t0 = perf_counter()
+            estimator = make_classifier(m)
+            estimator.fit(X_fv_train, Y_fv_train)
+            t1 = perf_counter()
+            Y_predicted = estimator.predict(X_fv_test)
+            Y_score = estimator.predict_proba(X_fv_test)
+            score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
+            logger.info(f"Balanced Test score: {score}")
+            Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
+            pooled_score = balanced_accuracy_score(
+                y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+            )
+            logger.info(f"Balanced Pooled Test score: {pooled_score}")
+            # calculate confusion matrix
+            confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
+                y_true=Y_fv_test, y_pred=Y_predicted
+            )
+            confusion_matrix_display.ax_.set_title("Confusion Matrix")
+            logger.debug(f"Confusion matrix: {confusion_matrix_display}")
+            confusion_matrix_display.figure_.savefig(
+                os.path.join(args.output, f"confusion_matrix_{v}_{m}.png")
+            )
+            confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
+                y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+            )
+            confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
+            logger.debug(f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
+            confusion_matrix_display_pooled.figure_.savefig(
+                os.path.join(args.output, f"confusion_matrix_pooled_{v}_{m}.png")
+            )
+            # save model with additional data about dataset
+            estimator.cluster_centroids = cluster_centers
+            estimator.pooled_cluster_centroids = cluster_centers_pooled
+            estimator.pooled_classes = pooled_classes
+            save_model(
+                savedir=args.output,
+                classifier_type=m,
+                model=estimator,
+                version=v
+            )
+            results.loc[len(results)] = [
+                m,
+                v,
+                score*100,
+                pooled_score*100,
+                t1 - t0,
+            ]
+    print(results.to_markdown())
 
 if __name__ == "__main__":
     main()
