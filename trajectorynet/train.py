@@ -187,12 +187,17 @@ def generate_feature_vectors(
         )
     elif version == "7_SY":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
-            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30, weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300])
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+            weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
         )
     return X_fv, Y_fv, Y_pooled_fv
 
 
 def main():
+    T0 = perf_counter()
     logger = init_logger()
     args = get_arguments()
     logger.debug(f"Arguments: {args}")
@@ -253,6 +258,11 @@ def main():
     #     fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
     # for now generate only version 1 feature vectors
     # create dataframes for results
+    cross_validation_results = pd.DataFrame(columns=["classifier", "version"])
+    for i in range(5):
+        cross_validation_results[f"split_{i} (percent)"] = []
+    cross_validation_results["mean (percent)"] = []
+    cross_validation_results["std (percent)"] = []
     results = pd.DataFrame(
         columns=[
             "classifier",
@@ -283,12 +293,25 @@ def main():
                 cv = KFold(n_splits=5)
                 plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
                 fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
+                t0 = perf_counter()
                 scores = cross_val_score(
-                    estimator, X_fv_train, Y_fv_train, cv=cv, scoring="balanced_accuracy"
+                    estimator,
+                    X_fv_train,
+                    Y_fv_train,
+                    cv=cv,
+                    scoring="balanced_accuracy",
                 )
+                t1 = perf_counter()
                 logger.info(
                     f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
                 )
+                entry_num = len(cross_validation_results)
+                cross_validation_results.loc[entry_num, "classifier"] = m
+                cross_validation_results.loc[entry_num, "version"] = v
+                for i, s in enumerate(scores):
+                    cross_validation_results.loc[entry_num, "split_"+str(i)+" (percent)"] = s * 100
+                cross_validation_results.loc[entry_num, "mean (percent)"] = scores.mean() * 100
+                cross_validation_results.loc[entry_num, "std (percent)"] = scores.std() * 100
             # train classifier and evaluate on test set
             t0 = perf_counter()
             estimator = make_classifier(m)
@@ -316,7 +339,9 @@ def main():
                 y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
             )
             confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
-            logger.debug(f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
+            logger.debug(
+                f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
+            )
             confusion_matrix_display_pooled.figure_.savefig(
                 os.path.join(args.output, f"confusion_matrix_pooled_{v}_{m}.png")
             )
@@ -325,19 +350,19 @@ def main():
             estimator.pooled_cluster_centroids = cluster_centers_pooled
             estimator.pooled_classes = pooled_classes
             save_model(
-                savedir=args.output,
-                classifier_type=m,
-                model=estimator,
-                version=v
+                savedir=args.output, classifier_type=m, model=estimator, version=v
             )
             results.loc[len(results)] = [
                 m,
                 v,
-                score*100,
-                pooled_score*100,
+                score * 100,
+                pooled_score * 100,
                 t1 - t0,
             ]
+    print(cross_validation_results.to_markdown())
     print(results.to_markdown())
+    print(f"Total time: {perf_counter() - T0} seconds")
+
 
 if __name__ == "__main__":
     main()
