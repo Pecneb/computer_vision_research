@@ -21,8 +21,7 @@ import numpy as np
 from joblib import Parallel, delayed
 from sklearn import multiclass
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
-from sklearn.multiclass import (OneVsRestClassifier, _partial_fit_binary,
-                                check_is_fitted)
+from sklearn.multiclass import OneVsRestClassifier, _partial_fit_binary, check_is_fitted
 from sklearn.preprocessing import LabelBinarizer, StandardScaler
 from sklearn.utils import validation
 from sklearn.utils.multiclass import _check_partial_fit_first_call
@@ -31,7 +30,7 @@ from sklearn.utils.multiclass import _check_partial_fit_first_call
 class BinaryClassifier(ClassifierMixin, BaseEstimator):
     """Base Binary Classifier
 
-    A classifier that can take any type of scikit-learn classifier as the binary classifier. 
+    A classifier that can take any type of scikit-learn classifier as the binary classifier.
     At the creation of the classifier object, a scikit learn classifier have to be given
     as the first argument, the second argument is a dictionary of args that will be passed
     to the scikit learn classifier.
@@ -39,7 +38,7 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
     Parameters
     ----------
     classifier : scikit-learn classifier
-        A scikit-learn classifier that will be used to create the multiclass binary classifier. 
+        A scikit-learn classifier that will be used to create the multiclass binary classifier.
 
     Attributes
     ----------
@@ -49,12 +48,13 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         The labels passed during :meth:`fit`.
     classes_ : ndarray, shape (n_classes,)
         The classes seen at :meth:`fit`.
-    label_mtx_ : np.ndarray shape (n_cluster, n_samples) 
-        Matrix of labels, each label gets its own array, 
-        that is filled with the actual label and the other labels but labeled as class 0. 
+    label_mtx_ : np.ndarray shape (n_cluster, n_samples)
+        Matrix of labels, each label gets its own array,
+        that is filled with the actual label and the other labels but labeled as class 0.
     models : scikit-learn classifier
         Sklearn Classifiers fitted as binary Classifiers.
     """
+
     # trackData: list
     # X_: np.ndarray
     # y_: np.ndarray
@@ -62,13 +62,15 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
     # label_mtx_: np.ndarray
     # models_: list
 
-    def __init__(self, trackData: list, classifier: ClassifierMixin, classifier_argv: dict = None):
+    def __init__(
+        self, trackData: list, classifier: ClassifierMixin, classifier_argv: dict = None
+    ):
         """Constructor of the BinaryClassifier.
 
         Args:
             trackData : list[TrackedObject]
                 List of object track's
-            classifier : scikit-learn classifier 
+            classifier : scikit-learn classifier
                 This scikit-learn classifier class will be used as binary classifier.
             classifier_argv : dict
                 These arguments will be passed to the given scikit-learn classifier.
@@ -83,7 +85,8 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         Each label exist once in this attribute.
         """
         self.classes_ = np.array(list(set(self.y)), dtype=int).reshape(
-            (1, len(set(self.y))))
+            (1, len(set(self.y)))
+        )
 
     def __make_label_mtx_(self):
         """Private method of Binary Classifier
@@ -95,7 +98,8 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         Every row corresponds to its class label, and every column is a label, that can be 1 or 0.
         """
         self.label_mtx_ = np.zeros(
-            (self.classes_.shape[0], self.y_.shape[0]), dtype=int)
+            (self.classes_.shape[0], self.y_.shape[0]), dtype=int
+        )
         for i in range(self.classes_.shape[0]):
             for j in range(self.y_.shape[0]):
                 if self.y_[j] == self.classes_[i]:
@@ -104,13 +108,13 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
                     self.label_mtx_[i, j] = 0
 
     def __init_models(self):
-        """Initialize self.models_ with sklearn classifiers
-        """
+        """Initialize self.models_ with sklearn classifiers"""
         self.models_ = []
         for clr in self.classes_:
             if self.classifier_argv is not None:
                 self.models_.append(
-                    self.classifier().set_params(**self.classifier_argv))
+                    self.classifier().set_params(**self.classifier_argv)
+                )
             else:
                 self.models_.append(self.classifier())
 
@@ -165,8 +169,8 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         X : np.ndarray shape (n_samples, n_features)
 
         Returns:
-        np.ndarray : shape (n_samples, n_classes) 
-            Prediction probabilities of 
+        np.ndarray : shape (n_samples, n_classes)
+            Prediction probabilities of
         """
         X = validation.check_array(X, ensure_2d=True)
         class_proba = np.zeros((X.shape[0], self.classes_.shape[0]))
@@ -174,11 +178,11 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             class_proba[:, clr] = mdl.predict_proba(X)[:, 1]
         return class_proba
 
-    def predict(self, X: np.ndarray,  threshold: np.float32 = 0.5, top: int = 1):
+    def predict(self, X: np.ndarray, threshold: np.float32 = 0.5, top: int = 1):
         """Return predicted top labels of dataset  X
 
         Args:
-            X (np.ndarray): Feature vector of shape( n_samples, n_features ) for prediction. 
+            X (np.ndarray): Feature vector of shape( n_samples, n_features ) for prediction.
             top (int): Number tof classes with the highest probability
 
         Returns:
@@ -186,7 +190,8 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
         """
         if top > len(self.classes_):
             print(
-                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes"
+            )
         class_proba = self.predict_proba(X=X)
         # print(class_proba)
         # print(class_proba.shape)
@@ -209,8 +214,8 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
     def validate(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32):
         """Validate trained models.
         Args:
-            X_test (np.ndarray): Validation dataset of shape( n_samples, n_features ). 
-            y_test (np.ndarray): Validation class labels shape( n_samples, 1 ). 
+            X_test (np.ndarray): Validation dataset of shape( n_samples, n_features ).
+            y_test (np.ndarray): Validation class labels shape( n_samples, 1 ).
             threshold (np.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
         predict_proba_results = self.predict_proba(X_test)
@@ -237,25 +242,31 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             if tp + fn == 0:
                 sens = 0
             else:
-                sens = tp/(tp+fn)
+                sens = tp / (tp + fn)
             if (tn + fp) == 0:
                 spec = 0
             else:
-                spec = tn/(tn+fp)
+                spec = tn / (tn + fp)
             balanc = (sens + spec) / 2
-            tp = tp/len(y_test)
-            tn = tn/len(y_test)
-            fn = fn/len(y_test)
-            fp = fp/len(y_test)
-            accuracy_vector.append(tp+tn)
+            tp = tp / len(y_test)
+            tn = tn / len(y_test)
+            fn = fn / len(y_test)
+            fp = fp / len(y_test)
+            accuracy_vector.append(tp + tn)
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, top: int = 1):
+    def validate_predictions(
+        self,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        threshold: np.float32,
+        top: int = 1,
+    ):
         """Validate trained models.
         Args:
-            X_test (np.ndarray): Validation dataset of shape( n_samples, n_features ). 
-            y_test (np.ndarray): Validation class labels shape( n_samples, 1 ). 
+            X_test (np.ndarray): Validation dataset of shape( n_samples, n_features ).
+            y_test (np.ndarray): Validation class labels shape( n_samples, 1 ).
             threshold (np.float32): Probability threshold, if prediction probability higher than the threshold, then it counts as a valid prediction.
         """
         predict_results = self.predict(X_test, threshold=threshold, top=top)
@@ -276,7 +287,7 @@ class BinaryClassifier(ClassifierMixin, BaseEstimator):
             else:
                 fp += 1
         # print(tp, len(y_test))
-        map_ = tp/len(y_test)
+        map_ = tp / len(y_test)
         # print(map_)
         return map_
 
@@ -324,7 +335,16 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         List of centroid coordinates.
     """
 
-    def __init__(self, estimator, tracks=None, n_jobs=16, centroid_labels=None, centroid_coordinates=None, pooled_labels=None, pooled_coordinates=None):
+    def __init__(
+        self,
+        estimator,
+        tracks=None,
+        n_jobs=16,
+        centroid_labels=None,
+        centroid_coordinates=None,
+        pooled_labels=None,
+        pooled_coordinates=None,
+    ):
         """
         Initialize a TrajectoryNet classifier.
 
@@ -399,12 +419,22 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
                 delayed(multiclass._fit_binary)(
                     self.estimator,
-                    np.array([np.append(x, [centroids[i][0] - x[0],
-                                            centroids[i][1] - x[1],
-                                            centroids[i][0] - x[2],
-                                            centroids[i][1] - x[3],
-                                            centroids[i][0] - x[4],
-                                            centroids[i][1] - x[5]]) for x in X_]),
+                    np.array(
+                        [
+                            np.append(
+                                x,
+                                [
+                                    centroids[i][0] - x[0],
+                                    centroids[i][1] - x[1],
+                                    centroids[i][0] - x[2],
+                                    centroids[i][1] - x[3],
+                                    centroids[i][0] - x[4],
+                                    centroids[i][1] - x[5],
+                                ],
+                            )
+                            for x in X_
+                        ]
+                    ),
                     column,
                     classes=[
                         "not %s" % self.label_binarizer_.classes_[i],
@@ -469,8 +499,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                         self.estimator
                     )
                 )
-            self.estimators_ = [clone(self.estimator)
-                                for _ in range(self.n_classes_)]
+            self.estimators_ = [clone(self.estimator) for _ in range(self.n_classes_)]
 
             # A sparse LabelBinarizer, with sparse_output=True, has been
             # shown to outperform or match a dense label binarizer in all
@@ -482,8 +511,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         if len(np.setdiff1d(y, self.classes_)):
             raise ValueError(
                 (
-                    "Mini-batch contains {0} while classes " +
-                    "must be subset of {1}"
+                    "Mini-batch contains {0} while classes " + "must be subset of {1}"
                 ).format(np.unique(y), self.classes_)
             )
 
@@ -501,7 +529,13 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         return self
 
-    def predict_proba(self, X: np.ndarray, classes: np.ndarray = None, centroids: dict = None, scale: bool = False):
+    def predict_proba(
+        self,
+        X: np.ndarray,
+        classes: np.ndarray = None,
+        centroids: dict = None,
+        scale: bool = False,
+    ):
         """
         Predict class probabilities for X.
 
@@ -560,14 +594,24 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             Y = np.zeros((X.shape[0], self.classes_.shape[0]))
         for clr, mdl in zip(range(self.classes_.shape[0]), self.estimators_):
             if centroids is not None:
-                Y[:, clr] = mdl.predict_proba(np.array([np.append(x, [
-                    centroids[clr][0] - x[0],
-                    centroids[clr][1] - x[1],
-                    centroids[clr][0] - x[2],
-                    centroids[clr][1] - x[3],
-                    centroids[clr][0] - x[4],
-                    centroids[clr][1] - x[5]
-                ]) for x in X_]))[:, 1]
+                Y[:, clr] = mdl.predict_proba(
+                    np.array(
+                        [
+                            np.append(
+                                x,
+                                [
+                                    centroids[clr][0] - x[0],
+                                    centroids[clr][1] - x[1],
+                                    centroids[clr][0] - x[2],
+                                    centroids[clr][1] - x[3],
+                                    centroids[clr][0] - x[4],
+                                    centroids[clr][1] - x[5],
+                                ],
+                            )
+                            for x in X_
+                        ]
+                    )
+                )[:, 1]
             else:
                 if classes is not None:
                     predictions = mdl.predict_proba(X_)[:, 1]
@@ -578,7 +622,13 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
                     Y[:, clr] = mdl.predict_proba(X_)[:, 1]
         return Y
 
-    def predict(self, X: np.ndarray, top: int = 1, classes: np.ndarray = None, centroids: dict = None):
+    def predict(
+        self,
+        X: np.ndarray,
+        top: int = 1,
+        classes: np.ndarray = None,
+        centroids: dict = None,
+    ):
         """
         Predict class labels for samples in X.
 
@@ -602,7 +652,8 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
 
         if top > len(self.classes_):
             print(
-                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes")
+                "PARAMETER ERROR: The value of TOP must be lower or equal than the number of classes"
+            )
             raise ValueError
 
         # Get probability for all classes.
@@ -620,7 +671,13 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         return prediction_result[:, -top:]
         # return top_pred_res[:,-top:]
 
-    def validate(self, X_test: np.ndarray, y_test: np.ndarray, threshold: np.float32, centroids: dict = None):
+    def validate(
+        self,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        threshold: np.float32,
+        centroids: dict = None,
+    ):
         """
         Validate the classifier on the given test data and return the balanced accuracy for each class.
 
@@ -667,21 +724,27 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             if tp + fn == 0:
                 sens = 0
             else:
-                sens = tp/(tp+fn)
+                sens = tp / (tp + fn)
             if (tn + fp) == 0:
                 spec = 0
             else:
-                spec = tn/(tn+fp)
+                spec = tn / (tn + fp)
             balanc = (sens + spec) / 2
-            tp = tp/len(y_test)
-            tn = tn/len(y_test)
-            fn = fn/len(y_test)
-            fp = fp/len(y_test)
-            accuracy_vector.append(tp+tn)
+            tp = tp / len(y_test)
+            tn = tn / len(y_test)
+            fn = fn / len(y_test)
+            fp = fp / len(y_test)
+            accuracy_vector.append(tp + tn)
             balanced_accuracy.append(balanc)
         return balanced_accuracy
 
-    def validate_predictions(self, X_test: np.ndarray, y_test: np.ndarray, top: int = 1, centroids: dict = None):
+    def validate_predictions(
+        self,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        top: int = 1,
+        centroids: dict = None,
+    ):
         """
         Validates the predictions made by the model.
 
@@ -719,8 +782,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
         0.0
         """
         if centroids is not None:
-            predict_results = self.predict(
-                X_test, top=top, centroids=centroids)
+            predict_results = self.predict(X_test, top=top, centroids=centroids)
         else:
             predict_results = self.predict(X_test, top=top)
 
@@ -737,7 +799,7 @@ class OneVSRestClassifierExtended(OneVsRestClassifier):
             else:
                 fp += 1
 
-        map_ = tp/len(y_test)
+        map_ = tp / len(y_test)
 
         return map_
 
@@ -771,7 +833,15 @@ class OneVsRestClassifierWrapper(OneVsRestClassifier):
         The pooler mask for the original classes. for example pooled_classes = [0, 0, 0, 1, 1, 1, 2, 2, 2] can be a mask of the original classes like [0, 1, 2, 3, 4, 5, 6, 7, 8].
     """
 
-    def __init__(self, estimator, n_jobs=16, verbose=0, cluster_centroids: np.ndarray = None, pooled_cluster_centroids: np.ndarray = None, pooled_classes: np.ndarray = None):
+    def __init__(
+        self,
+        estimator,
+        n_jobs=16,
+        verbose=0,
+        cluster_centroids: np.ndarray = None,
+        pooled_cluster_centroids: np.ndarray = None,
+        pooled_classes: np.ndarray = None,
+    ):
         super().__init__(estimator=estimator, n_jobs=n_jobs, verbose=verbose)
         self.cluster_centroids = cluster_centroids
         self.pooled_cluster_centroids = pooled_cluster_centroids
