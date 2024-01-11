@@ -130,3 +130,9 @@ dmypy.json
 
 # Darknet weights
 .weights
+
+# Scikit-Learn stuff
+*.joblib
+
+# Dataset files
+*.db
