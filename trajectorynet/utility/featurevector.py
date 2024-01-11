@@ -549,9 +549,7 @@ class FeatureVector(object):
         featureVectors = []
         new_labels = []
         new_pooled_labels = []
-        # list of [start_time, mid_time, end_time, history_length, trackID]
         track_history_metadata = []
-        # TODO remove time vector, use track_history_metadata instead
         for j in range(len(trackedObjects)):
             step_calc = len(trackedObjects[j].history) // k
             step = step_calc
@@ -597,26 +595,24 @@ class FeatureVector(object):
         ),
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate feature vectors from the histories of trajectories.
-        Make feature vectors from the whole trajectory, with a stride of max_stride.
-
 
         Parameters
         ----------
         trackedObjects : List
-            Tracked objects.
+            List of trajectories.
         labels : np.ndarray
-            Labels.
+            Labels for each trajectory.
         pooled_labels : np.ndarray
-            Pooled labels.
+            Pooled labels for each trajectory.
         max_stride : int
-            Maximum stride length.
+            Maximum stride length. This means that the subtrajectory length will be max_stride.
         weights : Optional[np.ndarray], optional
-            Weight vector, by default None
+            Weight vector, by default np.array( [1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32 )
 
         Returns
         -------
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-            Feature vectors, corresponding labels and pooled labels, and metadata.
+            Tuple containing the generated feature vectors, corresponding labels, corresponding pooled labels, corresponding metadata.
         """
         # weights = np.array([1,1,100,100,2,2,200,200], dtype=np.float32)
         X_feature_vectors = np.array([])
