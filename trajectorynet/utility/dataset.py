@@ -63,7 +63,7 @@ def loadDatasetsFromDirectory(path: Union[str, Path]) -> Union[np.ndarray, bool]
     if not dirPath.is_dir():
         return False
     dataset = np.array([], dtype=object)
-    for p in dirPath.glob("*.joblib"):
+    for p in tqdm.tqdm(dirPath.glob("*.joblib")):
         tmpDataset = load_dataset(p)
         dataset = np.append(dataset, tmpDataset, axis=0)
         # print(len(tmpDataset))
