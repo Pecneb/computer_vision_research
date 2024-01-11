@@ -34,17 +34,69 @@ from utility import databaseLoader
 
 @dataclass
 class Detection:
-    """Class for storing detections of YOLO Darknet
+    """Class for storing detections of YOLO Darknet.
 
-       Fields: 
-        label(string): classification name ex. car, person, bicycle, etc.
-        confidence(float): the likeliness that the detected object is really the above label, 0.0-1.0
-        X(int): center of bounding box in the X axis
-        Y(int): center of bounding box in the Y axis
-        Width(int): width of the bounding box
-        Height(int): height of the bounding box
-        frameID(int): the number of the frame, the detection is oqqured
-        VX(int)
+    Parameters
+    ----------
+    label : str
+        Classification name ex. car, person, bicycle, etc.
+    confidence : float
+        The likeliness that the detected object is really the above label, 0.0-1.0.
+    X : float
+        Center of bounding box in the X axis.
+    Y : float
+        Center of bounding box in the Y axis.
+    Width : float
+        Width of the bounding box.
+    Height : float
+        Height of the bounding box.
+    frameID : int
+        The number of the frame, the detection is acquired.
+    VX : float, optional
+        Velocity in the X axis. Used in the analyzer script and databaseLoader script.
+    VY : float, optional
+        Velocity in the Y axis. Used in the analyzer script and databaseLoader script.
+    AX : float, optional
+        Acceleration in the X axis. Used in the analyzer script and databaseLoader script.
+    AY : float, optional
+        Acceleration in the Y axis. Used in the analyzer script and databaseLoader script.
+    objID : int, optional
+        Object ID. Used in the analyzer script and databaseLoader script.
+
+    Attributes
+    ----------
+    label : str
+        Classification name ex. car, person, bicycle, etc.
+    confidence : float
+        The likeliness that the detected object is really the above label, 0.0-1.0.
+    X : float
+        Center of bounding box in the X axis.
+    Y : float
+        Center of bounding box in the Y axis.
+    Width : float
+        Width of the bounding box.
+    Height : float
+        Height of the bounding box.
+    frameID : int
+        The number of the frame, the detection is acquired.
+    VX : float, optional
+        Velocity in the X axis. Used in the analyzer script and databaseLoader script.
+    VY : float, optional
+        Velocity in the Y axis. Used in the analyzer script and databaseLoader script.
+    AX : float, optional
+        Acceleration in the X axis. Used in the analyzer script and databaseLoader script.
+    AY : float, optional
+        Acceleration in the Y axis. Used in the analyzer script and databaseLoader script.
+    objID : int, optional
+        Object ID. Used in the analyzer script and databaseLoader script.
+
+    Methods
+    -------
+    __repr__() -> str
+        Returns a string representation of the Detection object.
+    __eq__(other) -> bool
+        Compares two Detection objects for equality.
+
     """
     label: str
     confidence: float
