@@ -279,9 +279,9 @@ def main():
     )
     if args.grid_search:
         param_grid = {
-            "DT": {"max_depth": [None, 5, 10]},
+            "DT": {"max_depth": [None, 10, 15]},
             "KNN": {"n_neighbors": [3, 5, 10]},
-            "SVM": {"C": [0.1, 1, 10], "max_iter": [5000, 15000, 30000]},
+            "SVM": {"C": [10, 100, 1000], "max_iter": [30000]},
         }
     else:
         param_grid = {
