@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python3 -m sklearnex computer_vision_research/classification.py \
+python3 -m sklearnex trajectorynet/classification.py \
     --n-jobs 7 \
     train \
     --dataset \
@@ -10,7 +10,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --preprocessed \
     --min-samples 100 --max-eps 0.15 \
     --mse 0.2 --feature-version 1
-python3 -m sklearnex computer_vision_research/classification.py \
+python3 -m sklearnex trajectorynet/classification.py \
     --n-jobs 7 \
     train \
     --dataset \
@@ -20,7 +20,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --preprocessed \
     --min-samples 200 --max-eps 0.16 \
     --mse 0.2 --feature-version 1
-python3 -m sklearnex computer_vision_research/classification.py \
+python3 -m sklearnex trajectorynet/classification.py \
     --n-jobs 7 \
     train \
     --dataset \
@@ -30,7 +30,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --preprocessed \
     --min-samples 200 --max-eps 0.1 \
     --mse 0.2 --feature-version 1
-python3 -m sklearnex computer_vision_research/classification.py \
+python3 -m sklearnex trajectorynet/classification.py \
     --n-jobs 7 \
     train \
     --dataset \
@@ -41,7 +41,7 @@ python3 -m sklearnex computer_vision_research/classification.py \
     --test 0.5 \
     --min-samples 100 --max-eps 0.15 \
     --mse 0.2 --feature-version 1
-python3 -m sklearnex computer_vision_research/classification.py \
+python3 -m sklearnex trajectorynet/classification.py \
     --n-jobs 7 \
     train \
     --dataset \
