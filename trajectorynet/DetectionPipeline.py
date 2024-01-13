@@ -780,7 +780,7 @@ class Detector:
     >>> detector.run(yolo, deepSort, show=True)
     """
 
-    def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = True):
+    def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = False):
         self._init_logger(debug=debug)
         self._source = Path(source)
         self._init_output_directory(path=outdir)
@@ -919,7 +919,7 @@ class Detector:
                     label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
 
-    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: TrajectoryNet = None, show: bool = False, feature_version: Literal["1", "7"] = "7", k: int = 1):
+    def run(self, yolo: Yolov7, deepSort: Optional[DeepSORT] = None, trajectoryNet: Optional[TrajectoryNet] = None, show: bool = False, feature_version: Literal["1", "7"] = "7", k: int = 1):
         """Run detection pipeline.
 
         Parameters
@@ -937,10 +937,11 @@ class Detector:
         yolo.warmup()  # warm up yolo model
         # previous_path = None
         _, _, im0s, _ = next(iter(self._dataset))
-        cluster_centroids = np.array([trajectoryNet.upscale_coordinate(
-            coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.cluster_centroids])
-        pooled_mask = trajectoryNet._model.pooled_classes
-        self._logger.debug(f"Cluster centroids: {cluster_centroids}")
+        if trajectoryNet is not None:
+            cluster_centroids = np.array([trajectoryNet.upscale_coordinate(
+                coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.cluster_centroids])
+            pooled_mask = trajectoryNet._model.pooled_classes
+            self._logger.debug(f"Cluster centroids: {cluster_centroids}")
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
             self._logger.debug(f"Input image shape: {img.shape}")
