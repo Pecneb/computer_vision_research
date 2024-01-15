@@ -1,0 +1,13 @@
+dataset:
+  path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th__2017-09-10_19-08-25.joblib"
+fov_correction:
+  # road center view angle from horizon
+  alfa_zero: 60
+  # distance of road horizontally
+  distance: 100
+  # horizontal field of view
+  delta: 120
+  # resolution
+  resolution:
+    horizontal: 1920
+    vertical: 1080

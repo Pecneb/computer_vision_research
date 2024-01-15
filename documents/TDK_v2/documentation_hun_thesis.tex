@@ -17,7 +17,19 @@
 \usepackage{subcaption}
 \usepackage[margin=20mm]{geometry}
 \usepackage{booktabs}
+\usepackage{pdfpages}
+\usepackage{setspace}
 
+\setlength{\parindent}{1cm}
+
+\onehalfspacing
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,
+    urlcolor=cyan
+}
 
 \newcommand{\firstpage}{
 \thispagestyle{empty}
@@ -28,7 +40,7 @@
 \end{center}
 \vspace{35mm}
 \begin{center}
-    {\huge \bf DIPLOAMUNKA}
+    {\huge \bf SZAKDOLGOZAT}
 \end{center}
 \vspace{35mm}
 \begin{center}
@@ -70,7 +82,7 @@
         \end{tabular}
         \vspace{10mm}
         \begin{center}
-            {\huge \bf TDK Dolgozat}
+            {\huge \bf SZAKDOLGOZAT}
         \end{center}
         \vspace{10mm}
         \begin{center}
@@ -79,7 +91,7 @@
         \end{center}
         \vspace{10mm}
         \begin{center}
-            {\huge Péter Bence Gábor\\Konzulensek:\\Dr. Horváth András egyetemi docens\\Agg Áron PhD hallgató}
+            {\huge Péter Bence Gábor\\Témavezető:\\Dr. CSc Horváth András}
         \end{center}
         \vspace{10mm}
         \begin{center}
@@ -93,65 +105,60 @@
 \end{titlepage}
 \newpage
 
+% feladatkiiro lap
+\includepdf[pages={1}]{PeterBenceGaborFeladatKiiroLap.pdf}
+
+% hallgatoi nyilatkozat
+\includepdf[pages={1}]{hallgatoinyilatkozat_pbg.pdf}
+
+\newpage
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+
+\newpage
 \renewcommand{\abstractname}{}
 \begin{abstract}
     \noindent \begin{center}\textbf{Kivonat}\end{center} \par
     \vspace{10pt}
-    Az ITS (intelligent transportation system) egyre nagyobb teret hódít napjainkban és rengeteg különböző területen alkalmazzák ezeket a rendszereket. A közlekedési csomópontok elemzése egy frekventált terület az ITS alkalmazásokban. Célunk, gépi látás és gépi tanulás felhasználásával, közlekedési csomópontok elemzésének automatizálása és felgyorsítása. A kutatás eredményeit, a kifejlesztett keretrendszert és a felmerülő problémák megoldásait a gyakorlatban balesetek megelőzésére, renitens viselkedések kiszűrésére és forgalomirányító rendszerek támogatására lehet használni. A kutatásban egy trajektória osztályozó módszert ismertetünk, amely objektum detektálás és objektumkövetés segítségével elemezze a közlekedési csomópontokban elhaladó járművek mozgását. A mozgásuk alapján klaszterezi a trajektóriákat. A klaszterező algoritmus paramétereinek változtatásával különböző finomságú útvonal szétválasztás érhető el. Ezek az útvonal csoportok bemenetként szolgálnak az osztályozó algoritmus tanításánál, ami betanítás után valós időben tudja prediktálni a belépő járművek kimeneti pontjait. Az OPTICS klaszterező algoritmus bizonyult a mi esetünkben a leghatásosabbnak. Az OPTICS által csoportosított útvonalak végpontjai alapján további finomításra van lehetőség egy általunk létrehozott algoritmus segítségével, ami a KMeans algoritmust használja fel alapul. A közlekedők útvonalainak valós idejű előrejelzésére létrehozott módszerekben az SVM, KNN és DecisionTree osztályozó algoritmusok érték el a legmagasabb pontosságot az általunk végzett kiértékelések során. Továbbá az általunk kifejlesztett keretrendszer alkalmas forgalomszámlálásra és forgalmi statisztikák előállítására, ami értékes információként szolgálhat közlekedésmérnököknek.
+    \paragraph{Az ITS (intelligent transportation system)} egyre nagyobb teret hódít napjainkban és rengeteg különböző területen alkalmazzák ezeket a rendszereket. A közlekedési csomópontok elemzése egy frekventált terület az ITS alkalmazásokban.
+    \paragraph{Célunk} gépi látás és gépi tanulás felhasználásával, közlekedési csomópontok elemzésének automatizálása és felgyorsítása. A kutatás eredményeit, a kifejlesztett keretrendszert és a felmerülő problémák megoldásait a gyakorlatban balesetek megelőzésére, renitens viselkedések kiszűrésére és forgalomirányító rendszerek támogatására lehet használni. 
+    A kutatásban egy trajektória osztályozó módszert ismertetünk, amely objektum detektálás és objektumkövetés segítségével elemezze a közlekedési csomópontokban elhaladó járművek mozgását. 
+    A mozgásuk alapján klaszterezi a trajektóriákat. A klaszterező algoritmus paramétereinek változtatásával különböző finomságú útvonal szétválasztás érhető el. Ezek az útvonal csoportok bemenetként szolgálnak az osztályozó algoritmus tanításánál, ami betanítás után valós időben tudja prediktálni a belépő járművek kimeneti pontjait. 
+    \paragraph{OPTICS} klaszterező algoritmus bizonyult a mi esetünkben a leghatásosabbnak. Az OPTICS által csoportosított útvonalak végpontjai alapján további finomításra van lehetőség egy általunk létrehozott algoritmus segítségével, ami a KMeans algoritmust használja fel alapul. 
+    \paragraph{Osztályozás} A közlekedők útvonalainak valós idejű előrejelzésére létrehozott módszerekben az SVM, KNN és DecisionTree osztályozó algoritmusok érték el a legmagasabb pontosságot az általunk végzett kiértékelések során. Ez számszerűen 90\% feletti átlagos pontosságot jelentett.
+    \paragraph{Grafikus felület} fejlesztésével valós idejű előrejelzéseket tudjuk vizualizálni, ami egy prototípusnak is szolgál a későbbi fejlesztésekhez, amik a gyakorlatban való alkalmazást célozzák meg.
+    \paragraph{Továbbá} az általunk kifejlesztett keretrendszer alkalmas forgalomszámlálásra és forgalmi statisztikák előállítására, ami értékes információként szolgálhat közlekedésmérnököknek.
+    Ezeket a forgalmi statisztikákat hisztogramok, hőtérképek és idősorok formájában készítettük el. 
+    Az adathalmaz kialakításáról, elemzési módszereiről témavezetőmmel egy közlekedési és mobilitási folyóiratban publikáltunk cikket \cite{aggpeterhorvath2023}.
 \end{abstract}
-
-% \newpage
-% \renewcommand{\abstractname}{}
-% \begin{abstract}
-%     \noindent \begin{center}\textbf{Abstract}\end{center} \par
-%     \vspace{10pt}
-%     Az ITS (intelligent transportation system) egyre nagyobb teret
-%     hódít napjainkban és rengeteg különböző területen alkalmazzák
-%     ezeket a rendszereket. A közlekedési csomópontok elemzése egy
-%     frekventált terület az ITS alkalmazásában.
-%     Célunk, gépi látás és gépi tanulás felhasználásával, közlekedési
-%     csomópontok elemzésének automatizálása és felgyorsítása. A kutatásban
-%     lefektetett alapgondolatokat, kifejlesztett keretrendszert és
-%     a felmerülő probélmák megoldásait a gyakorlatban balesetek megelőzésére,
-%     renitens viselkedések kiszűrésére és forgalomirányító renszerek támogatására
-%     lehet használni.
-%     A kutatásban egy trajektória osztályozó módszert ismertetünk, amely objektumdetektálás
-%     és objektumkövetés segítségével elemezi a közlekedési
-%     csomópontokban elhaladó járművek mozgását. A mozgásuk alapján
-%     klaszterezi a trajektóriákat, majd gépi tanulás
-%     segítségével predikciót ad az újonnan belépő járművek kilépési
-%     pontjára. A módszerhez 6 különböző közlekedési csomópontban
-%     készített saját videó adatbázisunkat használtuk fel.
-%     A tesztelt klaszterezési módszerek közül (OPTICS, BIRCH, KMeans, DBSCAN)
-%     az OPTICS algoritmus bizonyult legjobbnak trajektóriák klaszterezésére.
-%     Összehasonlítottunk több különböző klasszifikációs módszert
-%     a legpontosabb predikció eléréséhez, amelyek: KNN (K-Nearest Neighbors), SVM (Support Vector Machine), GP (Gaussian Process), DT (Decision Tree),
-%     GNB (Gaussian Naive Bayes), MLP (Multi Layer Perceptron), SGD (Stochastic Gradient Descent). A tanulmányban bemutatott eljárások közül az
-%     KNN adta átlagban a legpontosabb 90\%-os eredményt.
-%     %Ezt a pontosságot valós idejű futás közben 5 fps mellett érte el.
-%     %Ebből azt a következtetést lehet levonni, hogy jobb sebesség elérése
-%     %érdekében, vagy a feature vectorok dimenzióját kell csökkenteni, vagy
-%     %érdemes neurális hálót alkalmazni a klasszifikációhoz.
-%     %A forráskód megtalálható ebben a github repositoriban 
-%     %\url{https://www.github.com/Pecneb/computer_vision_research}
-% \end{abstract}
 
 \newpage
 \renewcommand{\abstractname}{}
 \begin{abstract}
     \noindent \begin{center}\textbf{Abstract}\end{center} \par
     \vspace{10pt}
-    Intelligent transportation systems (ITS) are increasingly gaining importance nowadays, and they are being applied in various fields. Traffic node analysis is a popular topic in ITS applications. Our goal is to automate and accelerate traffic node analysis using machine vision and machine learning techniques. The research results, developed framework, and solutions to emerging problems can be used in practice to prevent accidents, detect aggressive driving, and support traffic management systems. We introduce a trajectory classification method that analyzes the movement of vehicles passing through traffic nodes using object detection and tracking. The algorithm clusters the trajectories based on their motion patterns. By adjusting the parameters of the clustering algorithm, we can achieve different levels of route separation. These routes serve as input to the classifier algorithm, which predicts the output points of incoming vehicles in real-time after training. The OPTICS clustering algorithm proved to be the most effective in our case. Using the endpoint of the routes clustered by OPTICS, we can further refine the classification with an algorithm we developed that uses the KMeans algorithm as a foundation. The methods we developed for real-time prediction of traffic routes achieved the highest accuracy in our evaluations, using the SVM, KNN, and Decision Tree classification algorithms. Additionally, our developed framework is suitable for traffic counting and generating traffic statistics, providing valuable information for transportation engineers.
+    \paragraph{Intelligent transportation systems (ITS)} are increasingly gaining importance nowadays, and they are being applied in various fields. Traffic node analysis is a popular topic in ITS applications. 
+    \paragraph{Our goal} is to automate and accelerate traffic node analysis using machine vision and machine learning techniques. 
+    \paragraph{The research results}, developed framework, and solutions to emerging problems can be used in practice to prevent accidents, detect aggressive driving, and support traffic management systems. 
+    \paragraph{We introduce} a trajectory classification method that analyzes the movement of vehicles passing through traffic nodes using object detection and tracking. The algorithm clusters the trajectories based on their motion patterns. By adjusting the parameters of the clustering algorithm, we can achieve different levels of route separation. These routes serve as input to the classifier algorithm, which predicts the output points of incoming vehicles in real-time after training. 
+    \paragraph{OPTICS} clustering algorithm proved to be the most effective in our case. Using the endpoint of the routes clustered by OPTICS, we can further refine the classification with an algorithm we developed that uses the KMeans algorithm as a foundation. 
+    \paragraph{The classifcation methods} we developed for real-time prediction of traffic routes achieved the highest accuracy in our evaluations, using the SVM, KNN, and Decision Tree classification algorithms. This means an average accuracy of over 90\%.
+    \paragraph{Graphical interface} development allows us to visualize real-time predictions, which also serves as a prototype for future developments aimed at practical application.
+    \paragraph{Additionally} our developed framework is suitable for traffic counting and generating traffic statistics, providing valuable information for transportation engineers.
+    These traffic statistics were created in the form of histograms, heat maps, and time series.
+    We published an article with my supervisor on the development of the dataset and the analysis methods in a journal of transportation and mobility \cite{aggpeterhorvath2023}.
+
 \end{abstract}
 
 \newpage
 
-\tableofcontents
-
-\newpage
 \section{Bevezetés}
 A nagy számú jármű, útvonal és csomópont miatt az is nagy kihívás, hogy számszerű és pontos képet kapjunk
-a közlekedés dinamikájáról, az egyes útvonalak leterheltségéről és a közleketők útvonal-választási szokásairól.
+a közlekedés dinamikájáról, az egyes útvonalak leterheltségéről és a közleketők útvonalválasztási szokásairól.
 Ennek követésére számtalan tradicionális módszer is létezik (pl. ember által végzett forgalom-számlálás).
 Dolgozatomban egy olyan módszert mmutatok be, mely erre a kérdésre a már fentlevő forgalomfigyelő
 kamerák képének elemzésével pontos, részletes eredményeket ad.
@@ -159,19 +166,22 @@ kamerák képének elemzésével pontos, részletes eredményeket ad.
 kommunikációs technológiák, mint pélául szenzorok, kamerák, kommunikációs hálózatok és adatelemzés fejlesztését. 5G hálózatokon
 keresztül ezek a technológiák összeköthetők a közlekedési eszközökkel. Ehhez okos forgalomirányítási rendszerek kifejlesztésére
 van szükség, amik információval tudnak szolgáni a járművekbe szerelt informatikai rendszereknek.
-A legértékesebb információt a közlekedésben részvevő járművek jelen és jövőbeli pozíciója jelenti. Pontos és gyors trajektória
+\paragraph{A legértékesebb információt} a közlekedésben részvevő járművek jelen és jövőbeli pozíciója jelenti. Pontos és gyors trajektória
 előrejelző rendszerek kifejlesztése nagy kihívás és egyre növekszik irántuk a kereslet. E kutatási terület kiforratlanságából
 eredően, kevés létező keretrendszer és adathalmaz található, így a tanító adathalmaz gyűjtése, adatok kinyerésének formátuma, tárolása
 és mérőszámok kifejlesztése (amivel a tesztelni kívánt modellek pontosságát tudjuk mérni) is a kutatáshoz tartoznak.
 Ebben a kutatásban erre a problémára törekszünk egy módszertant és keretrendszert kifejleszteni, emellett klaszterezési és klasszifikációs
 gépi tanulási algoritmusokat tesztelni.
-\paragraph{Machine Learning} A gépi tanulás számos különböző típusa létezik, például a felügyelt tanulás, a felügyelet nélküli tanulás és a megerősítő tanulás. A felügyelt tanulásban a modell az adatokon keresztül próbál megtanulni egy adott feladatot. A modellnek az adatok mellett ismert kimeneti értékekre van szüksége, amelyek segítik a modell tanulását és az előrejelzéseket. A felügyelet nélküli tanulásban a modellnek az adatokból kell megtalálnia a mintákat és összefüggéseket anélkül, hogy előzetesen ismert kimeneti értékekre támaszkodna. A megerősítő tanulásban a modell az adatokon és a rendszeren keresztül próbál megtanulni, és visszajelzést kap a teljesítményéről.
-A gépi tanulás nagyon széles körben alkalmazható, például az automatikus beszédfelismerésben, a képfelismerésben, a termékajánlásokban, a pénzügyi előrejelzésekben, az egészségügyben és az üzleti elemzésekben. Az adatok rendelkezésre állása miatt az iparágak és a kutatási területek számos területen használják a gépi tanulást az előrejelzések és a döntéshozatal támogatása érdekében.
-Mi esetünkben forgalomban résztvevő objektumok trajektóriájának osztályozáshoz használjuk ezeket a gépi tanulási algoritmusokat.
+\paragraph{Machine Learning} A gépi tanulás számos különböző típusa létezik, például a felügyelt tanulás, a felügyelet nélküli tanulás és a megerősítő tanulás. 
+\paragraph{A felügyelt tanulásban} a modell az adatokon keresztül próbál megtanulni egy adott feladatot. A modellnek az adatok mellett ismert kimeneti értékekre van szüksége, amelyek segítik a modell tanulását és az előrejelzéseket. 
+\paragraph{A felügyelet nélküli tanulásban} a modellnek az adatokból kell megtalálnia a mintákat és összefüggéseket anélkül, hogy előzetesen ismert kimeneti értékekre támaszkodna. 
+\paragraph{A megerősítő tanulásban} a modell az adatokon és a rendszeren keresztül próbál megtanulni, és visszajelzést kap a teljesítményéről.
+\paragraph{A gépi tanulás nagyon széles körben alkalmazható} például az automatikus beszédfelismerésben, a képfelismerésben, a termékajánlásokban, a pénzügyi előrejelzésekben, az egészségügyben és az üzleti elemzésekben. Az adatok rendelkezésre állása miatt az iparágak és a kutatási területek számos területen használják a gépi tanulást az előrejelzések és a döntéshozatal támogatása érdekében.
+\paragraph{Mi esetünkben} forgalomban résztvevő objektumok trajektóriájának osztályozáshoz használjuk ezeket a gépi tanulási algoritmusokat.
 A forgalomban fellelhető szabályosságokat, unsupervised tanulási módszerrel, úgynevezett klaszterezéssel határozzuk meg. Erre a feladatra KMeans, BIRCH \cite{10.1145/233269.233324} és DBSCAN \cite{10.5555/3001460.3001507}\cite{10.1145/3068335}, OPTICS \cite{10.1145/304181.304187} algoritmusokat teszteltük.
-A klaszterezés során az objektumok be- és kimeneti pontjai szolgálnak bemenetként az algoritmusoknak, az algoritmusok által meghatározott trajektória klaszterek lesznek a klasszifikáció tanításására felhasznált osztályok.
+\paragraph{A klaszterezés} során az objektumok be- és kimeneti pontjai szolgálnak bemenetként az algoritmusoknak, az algoritmusok által meghatározott trajektória klaszterek lesznek a klasszifikáció tanításására felhasznált osztályok.
 A klaszterezési lépés felgyorsítja a klasszifikációs modellek tanítását, mivel a trajektóriák osztályokba sorolását kézzel is el lehetne végezni, ami nagy adathalmazok esetén nagyon hoszzú idő lenne.
-A klasszifikáció egy supervised tanulási módszer, amihez mi bináris klasszifikációs modelleket kombinálunk, ami magas osztályszámnál, ami a mi esetünkben átlagosan 10-15 között volt, igen hatékony. Minden bináris modellnél, egy osztály az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot alkalmaztunk, amik az \emph{Accuracy Score}, \emph{Balanced Accuracy Score} \cite{10.1109/ICPR.2010.764} és \emph{Top-k Accuracy Score}.
+\paragraph{Az osztályozás} egy supervised tanulási módszer, amihez mi bináris klasszifikációs modelleket kombinálunk, ami magas osztályszámnál, ami a mi esetünkben átlagosan 10-15 között volt, igen hatékony. Minden bináris modellnél, egy osztály az összes többivel szemben van betanítva. A modellek pontosságának kiértékelésére 3 mérőszámot alkalmaztunk, amik az \emph{Accuracy Score}, \emph{Balanced Accuracy Score} \cite{10.1109/ICPR.2010.764} és \emph{Top-k Accuracy Score}.
 Mindegyik mérőszám kiszámolásához \emph{K-Fold Cross-Validation} \cite{Anguita2012TheI} metódust alkalmaztunk, ahol \begin{math}K=5\end{math}.
 
 % \begin{figure}
@@ -183,8 +193,8 @@ Mindegyik mérőszám kiszámolásához \emph{K-Fold Cross-Validation} \cite{Ang
 
 \paragraph{A tanító adatok} előállításához, objektumok detektálására a YOLOv7 \cite{wang2022yolov7} konvolúciós neurális hálót használtuk, ez a konvolúciós neurális háló architektúra nem csak nagy pontosságot, hanem sebességet is nyújt nekünk.
 Emellett képkockáról képkockára követni is kell tudni a detektált objektumokat. Erre is sok megoldás található manapság, erre a feladatra
-a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez kálmán filtert és konvolúciós neurális hálót használ az objektumok követésére.
-A tanító adatok 5 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
+a DeepSORT \cite{Wojke2018deep} nevezetű algoritmust használtuk, ez Kálmán-filtert és konvolúciós neurális hálót használ az objektumok követésére.
+\paragraph{A tanító adatok} 5 különböző helyszín forgalmát tartalmazzák. Minden helyszín más tulajdonságokkal bír, ezért nem lehet generalizálni
 a tanítási folyamatot, nem lehet egy univerzális modellt betanítani ami minden közlekedési helyszínre alkalmazható egyaránt.
 4 videót Bellevue város github oldaláról gyűjtöttük, amiknek az elérhetőségét függelékként csatoljuk, a kereszteződések
 \ref{fig: BellevueNewport}. \ref{fig: BellevueEastgate}. \ref{fig: BellevueNE}. \ref{fig: BellevueSE}. képeken láthatók, az ötödik videó La Grange-ból származik lásd \ref{lagrangekynorth}. A videók pontos elérhetőségét
@@ -216,7 +226,8 @@ a mellékletben található \emph{urls.txt}-ben adtuk meg.
 \end{figure}
 
 \newpage
-\section{Kapcsolódó kutatások}
+\section{Felhaszált módszerek}
+\subsection{Kapcsolódó kutatások} 
 Sok ITS-el kapcsolatos kutatásban tárgyalják a forgalom folyás (traffic flow) előrejelzését. \cite{PAUL2017177} összehasonlítja az eddig
 kutatott és használt modellek, mint például Kálmán-szűrő, k-nearest neighbor (k-NN), mesterséges neurális hálók, stb., pontosságát és
 sebességét, ezen modellek továbbkutatását, mivel egyre növekednek a különböző szenzorok által  begyűjtött traffic flow adatok, így ez a terület belépett
@@ -264,12 +275,13 @@ Legfrissebb változata a Yolov7 felülmúlja sebességben és pontosságban a mo
     \label{fig:Yolov7chart}
 \end{figure}
 \subsection{DeepSORT}
-% A YOLO algoritmus előnye, hogy nagyon gyors és hatékonyan kezeli az objektumok lokalizálását és azok osztályozását. Az algoritmus gyakran jobb teljesítményt nyújt, mint a hasonló módszerek, és a különböző objektumokat a bemeneti képen gyorsan és hatékonyan azonosítja. Azonban az YOLO algoritmus hibázhat, ha az objektumok nagyon hasonlóak egymáshoz vagy a háttérhez, és nagyobb hibát eredményezhet, ha az objektumok nagyon kicsik a képen.
-A DeepSORT algoritmus működése a következő lépésekből áll:
+\paragraph{DeepSORT (Deep Learning to Track Multi-Object in Video Sequences)} egy objektumkövetési algoritmus, amely a Deep Learning és a SORT (Simple Online and Realtime Tracking) algoritmusokat kombinálja. A DeepSORT algoritmus célja, hogy pontosan kövesse az objektumokat a videófelvételen, és azonosítsa azokat egyedi azonosítókkal.
+Ez egy kiterjesztése a SORT (Simple Online and Realtime Tracking) algoritmusnak, amely az egymást követő képkockákban található detekciókhoz való társításon alapul a magyar algoritmus segítségével.
+\paragraph{A DeepSORT algoritmus működése a következő lépésekből áll:}
 \begin{enumerate}
     \item Objektumdetektálás: Az algoritmus először objektumdetektálással azonosítja az összes objektumot a videófelvételen, például a YOLO objektumdetektáló algoritmust használva.
     \item Jellemzők kinyerése: A DeepSORT az objektumok jellemzőit (pl. méret, sebesség, szín) kinyeri, hogy a következő lépésben a következő objektumot azonosítani tudja.
-    \item Objektumazonosítás: Az algoritmus használ egy "tracklet" nevű algoritmust, hogy azonosítsa és kövesse az objektumokat az időben. A "tracklet" az objektum jellemzőit használja, hogy azonosítsa az adott objektumot a videófelvétel további részein.
+    \item Objektumazonosítás: Az algoritmus használ egy ``tracklet" nevű algoritmust, hogy azonosítsa és kövesse az objektumokat az időben. A ``tracklet" az objektum jellemzőit használja, hogy azonosítsa az adott objektumot a videófelvétel további részein.
     \item Címkézés: Az objektumokat azonosítják egyedi azonosítókkal, hogy az algoritmus megkülönböztethesse azokat az egyes videófelvételeken.
     \item Korszakosítás: A DeepSORT algoritmus általánosan a Kálmán-szűrőt használja, amely folyamatosan frissíti az objektumok helyzetének becslését. A Kálmán-szűrő segít az algoritmusnak megjósolni az objektumok további helyzetét a videófelvétel során.
 \end{enumerate}
@@ -286,7 +298,7 @@ A kutatás során saját adathalmazok kialakítására volt szükség. Az adatok
 fejlesztettünk ki. A szoftver keretrendszert python nyelven írtuk meg, a forráskód ezen a linken megtatlálható \url{http://github.com/Pecneb/computer_vision_research}.
 A fejlesztés során a következő programkönyvtárakat használtuk OpenCV \cite{opencv_library}, Numpy \cite{harris2020array}, Pandas \cite{reback2020pandas},
 Scikit-Learn \cite{scikit-learn}, Matplotlib \cite{Hunter:2007}, SQLite \cite{sqlite2020hipp}, Joblib \cite{joblib_library}. Az adathalmazokat SQLite adatbázisban és
-joblib fájlokban tároltuk el. 
+joblib fájlokban tároltuk el.
 \paragraph{OpenCV} A videók feldolgozásához és a képkockák feldolgozásához használtuk az OpenCV könyvtárat. Az OpenCV egy nyílt forráskódú programkönyvtár, amelyet a gépi látás és a gépi tanulás alkalmazásokhoz fejlesztettek ki. Az OpenCV-t C++ nyelven írták, de támogatja a Python, Java és MATLAB programozási nyelveket is. Az OpenCV-t a BSD licenc alatt terjesztik, és szabadon használható és módosítható.
 \paragraph{Numpy} A Numpy egy Python könyvtár, amelyet a tudományos számításokhoz fejlesztettek ki. A Numpy-t C és Fortran nyelveken írták. A Numpy-t a tudományos számításokhoz, például a mátrixműveletekhez, a mátrixok létrehozásához és a lineáris algebrai műveletekhez használják.
 \paragraph{Pandas} A Pandas egy Python könyvtár, amelyet a nagy teljesítményű adatelemzéshez és adatmanipulációhoz fejlesztettek ki. Numpy könyvtárra épül.
@@ -353,8 +365,8 @@ akkor a képarány \begin{math}r = \frac{w}{h}\end{math}, és az eltárolt koord
 \begin{equation}a_{x_c} = \frac{a_{xc0}}{w} \cdot r, a_{y_c} = \frac{a_{yc0}}{w} \cdot r\end{equation}.
 
 \paragraph{Python osztályok} A python osztályokhoz a python beépített Dataclass könyvtárat használtam, ami sok boilerplate kódot spórol meg.
-Detektálások és Trajektóriák reprezentálására, összehasonlítására és numpy-vel való műveletekre nagyon hasznos. 
-\paragraph{Python Detection osztály} 
+Detektálások és Trajektóriák reprezentálására, összehasonlítására és numpy-vel való műveletekre nagyon hasznos.
+\paragraph{Python Detection osztály}
 \begin{minted}{python}
     @dataclass
     class Detection:
@@ -477,6 +489,55 @@ interface-t.
 Az objektum detektálási és követése pipeline-t egy objektum orientált megközelítéssel valósítottam meg. A programban 4 fő osztályt hoztam létre. A osztály architektúra diagramja \ref{fig:ClassDiagram} ábrán látható.
 A részletes implementációs dokumentáció a mellékletben található. A forráskód pedig a korábban említett github oldalon található \url{http://github.com/Pecneb/computer_vision_research}.
 \paragraph{Yolov7} osztály felelős a képek előfeldolgozásáért, az objektumok detektálásálért, majd utófeldolgozásáért.
+Az előfeldolgozáshoz írt saját kódban (\textit{preprocess()}) az opencv-vel bekért képeket a Yolov7 által elvárt formátumra alakítom.
+A Yolov7 640x640-es képeket vár, ezért a képeket erre a méretre skálázom.
+\begin{minted}{python3}
+def preprocess(self, img0: np.ndarray) -> np.ndarray:
+    # Padded resize
+    if len(img0.shape) == 3:  # check for single image
+        self._logger.debug(f"Input image shape: {img0.shape}")
+        img = letterbox(img0, new_shape=self.imgsz, stride=self.stride)[0]
+        img = np.expand_dims(img, axis=0)
+    else:  # check for multiple images as input
+        img = [letterbox(x, new_shape=self.imgsz, stride=self.stride)[
+            0] for x in img0]
+    img = np.stack(img, 0)
+    # Convert
+    # BGR to RGB, to 3x640x640
+    img = img[:, :, :, ::-1].transpose(0, 3, 1, 2)
+    # store img in memory in on place, not in segments for faster lookup
+    img = np.ascontiguousarray(img)
+    return img
+\end{minted}
+
+Az utófeldolgozásnál (\textit{postprocess()}) a meghatározott konfidencia érték és IoU (Intersection over Union) érték alapján szűröm a detektálásokat.
+A neurális háló a képen detektált objektumok keretét, az objektumok osztályát és a detektálás konfidencia értékét adja vissza.
+Az objektum kereteket a kép méretére skálázom, hogy később ki tudjam rajzolni a képre.
+\begin{minted}{python3}
+def postprocess(
+    self, 
+    pred: torch.Tensor, 
+    im0: np.ndarray, 
+    im: np.ndarray, 
+    show: bool = True) -> List:
+    _pred = non_max_suppression(
+        pred, conf_thres=self.conf_thres, iou_thres=self.iou_thres)
+    detections_adjusted = []
+    for det in _pred:
+        if len(det):
+            det[:, :4] = scale_coords(
+                im.shape[1:], det[:, :4], im0.shape).round()
+            for *xyxy, conf, cls in det:
+                if show:
+                    plot_one_box(xyxy, im0, label=self.names[int(
+                        cls)], color=self.colors[int(cls)], line_thickness=3)
+                # convert to center coords, width, height format
+                bbox = xyxy2xywh(torch.tensor(xyxy).view(1, 4))
+                label = self.names[int(cls)]
+                detections_adjusted.append(
+                    [label, conf.item(), bbox[0, :].numpy()])
+    return detections_adjusted
+\end{minted}
 \paragraph{DeepSORT} osztály felelős a detektálások követéséért, és a trajektóriák kialakításáért.
 \paragraph{TrajectoryNet} osztály kezeli az általunk tanított gépi tanulási modelleket, a feature vektorok előállítását és osztályozást.
 \paragraph{Detector} osztály fogja össze az előbb felsorolt osztályokat. Inicializálja a bemeneti és kimeneti adatokat. Végig itertál a videó képkockáin és futtatja a detektáló és követő algoritmusokat.
@@ -500,7 +561,7 @@ A részletes implementációs dokumentáció a mellékletben található. A forr
 \subsection{Implementáció dokumentálása}
 A programok dokumentálására a Sphinx \cite{brandl2021sphinx} keretrendszert használtuk. A Sphinx egy dokumentációs generátor, amely a megfelelően dokumentált
 Python kódból (ezalatt a Python nyelvhez tartozó dokumentációs sztringeket értjük) HTML és Latex dokumentációt készít. Egy ilyen dokumentációs sztringre példa.
-
+A generált dokumentáció a mellékletben található.
 \begin{minted}{python}
    def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
     """
@@ -537,8 +598,8 @@ megtalálni az egymáshoz közeli, hasonló trajektóriákat.
 \subsection{Adattisztítás}
 A klaszterezés előtt a nyers adatokat fel kell dolgoznunk, hogy az esetleges hibás, zajos detektálások, trajektóriák miatt
 kapjunk fals klasztereket. Az objektum detektálás és követés nem tökéletes, rossz fényviszonyok, hosszabb eltakarások miatt
-a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három általam implementált szűrő algoritmust használtam  
-az adathalmazon. 
+a trajektóriák megszakadhatnak, ezért ki kell választani az egyben maradt trajektóriákat. Három általam implementált szűrő algoritmust használtam
+az adathalmazon.
 \paragraph{Trajektória hossz} Elsőnek a trajektóriák belépő és kilépő pontjainak az euklideszi távolsága alapján szűrtünk. Ezzel a szűréssel a zajos, félbeszakadt trajektóriákat szűrjük ki.
 \begin{minted}{python}
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
@@ -553,8 +614,9 @@ def filter_out_false_positive_detections_by_enter_exit_distance(
 \end{minted}
 Itt az euklideszi távolságot saját magam implementáltam, mert ez a megoldás bizonyult a leggyorsabbnak egyszerű, két 2 dimenziós pont között.
 A numpy-nak több féle megoldását és a scipy könyvtárban található távolságszámítást is kipróbáltam, de ezek lassabbnak bizonyultak.
-A méréshez a \textit{timeit} könyvtárat használtam. A mérés eredményeit a \ref{fig:EuclideanDistance} ábrán láthatjuk. A méréshez minden módszert $1000000$ alkalommal futtattam le, és az átlagot vettem. 
-Az $own$ címke jelenti a saját implementáció áltagos futás idejét. A forrás kód a következő a numpy és scipy könyvtárakat használó függvényekhez:
+A méréshez a \textit{timeit} könyvtárat használtam. A mérés eredményeit a \ref{fig:EuclideanDistance} ábrán láthatjuk. A méréshez minden módszert $1000000$ alkalommal futtattam le, és az átlagot vettem.
+Az $own$ címke jelenti a saját implementáció áltagos futás idejét.
+A forrás kód a következő a numpy és scipy könyvtárakat használó függvényekhez:
 \newpage
 \begin{minted}{python}
 def euclidean_distance(a, b):
@@ -615,7 +677,7 @@ def filter_out_edge_detections(trackedObjects, threshold):
 Kutatásunk során azt tapasztaltuk, hogy a DeepSORT és a YOLO pontatlanságai felerősítik egymást. A YOLO hajlamos néha táblákat
 vagy rendőrlámpákat autóknak nézni, és ekkor a DeepSORT is elkezdi követni. Egy olyan hibáját is felfedeztük a DeepSORT-nak, hogy
 egy objektumról áttapad a követés egy másik objektumra, ami fals trajektóriákat hoz létre. A DeepSORT-nak lehet finomhangolni a
-paramétereit, ami nem bizonyult akkora javulásnak, ezért utólagos szűréssel kellett korrigálnunk ezt a hibát. 
+paramétereit, ami nem bizonyult akkora javulásnak, ezért utólagos szűréssel kellett korrigálnunk ezt a hibát.
 \paragraph{Áttapadásos zaj szűrése} Az algoritmus végig iterál a trajektóriák pontjain és kiszámítja az egymást követő detektálások euklideszi távoláságát, és ha egy küszöbérték felett vannak, akkor eldobjuk a trajektóriát.
 Ez azért szükséges, mert a DeepSORT képes egymás közeli objektumokat összekeverni, és egyik objektumról a másikra áttapadni, ami hibás trajektóriákat eredményez.
 A következő képeken láthatók a klaszterek szűrés előtt és után (lásd \ref{fig: Klaszterezés szűrő} \ref{fig: Klaszterezés szűrő2} \ref{fig: Klaszterezés szűrő3}), ahol a bal oldali oszlop reprezentálja a szűrés előtti klasztereket, a jobb oldali oszlop pedig a szűrés utáni klasztereket.
@@ -646,11 +708,11 @@ A következő képeken láthatók a klaszterek szűrés előtt és után (lásd 
 \end{figure}
 
 \subsubsection{Yolov7 paraméterek}
-A Yolo-nak főbb paraméterei a konfidencia és az IoU (Intersection over Union). A konfidencia azt jelenti, hogy a neurális hálózat mennyire biztos abban, hogy az adott objektumot azonosította. 
+A Yolo-nak főbb paraméterei a konfidencia és az IoU (Intersection over Union). A konfidencia azt jelenti, hogy a neurális hálózat mennyire biztos abban, hogy az adott objektumot azonosította.
 Az IoU pedig azt jelenti, hogy a neurális hálózat mennyire biztos az objektum helyzetében. Ezen paraméterek finomhangolásával is javítani lehet a zajos detektálásokon és trajektóriákon.
 
 \subsection{Feature vektorok}
-Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y], de a kifejlesztett szűrő hatékonyab-bnak bizonyult, és a kevesebb dimenzió is előnyt jelent, ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
+Klaszterezéshez 4 és 6 dimenziós feature vektorokat használ-tunk. A 6 dimenziós vektorokat a DeepSORT hibájának a kiszűrésére hoztuk létre, felépítésük a következő [belépő x,y középső x,y kilépő x,y], de a kifejlesztett szűrők hatékonyabbaknak bizonyult, és a kevesebb dimenzió is előnyt jelent, ezért maradtunk a 4 dimenziós feature vektor mellett, aminek a felépítése: [belépő x,y kilépő x,y].
 \subsection{Klaszterezési algoritmusok}
 Klaszterezéshez több fajta algoritmust teszteltünk. A legjobb eredményeket az OPTICS (Ordering Points To Identify the Clustering Structure) \cite{10.1145/304181.304187} algoritmus adta.
 Aminek az eredményei a fenti képeken látható (lásd. \ref{fig: Bad clusters}). A képen bal oldalon láthatók rendre a KMeans, DBSCAN és BIRCH által rendezett klaszterek, a jobb oldalon pedig az OPTICS által rendezett klaszterek. Az utolsó sorban a BIRCH eredménye látható, ahol két klasztert egybevont, amit az OPTICS meg tudott különböztetni.
@@ -671,7 +733,7 @@ Elbow diagramok segítségével próbáltuk eldönteni, hogy milyen értéket é
 A mérőszámok konzisztensen alacsony értéket adtak, egy négyágú kereszteződésnél, ahol jóval több klaszterbe sorolhatók a trajektóriák. A KMeans használatát
 ezért elvetettük.
 
-\begin{figure}
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.7\columnwidth]{elbow/elbow_on_kmeans_2-16_metric_calinski-harabasz_thresh_0.5.png}
     \centering
@@ -683,17 +745,50 @@ ezért elvetettük.
     \label{fig: Elbow diagramok}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=0.65\columnwidth]{bad_clustering/example_kmeans_vs_optics.png}
-    \centering
-    \includegraphics[width=0.65\columnwidth]{bad_clustering/example_birch_vs_optics.png}
-    \centering
-    \includegraphics[width=0.65\columnwidth]{bad_clustering/example_dbscan_vs_optics_merged_cluster.png}
-
-    \caption{KMeans, BIRCH, DBSCAN vs OPTICS}
-    \label{fig: Bad clusters}
+\begin{figure}[htbp]
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{KMeans/n_cluster_0_n_tracks_256.png}
+        \caption{KMeans csoport}
+        \label{fig:kmeans_cluster}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{OPTICS/n_cluster_4_n_tracks_186.png}
+        \caption{OPTICS csoport}
+        \label{fig:optics_cluster}
+    \end{minipage}
 \end{figure}
+
+\begin{figure}[htpb]
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{Birch/n_cluster_3_n_tracks_608.png}
+        \caption{BIRCH csoport}
+        \label{fig:birch_cluster}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=1\linewidth]{OPTICS/n_cluster_4_n_tracks_186.png}
+        \caption{OPTICS csoport alulról felfelé}
+        \label{fig:optics_cluster_2}
+        \includegraphics[width=1\linewidth]{OPTICS/n_cluster_1_n_tracks_587.png}
+        \caption{OPTICS csoport jobbról balra}
+        \label{fig:optics_cluster_3}
+    \end{minipage}
+\end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.65\columnwidth]{bad_clustering/example_kmeans_vs_optics.png}
+%     \centering
+%     \includegraphics[width=0.65\columnwidth]{bad_clustering/example_birch_vs_optics.png}
+%     \centering
+%     \includegraphics[width=0.65\columnwidth]{bad_clustering/example_dbscan_vs_optics_merged_cluster.png}
+
+%     \caption{KMeans, BIRCH, DBSCAN vs OPTICS}
+%     \label{fig: Bad clusters}
+% \end{figure}
 
 \paragraph{A BIRCH (Balanced Iterative Reducing and Clustering using Hierarchies)}  egy gyors és hatékony hierarchikus klaszterezési algoritmus, amelyet nagy mennyiségű adat gyors csoportosítására fejlesztettek ki. Az algoritmus célja, hogy az adatokat összesítse a memóriában, és a klaszterek készítése során ne kelljen minden adatpontot az egész adathalmazon végigvinni.
 Az algoritmus a következő lépésekből áll:
@@ -721,15 +816,16 @@ Az OPTICS algoritmus lépései a következők:
     \item Válasszunk ki egy véletlenszerű adatpontot, amely még nem került klaszterezésre.
     \item Megkeresi az összes szomszédos adatpontot, és kiszámítja a távolságot az adott adatponttól.
     \item A szomszédos adatpontokat távolság és sűrűség szerint rednezi.
-    \item Létrehoz egy "optikai" sorrendet, amelyben az adatpontokat rendezzük a távolságuk és a sűrűségük szerint. Ez lehetővé teszi, hogy az algoritmus később könnyebben megtalálja a klasztereket és a zajokat.
+    \item Létrehoz egy ``optikai" sorrendet, amelyben az adatpontokat rendezzük a távolságuk és a sűrűségük szerint. Ez lehetővé teszi, hogy az algoritmus később könnyebben megtalálja a klasztereket és a zajokat.
     \item Ha az adatpontot egy klaszterhez lehet rendelni, akkor adjuk hozzá a klaszterhez.
     \item A folyamatot megismétli az összes nem klaszterezett adatpontra.
 \end{enumerate}
 Az OPTICS algoritmus előnye, hogy lehetővé teszi a klaszterek és a zajok meghatározását egyaránt, és további információkat is szolgáltat az adathalmaz klaszterezett struktúrájáról, mint például a klaszterek hierarchiájáról és a klaszterek közötti távolságról. Az OPTICS azonban az adathalmazok nagy méretű és magas dimenziós esetében nagyon lassú lehet, és sok erőforrást igényelhet a klaszterezéshez.
+Esetünkben azért választottuk az OPTICS-ot a DBSCAN-nel szemben mert az OPTICS még mindig jobban skálázható nagyobb adathalmazokra, és a klaszterek hierarchiáját is meg tudja határozni, ami a későbbi osztályozásnál hasznos lehet.
 
 Paraméterezésben a DBSCAN annyiban különbözik az OPTICS-tól, hogy $max\_eps$ paraméter helyett, ami egy távolság tartományt ad meg, az $eps$ paramétert használja, ami pontos távolságot ad meg.
 
-A \ref{fig: Bad clusters}. képen, a KMeans, BIRCH, DBSCAN klasztereit állítjuk szembe az OPTICS által rendezett klaszterekkel. Látható, hogy az OPTICS, nagyon hatékonyan tudta kiszűrni a zajos trajektóriákat, és nem vont egybe kimeneti vagy bemeneti klasztereket.
+A \ref{fig:kmeans_cluster}. \ref{fig:optics_cluster}. \ref{fig:birch_cluster}. \ref{fig:optics_cluster_2}. \ref{fig:optics_cluster_3}. képeken, a KMeans, BIRCH klasztereit állítjuk szembe az OPTICS által rendezett klaszterekkel. Látható, hogy az OPTICS, nagyon hatékonyan tudta kiszűrni a zajos trajektóriákat, és nem vont egybe kimeneti vagy bemeneti klasztereket.
 
 \subsection{Paraméterek kiválasztása}
 A megfelelő paraméterek kiválasztása a klaszterezéshez igen fonzosnak bizonyult. Ezt a gyűjtött adathalmazokon kézzel kellett finomhangolnunk.
@@ -737,7 +833,7 @@ A halmazok minimum számosságát a \begin{math}min\_samples\end{math} paraméte
 felső határát \begin{math}max\_eps\end{math}-el lehet megadni. Az távolság kiszámítására használt metódust \begin{math}metric\end{math}-el
 lehet megadni. A \begin{math}xi\end{math} paraméterrel az elérési plot minimum meredekségét lehet megadni, ami a klaszterek határát szabja meg.
 Az adathalmazra alkalmazható megfelelő paramétereket nem tudtuk generalizálni, kézzel kellett finomhangolnunk. A plotokon látható klaszterek
-megtalálásához \begin{math}min\_samples=50\end{math}, \begin{math}max\_eps=0.1\end{math}, \begin{math}metric='minkowski'\end{math} és \begin{math}xi=0.15\end{math}
+megtalálásához \begin{math}min\_samples=100\end{math}, \begin{math}max\_eps=0.15\end{math}, \begin{math}metric='minkowski'\end{math} és \begin{math}xi=0.15\end{math}
 paramétereket használtunk.
 
 \newpage
@@ -786,28 +882,28 @@ A képeken zölddel jelöltük a bemeneti pontokat és pirossal a kimeneti ponto
     \centering
     \begin{subfigure}{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{clustering/KMeansPooling/cluster_0.png}
+        \includegraphics[width=\textwidth]{clustering/KMeansPoolingv2/cluster_0.png}
         \caption{Klaszter 1}
         \label{fig:cluster1}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{clustering/KMeansPooling/cluster_1.png}
+        \includegraphics[width=\textwidth]{clustering/KMeansPoolingv2/cluster_1.png}
         \caption{Klaszter 2}
         \label{fig:cluster2}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{clustering/KMeansPooling/cluster_2.png}
+        \includegraphics[width=\textwidth]{clustering/KMeansPoolingv2/cluster_2.png}
         \caption{Klaszter 3}
         \label{fig:cluster3}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{clustering/KMeansPooling/cluster_3.png}
+        \includegraphics[width=\textwidth]{clustering/KMeansPoolingv2/cluster_3.png}
         \caption{Klaszter 4}
         \label{fig:cluster4}
     \end{subfigure}
@@ -821,12 +917,12 @@ A képeken zölddel jelöltük a bemeneti pontokat és pirossal a kimeneti ponto
 A több osztályos klasszifikálás egy olyan feladat, amikor több mint 2 osztály van, és minden feature vektor csak egy osztályba tartozhat. Az alapvető megközelítés a többosztályos klasszifikációra az, hogy a modell tanítása során az összes lehetséges kategóriát együttesen kell figyelembe venni. Ez azt jelenti, hogy minden egyes kategóriát egy külön osztályként kell kezelni, és a modell tanulásakor figyelembe kell venni az összes osztályt. Az osztályozó modell célja, hogy az adathalmazból kiválasztott jellemzők és az osztályok közötti kapcsolatok alapján olyan döntési fát vagy osztályozó algoritmust hozzon létre, amely képes az új adatok osztályozására. A multiclass klasszifikációhoz különböző algoritmusok használhatók, például a Random Forest, Support Vector Machine (SVM), k-Nearest Neighbor (kNN), Decision Tree és Deep Neural Network (DNN). A megfelelő algoritmus kiválasztása az adathalmaz méretétől, dimenziójától, a célkitűzésektől és az adatok jellegétől függ.
 A Multiclas klasszifikáció kevesebb osztály számnál jó eredeményt adhat, a mi esetünkben 10-15 osztály is lehet, ami azt jelenti, hogy nem lehet elérni nagy pontosságot. Ennyi osztály közül nehéz pontosan eltalálni, melyik osztályba tartozik egy trajektória.
 \subsection{Binary}
-A binary (kétosztályos) klasszifikáció egy olyan gépi tanulási probléma, amelyben az adathalmazban szereplő objektumokat vagy eseményeket két kategóriába kell osztályozni. Például megkülönböztethetjük a "spam" és "nem spam" leveleket, vagy az "egészséges" és "beteg" betegeket az orvosi diagnózisban.
+A binary (kétosztályos) klasszifikáció egy olyan gépi tanulási probléma, amelyben az adathalmazban szereplő objektumokat vagy eseményeket két kategóriába kell osztályozni. Például megkülönböztethetjük a ``spam" és ``nem spam" leveleket, vagy az ``egészséges" és ``beteg" betegeket az orvosi diagnózisban.
 Az alapvető megközelítés a binary klasszifikációra az, hogy az osztályozó modell olyan döntési határt hoz létre az adathalmazban található adatok és az osztályok között, amely megkülönbözteti az egyik kategóriába tartozó adatokat a másiktól. Ennek az eredménye egy bináris predikció, amely azt jelzi, hogy egy adott adat az egyik vagy a másik kategóriába tartozik.
 \subsection{OneVsRest}
-A One-vs-Rest (OvR), más néven One-vs-All (OvA) klasszifikáció egy olyan többosztályos osztályozási technika, amelynek célja, hogy különböző osztályok között megkülönböztetést végezzen. Az OvR-ben a különböző osztályok közötti különbségeket az egyik osztályhoz képest határozzák meg. Ezt az osztályt "egy" osztálynak nevezik, és a többi osztályt "a többi" osztályoknak.
+A One-vs-Rest (OvR), más néven One-vs-All (OvA) klasszifikáció egy olyan többosztályos osztályozási technika, amelynek célja, hogy különböző osztályok között megkülönböztetést végezzen. Az OvR-ben a különböző osztályok közötti különbségeket az egyik osztályhoz képest határozzák meg. Ezt az osztályt ``egy" osztálynak nevezik, és a többi osztályt ``a többi" osztályoknak.
 Az OvR algoritmusban egy osztályozó modellt hoznak létre minden egyes osztály és a többi osztályok közötti megkülönböztetésre. Ez azt jelenti, hogy ha van például 5 osztályunk, akkor 5 különböző bináris klasszifikátorra van szükségünk, amelyek mindegyike egy adott osztályt különböztet meg a többi osztálytól.
-A bináris osztályozók által létrehozott modellt használják az osztályozásra. Az osztályozó modellnek két kimenete van, "1" vagy "0". Ha a modell kimenete "1", akkor az adott minta az adott osztályhoz tartozik, ha a kimenete "0", akkor az adott minta nem tartozik az osztályhoz.
+A bináris osztályozók által létrehozott modellt használják az osztályozásra. Az osztályozó modellnek két kimenete van, ``1" vagy ``0". Ha a modell kimenete ``1", akkor az adott minta az adott osztályhoz tartozik, ha a kimenete ``0", akkor az adott minta nem tartozik az osztályhoz.
 Az OvR osztályozó előnye, hogy egyszerűen használható, mivel csak bináris osztályozókat kell alkalmazni minden egyes osztályra, és használható, ha az osztályok közötti határok nincsenek jól meghatározva.
 \subsection{Machine Learning modellek}
 Kutatásunk során több féle machine learning modellt teszteltünk: KNN (KNearesNeighbors), GNB (GaussianNaiveBayes), MLP (MultiLayerPerceptron),
@@ -1010,7 +1106,7 @@ Az SVM algoritmus működése a következő lépésekből áll:
     \item Osztályozás: Az algoritmus az új adatokat a hipersíkon való pozíciójuk alapján osztályozza. Az algoritmus eldönti, hogy az új adat melyik oldalon található a határvonalon.
 \end{enumerate}
 Az SVM előnye, hogy jól működik a magas dimenziós adatokon és olyan feladatokon, ahol az osztályok közötti határok nem lineárisak. Az SVM továbbá rendkívül hatékony az outlier-ek kezelésében, mivel csak azok a pontok határozzák meg a határvonalat, amelyek a legközelebb vannak hozzá. Az SVM azonban egy nehézkes algoritmus, amelynek tanítása hosszabb ideig tart, ha nagy adathalmazokat kell kezelni. Az algoritmus hiperparamétereinek finomhangolása továbbá kihívást jelenthet, különösen ha nem rendelkezünk megfelelő előzetes tudással az adathalmazról.
-\paragraph{SVM Paraméterek} Több féle "kernel function" - szűrő - közül választhatunk, ami lehet lineáris, polinomiális, exponenciális stb. Mi az RBF (Radial Basis Function) exponenciális szűrőt használtuk, aminek két fő paramétere van: $C$ és $\gamma$. $C$ az SVM egy általános paramétere, ami másik szűrők használatakor is jelen van. Ez a paraméter határozza meg mennyire legyen elsimítva az osztályok közötti határ. Alacsony $C$ sima határvonalhoz vezet, amíg a magas $C$ azt okozza, hogy minden tanító adatot pontosan osztályozni tudjon. A $\gamma$ prarméter, azt határozza meg, hogy egy tanító adatnak mekkora befolyása van. Magas $\gamma$ esetén az egymáshoz közelebbi adatok magas befolyással bírnak egymásra. Méréseink során azt tapasztaltuk, hogy az SVM tényleg gyors és hatékony, még nagy tanító halmaz mellett is.
+\paragraph{SVM Paraméterek} Több féle ``kernel function" - szűrő - közül választhatunk, ami lehet lineáris, polinomiális, exponenciális stb. Mi az RBF (Radial Basis Function) exponenciális szűrőt használtuk, aminek két fő paramétere van: $C$ és $\gamma$. $C$ az SVM egy általános paramétere, ami másik szűrők használatakor is jelen van. Ez a paraméter határozza meg mennyire legyen elsimítva az osztályok közötti határ. Alacsony $C$ sima határvonalhoz vezet, amíg a magas $C$ azt okozza, hogy minden tanító adatot pontosan osztályozni tudjon. A $\gamma$ prarméter, azt határozza meg, hogy egy tanító adatnak mekkora befolyása van. Magas $\gamma$ esetén az egymáshoz közelebbi adatok magas befolyással bírnak egymásra. Méréseink során azt tapasztaltuk, hogy az SVM tényleg gyors és hatékony, még nagy tanító halmaz mellett is.
 
 \paragraph{A Decision Tree (döntési fa)} egy olyan algoritmus, amely a bemeneti adatok alapján egy hierarchikus fastruktúrát hoz létre. Az ilyen fastruktúra minden csomópontjában egy adatfajta tulajdonsága áll, és a levélcsomópontokban pedig a végleges osztálycímkék találhatók. A döntési fában minden ág egy adott tulajdonság értékét reprezentálja, és a fa felépítése során az algoritmus igyekszik minél jobban felosztani a bemeneti adatokat az osztályok között.
 A Decision Tree osztályozó algoritmus létrehozása során a következő lépések szükségesek:
@@ -1020,7 +1116,7 @@ A Decision Tree osztályozó algoritmus létrehozása során a következő lép�
     \item Fa értékelése: Az értékelés során az algoritmus osztálycímkéket rendel a bemeneti adatokhoz a fa segítségével.
 \end{enumerate}
 A döntési fa osztályozó algoritmus előnye, hogy a modell könnyen értelmezhető és átlátható, így könnyen megérthető, hogy a modell hogyan dönt a különböző osztálycímkékkel kapcsolatban. Az algoritmus továbbá jól alkalmazható kategórikus és numerikus változók kezelésére, valamint skálázható és gyorsan futtatható nagyobb adathalmazokon is.
-Egy döntési fát könnyű vizualizálni és kirajzolni, hisz egyszerű "if-else" logikai elágazásokból épül fel (lásd \ref{DTVis}). Nagy és komplex fák alakulhatnak ki, amik túltanulást eredményezhetnek, és már kis eltérések a tanító halmazban nagy eltéréseket eredményezhetnek a fa logikájában.
+Egy döntési fát könnyű vizualizálni és kirajzolni, hisz egyszerű ``if-else" logikai elágazásokból épül fel (lásd \ref{DTVis}). Nagy és komplex fák alakulhatnak ki, amik túltanulást eredményezhetnek, és már kis eltérések a tanító halmazban nagy eltéréseket eredményezhetnek a fa logikájában.
 
 \begin{figure}[htbp]
     \centering
@@ -1083,20 +1179,112 @@ lehet definiálni:
 \end{equation}
 ahol \begin{math}k\end{math} a megengedett találgatások száma, és \begin{math}1(x)\end{math} a karakterisztikus függvény.
 \subsubsection{Adathalmaz szétválasztás}
-A pontosság méréséhez el kell választanunk egy teszt adatahalmazt a tanító adathalmaztól, mivel ha azon az adathalmazon tesztelünk, amin tanítottunk,
-akkor tökéletes pontosságot kapnánk eredményül. Ezt \emph{Overfitting}-nek hívják. A szétválasztást egy általunk implementált algoritmus végzi, ami véletlen szám generátort használ a
-minták kiválasztásához. Az algoritmusnak meg lehet adni paraméterként a tanító adathalmaz méretét, és egy \emph{seed} értéket, ami azért fontos, hogy meg
-lehessen ismételni a szétválasztást.
+Egy predikciós függvény paramétereit finomhangolni egy adathalmazon, majd tesztelni ugyan azon a halmazon nem jó módszer.
+Ez tökéletes pontosságot eredményezne, de a valóságban, még nem láttot adatokon nem lenne használható. Ezt a hibát túltanításnak - \textit{Overfitting} - hívják.
+Hogy elkerüljük ezt, egy megszokott módszer felügyelt gépi tanulásnál, egy teszt adathalmaz félrerakása amin csak leteszteljük a végső model pontosságát.
+A folyamatot szemléltető ábrán \ref{fig:TrainTestSplit} látható a paraméterek finomhangolása és a tesztelés folyamata.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=.65\columnwidth]{grid_search_workflow.png}
+    \centering
+    \caption{Tanítási folyamat. \href{https://scikit-learn.org/stable/_images/grid_search_workflow.png}{Forrás}}
+    \label{fig:TrainTestSplit}
+\end{figure}
+
 \subsubsection{Cross Validation - Kereszt validáció}
-A túltanítás elkerülése érdekében, alkalmaztunk egy elterjedt metódust a cross-validációt. A cross validáció egy olyan metódus, ahol a tanító adathalmazt
+A fennti problémára megoldás lehet, hogy 3 részre osztjuk az adathalmazt. Egy tanító, egy validációs és egy teszt adathalmazra.
+A tanító adathalmazon tanítjuk be a modellt, a validációs adathalmazon pedig finomhangoljuk a paramétereket, és a teszt adathalmazon teszteljük a modell pontosságát.
+Ez sok esetben az adathalmaz méretének a harmadára csökkenti a tanító adathalmazt, ami nem kívánatos. Ezt a problémát oldja meg a kereszt validáció \ref{fig:KFold}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.65\columnwidth]{grid_search_cross_validation.png}
+    \caption{KFold cross-validation. \href{https://scikit-learn.org/stable/_images/grid_search_cross_validation.png}{Forrás}}
+    \label{fig:KFold}
+\end{figure}
+
+\paragraph{KFold} Egy olyan cross-validation metódus, ahol a tanító adathalmazt
 $k$ részre osztják, ebből a $k$ részből egyet kiválasztanak validációra, így keletkezik egy tanító és validáló adathalmaz. A tanító adathalmazon betanítanak
 egy modellt, aminek a pontosságát megmérik a validáló adathalmazon. Ezt az algoritmust $k$-szor ismétlik meg, úgy hogy minden rész egyszer legyen validáló
-adathalmaz. Ezeknek a méréseknek az átlag pontosságát szokták kiszámolni. A cross-validációból származó eredmények a \ref{table:3}., \ref{table:6} és \ref{table:7}.
-táblázatban mutatjuk be.
+adathalmaz. Ezeknek a méréseknek az átlag pontosságát szokták kiszámolni, és az eredmények alapján finomhangolni a model paramétereit. A cross-validációból származó eredményeket a \ref{table:3}., \ref{table:6} és \ref{table:7} táblázatban mutatjuk be.
+Az általam írt tanító programban lehetőség van vizualizálni az adathalmaz kereszt validációját és csoportok egymáshoz képesti eloszlását, ami a \ref{fig:CrossValDataVisualization} ábrán látható.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.65\columnwidth]{cross_validation_data.png}
+    \caption{Kereszt-validáció adat vizualizáció}
+    \label{fig:CrossValDataVisualization}
+\end{figure}
+
 \subsubsection{Teszthalmazos validáció}
 Hogy meggyőződjünk arról, hogy biztosan nem tanítottuk túl a modellünket, egy olyan teszt adathalmazon is le kell tesztelnünk, amit nem használtunk fel egyszer sem
 cross-validáció alatt tanításra. Ezzel a méréssel bebizonyosodhatunk róla, hogy a modellünkben nincsen bias. A teszthalmazos mérés eredményeit a \ref{table:2}., \ref{table:4} és \ref{table:5}.
 táblázatban mutatjuk be.
+
+\subsubsection{Confusion Matrix - Konfúziós mátrix}
+%TODO confusion matrix magyarázat
+\paragraph{Mi az a konfúziós mátrix?}
+A konfúziós mátrix egy táblázat ami összegzi a helyes és helytelen osztályozásokat egy osztályozó algoritmuson. A konfúziós mátrixot használják a gépi tanulásban, ahol a felügyelt tanulás során az osztályozó algoritmusokat osztályozási feladatokra használják. A konfúziós mátrixot használják a bináris és a többosztályos problémákra is.
+Általában egy négyzetes mátrixként ábrázolják, ahol a sorok a valódi osztályokat, az oszlopok pedig a predikált osztályokat jelölik. A konfúziós mátrixban a főátló azokat az eseteket tartalmazza, amikor a predikció és a valóságos osztály megegyezik. A főátlón kívül a konfúziós mátrix minden cellája azt mutatja, hogy a predikció és a valóságos osztály között hány esetben volt félreértés. A konfúziós mátrixot használják a gépi tanulásban a modell pontosságának mérésére.
+
+\paragraph{Konfúziós mátrix értelmezése}
+Hogy értelmezni tudjuk a konfúziós mátrixot, kezdjünk el a főátlóval. A főátló azt mutatja, hogy a predikció és a valóságos osztály megegyezik. Ezek a true-positive (TP) és true-negative (TN) értékek. A főátlón kívül a konfúziós mátrix minden cellája azt mutatja, hogy a predikció és a valóságos osztály között hány esetben volt félreértés. Ezek a false-positive (FP) és false-negative (FN) értékek.
+\begin{enumerate}
+    \item TP: A predikció pozitív értéket adott vissza, és a valóságos osztály is pozitív.
+    \item TN: A predikció negatív értéket adott vissza, és a valóságos osztály is negatív.
+\end{enumerate}
+
+A főátlón kívül a konfúziós mátrix minden cellája azt mutatja, hogy a predikció és a valóságos osztály között hány esetben volt félreértés. Ezek a false-positive (FP) és false-negative (FN) értékek.
+\begin{enumerate}
+    \item FP: A predikció pozitív értéket adott vissza, és a valóságos osztály negatív.
+    \item FN: A predikció negatív értéket adott vissza, és a valóságos osztály pozitív.
+\end{enumerate}
+
+\paragraph{Miért hasznos a konfúziós mátrix?}
+\begin{enumerate}
+    \item Metrikák számítása: A konfúziós mátrix értékes információkat nyújt a gépi tanulásos osztályozó algoritmusokról, amelyeket felhasználhatunk a modell finomhangolására. A konfúziós mátrix segítségével könnyen megérthetjük, hogy a modellünk hogyan teljesített a teszt adathalmazon, és melyik osztályokat keverte össze. A konfúziós mátrix segítségével könnyen kiszámíthatók a pontossági metrikák, mint például az accuracy, a precision, a recall és az F1-score. A konfúziós mátrix segítségével könnyen megérthetjük, hogy a modellünk hogyan teljesített a teszt adathalmazon, és melyik osztályokat keverte össze.
+    \item Hiba analízis: A konfúziós mátrix segítségével könnyen megérthetjük, hogy a modellünk hogyan teljesített a teszt adathalmazon, és melyik osztályokat keverte össze. Könnyen kideríthetjük, hogy a modellünkben van e bias. Ennek segítségével tudjuk finomhangolni a modellünket feature engineering segítségével.
+    \item Model kiválasztás: Amikor különböző modelleket hasonlítunk össze, a konfúziós mátrix segítségével ki lehet választani a legjobban teljesítő modellt. Egy jó modellnek sűrű a főáltója (TP és TN értékek), és ritka a főátlón kívüli cellákban lévő értékek (pontos), és kevesebb a főátlón kívüli értékek (kevés hiba).
+    \item Adat kiegyenlítetlenség: A konfúziós mátrix segítségével felfedhetjük az osztályok közötti kiegyenlítetlenséget. Ha az osztályok közötti kiegyenlítetlenség nagy, akkor a modellünknek nagy a biasa, és nem fogja jól osztályozni az adatokat. Ezt oversampling és undersampling segítségével, vagy tanításkor az osztályok súlyozásával lehet javítani.
+\end{enumerate}
+
+\paragraph{Konfúziós mátrix vizualizáció}
+A Scikit-Learn segítségével könnyen lehet konfúziós mátrixot vizualizálni. A \ref{fig:ConfusionMatrix}. és \ref{fig:ConfusionMatrixPooled}. ábrákon látható a konfúziós mátrix eredeti és összevont osztályokon.
+A $ConfusionMatrixDisplay$ osztály $from\_predictions()$ metódusának meghívásáal lehet konfúziós mátrixot létrehozni. A valódi és prediktált osztályokat kell megadni paraméterként. A $ConfusionMatrixDisplay$ osztály $plot()$ metódusával lehet kirajzolni a konfúziós mátrixot. A $ConfusionMatrixDisplay$ osztály $savefig()$ metódusával lehet elmenteni a konfúziós mátrixot.
+
+
+\begin{minted}{python3}
+    # calculate confusion matrix
+    confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
+        y_true=Y_fv_test, y_pred=Y_predicted)
+    confusion_matrix_display.ax_.set_title("Confusion Matrix")
+    logger.debug(f"Confusion matrix: {confusion_matrix_display}")
+    confusion_matrix_display.figure_.savefig(
+        os.path.join(args.output, "confusion_matrix.png"))
+    confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
+        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled)
+    confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
+    logger.debug(
+        f"Confusion matrix (pooled): {confusion_matrix_display_pooled}")
+    confusion_matrix_display_pooled.figure_.savefig(
+        os.path.join(args.output, "confusion_matrix_pooled.png")) 
+\end{minted}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=.65\columnwidth]{confusion_matrix.png}
+    \caption{Konfúziós mátrix eredeti osztályokon}
+    \label{fig:ConfusionMatrix}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=.65\columnwidth]{confusion_matrix_pooled.png}
+    \caption{Konfúziós mátrix összevont osztályokon}
+    \label{fig:ConfusionMatrixPooled}
+\end{figure}
+
 \subsubsection{Modellek tárolása}
 A betanított modelleket joblib file-ként tároltam el, amit később python-nal tudunk betölteni. Azért döntöttem a joblib mellett, mert a scikit-learn könyvtár
 is ezt használja, és ezt ajánlják modeljeik eltárolásához.
@@ -1189,8 +1377,13 @@ Az utolso verzióban az óránkénti normalizált értékeket jelenítjük meg, 
 \newpage
 \section{Konklúzió}
 \paragraph{A kiépített keretrendszer} a klaszterezéssel és klasszifikációs modellek betanításával egy fontos lépés ezen terület fejlesztésében.
+Az adathalmazok előállítására kifejlesztett algoritmus hatékonynak bizonyult. Az adathalmaz feldolgozásához készített programokkal egy hatékony
+adatfeldolgozó rendszert hoztunk létre. A klaszterezési algoritmusokkal a forgalomban előforduló útvonalakat sikerült megfelelően felosztani.
+A kialakított tanítási folyamatnak köszönhetően a klasszifikációs modellek betanítása gyorsan és hatékonyan történik, a tanítás könnyen paraméterezhető, ami a további kísérletezésnél és modellek finomhangolásánál előnyt jelent.
+A tanítás utáni kiértékelési fázishoz is készítettem programokat amikkel plotokat és táblázatokat tudunk generálni, amik az átláthatóságot javítják.
+\paragraph{Grafikus megjelenítő} prototípus fejlesztésével a valós idejű alkalmazását lehet szemléltetni a kidolgozott módszerünknek. Továbbá jó alapul szolgál a jővőbeli praktikus felhasználáshoz.
 \paragraph{A mérések} jó alapot szolgálnak a jövőbeli kutatásoknak, milyen algoritmusokat érdemes még mélyebben megvizsgálni és melyekkel nem érdemes a továbbiakban foglalkozni. Más objektumdetektáló és objektumkövető algoritmusokat is érdemes lehet kipróbálni, amiviel az adatgyűjtési fázist és az adattisztítási fázist lehet felgyorsítani és hatékonyabbá tenni.
-\paragraph{Az átlagos 90\%} pontosság, amit elértünk a tanított modellekkel, nem tűnik túl magasnak, de figyelembe kell vennünk, hogy egy autó mozgása során sok olyan időszakasz van, amikor lehetetlen előre megmondani, melyik útvonalat fogja választani, mert pl. csak közelít a kereszteződéshez és nem választott még sávot. Ilyenkor az autó mozgása még semmilyen szinten nem utal a későbbi pályára, ezért óhatatlanul tévedések következnek be. A módszer predikciós képességét ilyenkor a "top-2 accuracy" mutatja: a tipikusan 10-15 lehetséges útvonal-csoport közül a választott 2 legvalószínűbb már 95\% feletti eséllyel tartalmazza a ténylegesen bekövetkezőt.
+\paragraph{Az átlagos 90\%} pontosság, amit elértünk a tanított modellekkel, nem tűnik túl magasnak, de figyelembe kell vennünk, hogy egy autó mozgása során sok olyan időszakasz van, amikor lehetetlen előre megmondani, melyik útvonalat fogja választani, mert pl. csak közelít a kereszteződéshez és nem választott még sávot. Ilyenkor az autó mozgása még semmilyen szinten nem utal a későbbi pályára, ezért óhatatlanul tévedések következnek be. A módszer predikciós képességét ilyenkor a ``top-2 accuracy" mutatja: a tipikusan 10-15 lehetséges útvonal-csoport közül a választott 2 legvalószínűbb már 95\% feletti eséllyel tartalmazza a ténylegesen bekövetkezőt.
 \paragraph{Az adathalmaz növelésével} a pontosságot jövőben még növelni lehet. A feature vektorok dimenziószámának növelésével és másfajta súlyozással is növelhető ez a pontosság. A dimenzió növelése felveti a lehetőséget, hogy a jövőben mély neurális hálókat is teszteljünk az osztályozás feladatra.
 \paragraph{A megerősító tanulás} bevezetése a keretrendszerünke is egy nagy előrelépés lehet, ezt úgy lehetne megvalósítani, hogy valós idejű futás közben, a bejövő adatokon nem csak osztályozást végzünk hanem ezeket az adatokat folyamatosan mentjük, majd ha elég adat összegyűlt időközönként frissítjük a modellt, így a modell adaptálódni tud a forgalom változásához.
 \paragraph{A predikciós eljárásokon túl} a statisztikai kimutatások hasznos információként szolgálhatnak a forgalom megértéséhez, és a városi közlekedés optimalizálásához. Ezeket a kimutatásokat legfőképp közlekedés mérnökök tudják felhasználni.

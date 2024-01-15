@@ -67,10 +67,10 @@ def main():
     labels = ['own', 'np_linalg', 'np_sqrt',
               'np_sqrt_square', 'np_dot', 'scipy_cdist']
     yticks = np.arange(0, results.max(), 0.1)
-    cmap = cm.get_cmap('plasma')
-    norm = plt.Normalize(vmin=yticks.min(), vmax=yticks.max())
+    cmap = cm.get_cmap('Blues')
+    norm = cm.colors.Normalize(vmin=yticks.min(), vmax=yticks.max())
     plt.figure(figsize=(10, 5))
-    plt.bar(x=range(0,6), height=results, color=cmap(norm(yticks)))
+    plt.bar(range(len(results)), results, color=cmap(norm(results)))
     plt.xticks(ticks=range(0,6), labels=labels, rotation=45)
     plt.yticks(ticks=yticks)
     plt.xlabel('Methods')
