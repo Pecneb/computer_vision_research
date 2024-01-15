@@ -285,6 +285,10 @@ class TrackedObject:
                 if self.history[i] != other.history[j]:
                     return False
         return self.objID == other.objID
+    
+    @staticmethod
+    def upscale_x(x: float, framewidth: int = 1920, frameheight: int = 1080) -> float:
+        return x*framewidth/frameheight
 
     def avgArea(self) -> np.ndarray:
         """Calculate the average area of the bounding boxes of the object.

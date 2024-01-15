@@ -231,3 +231,23 @@ def plot_cross_validation_data(cv: BaseCrossValidator, X: np.ndarray, y: np.ndar
     ax.set_title("{}".format(type(cv).__name__), fontsize=15)
 
     return ax
+
+def plot_one_trajectory(trajectory, ax, color="b", label="Trajectory"):
+    """Plot one trajectory.
+
+    Parameters
+    ----------
+    trajectory : TrackedObject
+        Trajectory to plot.
+    ax : plt.Axes
+        Axes to plot on.
+    color : str, optional
+        Color of the trajectory, by default "b"
+    label : str, optional
+        Label of the trajectory, by default "Trajectory"
+    """
+    ax.plot(trajectory.history_X, trajectory.history_Y, color=color, label=label)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_title("Trajectory")
+    ax.legend(loc="lower right")
