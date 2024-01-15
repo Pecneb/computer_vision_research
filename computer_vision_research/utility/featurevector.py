@@ -5,6 +5,7 @@ import tqdm
 from icecream import ic
 from scipy.signal import savgol_filter
 
+ic.disable()
 
 class FeatureVector(object):
     """Class representing a feature vector.
@@ -76,10 +77,10 @@ class FeatureVector(object):
             _Y, window_length=window_length, polyorder=polyorder)
         _VX = np.array([detections[i].VX for i in range(_size)])
         _VX_s = savgol_filter(
-            _VX, window_length=window_length, polyorder=polyorder)
+            _VX, window_length=window_length, polyorder=polyorder, deriv=1)
         _VY = np.array([detections[i].VY for i in range(_size)])
         _VY_s = savgol_filter(
-            _VY, window_length=window_length, polyorder=polyorder)
+            _VY, window_length=window_length, polyorder=polyorder, deriv=1)
         return np.array([
             _X_s[0], _Y_s[0],
             _VX_s[0], _VY_s[0],
@@ -259,8 +260,8 @@ class FeatureVector(object):
         np.ndarray
             Feature Vector.
         """
-        vx = savgol_filter(x, window_length=window_length, polyorder=polyorder)
-        vy = savgol_filter(y, window_length=window_length, polyorder=polyorder)
+        vx = savgol_filter(x, window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y, window_length=window_length, polyorder=polyorder, deriv=1)
         return np.array([x[-1], y[-1], vx[-1], vy[-1]])*weights
 
     @staticmethod
@@ -574,6 +575,7 @@ class FeatureVector(object):
                     window_length=window_length,
                     polyorder=polyorder
                 )
+                ic(feature_vector)
                 if X_feature_vectors.shape == (0,):
                     X_feature_vectors = np.array(feature_vector).reshape(
                         (-1, feature_vector.shape[0]))
