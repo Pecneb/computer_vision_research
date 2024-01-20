@@ -17,7 +17,9 @@
 
     Contact email: ecneb2000@gmail.com
 """
-from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
+import os
+import glob
+from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger, FileHandler
 from pathlib import Path
 from typing import List, Optional, Tuple, Union, Literal
 from functools import lru_cache
@@ -25,7 +27,6 @@ from functools import lru_cache
 import cv2
 import numpy as np
 import torch
-from scipy.signal import savgol_filter
 from classifier import OneVsRestClassifierWrapper
 from dataManagementClasses import Detection as DarknetDetection
 from dataManagementClasses import TrackedObject
@@ -37,14 +38,157 @@ from masker import masker
 from torch import nn
 from utility.databaseLogger import logObject
 from utility.models import load_model, mask_predictions
-from utility.plots import plot_one_cluster, plot_one_prediction
 from yolov7.models.common import Conv
 from yolov7.models.experimental import Ensemble
-from yolov7.utils.datasets import LoadImages, letterbox
 from yolov7.utils.general import (check_img_size, check_imshow,
                                   non_max_suppression, scale_coords, xyxy2xywh)
 from yolov7.utils.plots import plot_one_box
 from yolov7.utils.torch_utils import select_device, time_synchronized
+
+
+def init_logger(name: str, filename: Optional[str] = None, debug: bool = False) -> Logger:
+    """Init logger.
+
+    Parameters
+    ----------
+    name : str
+        Logger name.
+    filename : Optional[str], optional
+        Logger filename, by default None
+    debug : bool, optional
+        Debug flag, by default False
+
+    Returns
+    -------
+    None
+    """
+    logger = getLogger(name)
+    handler = FileHandler(filename=filename) if filename is not None else StreamHandler()
+    if debug:
+        logger.setLevel(DEBUG)
+        handler.setLevel(DEBUG)
+    else:
+        logger.setLevel(INFO)
+        handler.setLevel(INFO)
+    formatter = Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
+
+def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
+    # Resize and pad image while meeting stride-multiple constraints
+    shape = img.shape[:2]  # current shape [height, width]
+    if isinstance(new_shape, int):
+        new_shape = (new_shape, new_shape)
+
+    # Scale ratio (new / old)
+    r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
+    if not scaleup:  # only scale down, do not scale up (for better test mAP)
+        r = min(r, 1.0)
+
+    # Compute padding
+    ratio = r, r  # width, height ratios
+    new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
+    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
+    if auto:  # minimum rectangle
+        dw, dh = np.mod(dw, stride), np.mod(dh, stride)  # wh padding
+    elif scaleFill:  # stretch
+        dw, dh = 0.0, 0.0
+        new_unpad = (new_shape[1], new_shape[0])
+        ratio = new_shape[1] / shape[1], new_shape[0] / shape[0]  # width, height ratios
+
+    dw /= 2  # divide padding into 2 sides
+    dh /= 2
+
+    if shape[::-1] != new_unpad:  # resize
+        img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
+    return img, ratio, (dw, dh)
+
+img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']  # acceptable image suffixes
+vid_formats = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv']  # acceptable video suffixes
+
+class LoadImages:  # for inference
+    def __init__(self, path, img_size=640, stride=32):
+        p = str(Path(path).absolute())  # os-agnostic absolute path
+        if '*' in p:
+            files = sorted(glob.glob(p, recursive=True))  # glob
+        elif os.path.isdir(p):
+            files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
+        elif os.path.isfile(p):
+            files = [p]  # files
+        else:
+            raise Exception(f'ERROR: {p} does not exist')
+
+        images = [x for x in files if x.split('.')[-1].lower() in img_formats]
+        videos = [x for x in files if x.split('.')[-1].lower() in vid_formats]
+        ni, nv = len(images), len(videos)
+
+        self.img_size = img_size
+        self.stride = stride
+        self.files = images + videos
+        self.nf = ni + nv  # number of files
+        self.video_flag = [False] * ni + [True] * nv
+        self.mode = 'image'
+        if any(videos):
+            self.new_video(videos[0])  # new video
+        else:
+            self.cap = None
+        assert self.nf > 0, f'No images or videos found in {p}. ' \
+                            f'Supported formats are:\nimages: {img_formats}\nvideos: {vid_formats}'
+
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        if self.count == self.nf:
+            raise StopIteration
+        path = self.files[self.count]
+
+        if self.video_flag[self.count]:
+            # Read video
+            self.mode = 'video'
+            ret_val, img0 = self.cap.read()
+            if not ret_val:
+                self.count += 1
+                self.cap.release()
+                if self.count == self.nf:  # last video
+                    raise StopIteration
+                else:
+                    path = self.files[self.count]
+                    self.new_video(path)
+                    ret_val, img0 = self.cap.read()
+
+            self.frame += 1
+            print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='\n')
+
+        else:
+            # Read image
+            self.count += 1
+            img0 = cv2.imread(path)  # BGR
+            assert img0 is not None, 'Image Not Found ' + path
+            #print(f'image {self.count}/{self.nf} {path}: ', end='')
+
+        # Padded resize
+        img = letterbox(img0, self.img_size, stride=self.stride)[0]
+
+        # Convert
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = np.ascontiguousarray(img)
+
+        return path, img, img0, self.cap
+
+    def new_video(self, path):
+        self.frame = 0
+        self.cap = cv2.VideoCapture(path)
+        self.nframes = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def __len__(self):
+        return self.nf  # number of files
 
 
 class Yolov7(object):
@@ -112,20 +256,7 @@ class Yolov7(object):
     """
 
     def __init__(self, weights: str, conf_thres: float = 0.6, iou_thres: float = 0.4, imgsz: int = 640, stride: int = 32, augment: bool = False, half: bool = True, device: Union[int, str] = "0", batch_size: int = 1, debug: bool = True) -> None:
-        # region init logger
-        self._logger = getLogger("Yolo_Logger")
-        _logHandler = StreamHandler()
-        if debug:
-            self._logger.setLevel(DEBUG)
-            _logHandler.setLevel(DEBUG)
-        else:
-            self._logger.setLevel(INFO)
-            _logHandler.setLevel(INFO)
-        _formatter = Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        _logHandler.setFormatter(_formatter)
-        self._logger.addHandler(_logHandler)
-        # endregion
+        self._logger = init_logger("Yolo_Logger", filename="yolo.log", debug=debug)
 
         # region init yolo
         self.device = select_device(device, batch_size)
@@ -337,18 +468,7 @@ class DeepSORT(object):
     """
 
     def __init__(self, max_cosine_distance: float = 10.0, max_iou_distance: float = 0.7, nn_budget: float = 100, historyDepth: int = 30, debug: bool = False) -> None:
-        ### Logging ###
-        self._logger = getLogger("DeepSORT_Logger")
-        _logHandler = StreamHandler()
-        if debug:
-            self._logger.setLevel(DEBUG)
-            _logHandler.setLevel(DEBUG)
-        else:
-            self._logger.setLevel(INFO)
-            _logHandler.setLevel(INFO)
-        _formatter = Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        _logHandler.setFormatter(_formatter)
+        self._logger = init_logger("DeepSORT_Logger", filename="deepsort.log", debug=debug)
 
         self.max_cosine_distance = max_cosine_distance
         self._logger.debug(f"Max cosine distance: {self.max_cosine_distance}")
@@ -419,7 +539,7 @@ class DeepSORT(object):
                                   darknetDetection.Height, darknetDetection.Height],
                                  float(darknetDetection.confidence), [], darknetDetection)
 
-    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], joblibbuffer: Optional[List[TrackedObject]] = None, db_connection: Optional[str] = None):
+    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], db_connection: Optional[str] = None):
         """Update trajectory history with new detections.
 
         Parameters
@@ -448,8 +568,6 @@ class DeepSORT(object):
                         # if arg in update is None, then time_since_update += 1
                         to.update()
                         if to.max_age <= to.time_since_update:
-                            if joblibbuffer is not None:
-                                joblibbuffer.append(to)
                             history.remove(to)
                     updated = True
                     break
@@ -499,18 +617,7 @@ class TrajectoryNet:
     """
 
     def __init__(self, model: str, debug: bool = False):
-        self._logger = getLogger("TrajectoryNet_Logger")
-        _logHandler = StreamHandler()
-        if debug:
-            self._logger.setLevel(DEBUG)
-            _logHandler.setLevel(DEBUG)
-        else:
-            self._logger.setLevel(INFO)
-            _logHandler.setLevel(INFO)
-        _formatter = Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        _logHandler.setFormatter(_formatter)
-        self._logger.addHandler(_logHandler)
+        self._logger = init_logger("TrajectoryNet_Logger", filename="trajectorynet.log", debug=debug) 
 
         self._model: OneVsRestClassifierWrapper = load_model(model)
         self._logger.debug(f"Model: {self._model}")
@@ -781,7 +888,7 @@ class Detector:
     """
 
     def __init__(self, source: str, outdir: Optional[str] = None, database: bool = False, joblib: bool = False, debug: bool = False):
-        self._init_logger(debug=debug)
+        self._logger = init_logger("Detector_Logger", "detector.log", debug=debug)
         self._source = Path(source)
         self._init_output_directory(path=outdir)
         self._init_video_writer()
@@ -801,30 +908,6 @@ class Detector:
         self._logger.debug(f"Joblib buffers: {self._joblibbuffers}")
         self._history = []
 
-    def _init_logger(self, debug: bool = False) -> None:
-        """Init logger.
-
-        Parameters
-        ----------
-        debug : bool, optional
-            Debug flag, by default False
-
-        Returns
-        -------
-        None
-        """
-        self._logger = getLogger("Pipeline_Logger")
-        _logHandler = StreamHandler()
-        if debug:
-            self._logger.setLevel(DEBUG)
-            _logHandler.setLevel(DEBUG)
-        else:
-            self._logger.setLevel(INFO)
-            _logHandler.setLevel(INFO)
-        _formatter = Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        _logHandler.setFormatter(_formatter)
-        self._logger.addHandler(_logHandler)
 
     def _init_output_directory(self, path: Optional[str] = None) -> None:
         """Init output directory.
@@ -942,6 +1025,8 @@ class Detector:
                 coord[0], coord[1], im0s.shape) for coord in trajectoryNet._model.cluster_centroids])
             pooled_mask = trajectoryNet._model.pooled_classes
             self._logger.debug(f"Cluster centroids: {cluster_centroids}")
+        old_p = None
+        partly_saved = False
         for path, img, im0s, vid_cap in self._dataset:
             p, s, im0, frame = path, '', im0s.copy(), getattr(self._dataset, 'frame', 0)
             self._logger.debug(f"Input image shape: {img.shape}")
@@ -956,8 +1041,7 @@ class Detector:
             self._logger.debug(
                 f"New detections: {[d.label for d in new_detections]}")
             # update tracker and history
-            deepSort.update_history(history=self._history, new_detections=new_detections,
-                                    joblibbuffer=self._joblibbuffers[self._dataset.count], db_connection=self._databases)
+            deepSort.update_history(history=self._history, new_detections=new_detections, db_connection=self._databases)
             self._logger.debug(f"History: {self._history}")
             if trajectoryNet is not None:
                 # draw clusters
@@ -983,16 +1067,33 @@ class Detector:
                     trajectoryNet.draw_history(t, im0, thickness=1)
                     trajectoryNet.draw_velocity_vector(
                         t, im0, color=(255, 255, 255))
+            #TODO how to find out if this is the last frame?
+            if old_p is not None and (p != old_p):
+                self._logger.info(f"Done processing video: {old_p}. Saving results...")
+                dump(self._history, self._joblibs[self._dataset.count-1])
+                self._logger.info(f"Saved results to {self._joblibs[self._dataset.count-1]}")
+                self._history.clear()
+                cv2.destroyWindow(p)
+            old_p = p
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
+                self._logger.info(f"Exiting at video: {p}. Saving results...")
+                dump(self._history, self._joblibs[self._dataset.count])
+                self._logger.info(f"Saved part results to {self._joblibs[self._dataset.count]}")
+                partly_saved = True
                 break
             elif cv2.waitKey(1) == ord('p'):
                 cv2.waitKey(0)
-        for i, buf in enumerate(self._joblibbuffers):
-            self._logger.debug(
-                f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
-            dump(buf, self._joblibs[i])
+        # saving last video's history
+        if partly_saved is False:
+            self._logger.info(f"Done processing last video: {self._dataset.files[-1]}. Saving results...")
+            dump(self._history, self._joblibs[-1])
+            self._logger.info(f"Saved results to {self._joblibs[-1]}")
+        # for i, buf in enumerate(self._joblibbuffers):
+        #     self._logger.debug(
+        #         f"Joblib buffer {self._joblibs[i]}: len({len(buf)})")
+        #     dump(buf, self._joblibs[i])
 
 
 if __name__ == "__main__":
