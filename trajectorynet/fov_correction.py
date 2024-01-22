@@ -4,6 +4,7 @@ from functools import lru_cache
 from matplotlib import pyplot as plt
 from typing import Tuple
 from copy import deepcopy
+from tqdm import tqdm
 
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -22,8 +23,8 @@ x = x_s * (height / width) * width
 class FOVCorrection:
     def __init__(self, config):
         self.config = config
-        self.alfa_zero = config["alfa_zero"]
-        self.delta = config["delta"]
+        self.alfa_zero = np.radians(config["alfa_zero"])
+        self.delta = np.radians(config["delta"])
         self.distance = config["distance"]
         self.p_u = config["resolution"]["horizontal"]
         self.p_v = config["resolution"]["vertical"]
@@ -31,7 +32,7 @@ class FOVCorrection:
         self.s_p = self.delta / self.p_u
         self.d_p_sin_alfa = (self.distance / self.p_u) * np.sin(self.alfa_zero)
         self.alfa = self.alfa_zero - (np.arange(self.p_v) * self.s_p)
-        self.alfa = np.where(self.alfa < 10, 10, self.alfa)
+        self.alfa = np.where(self.alfa < 0.1, 0.1, self.alfa)
         self.sin_alfa = np.sin(self.alfa)
         self.tan_alfa = np.tan(self.alfa)
         self.tan_alfa_zero = np.tan(self.alfa_zero)
@@ -44,7 +45,7 @@ class FOVCorrection:
 
     def get_coord(self, u, v) -> Tuple[float, float]:
         x = u * self.d_p_sin_alfa / self.sin_alfa[v]
-        y = self.h - ((1 / self.tan_alfa[v]) * (1 / self.tan_alfa_zero))
+        y = self.h * ((1 / self.tan_alfa[v]) - (1 / self.tan_alfa_zero))
         return x, y
 
 
@@ -57,14 +58,16 @@ def main():
     dataset = load_dataset(dataset_path)
     fig, ax = plt.subplots(ncols=2, figsize=(7, 7))
     dataset_transformed = []
-    for obj in dataset[:10]:
+    for obj in tqdm(dataset[500:700]):
         obj_transformed = deepcopy(obj)
         for i, det in enumerate(obj_transformed.history):
-            det.X, det.Y = int(det.X * corrector.p_v), int(det.Y * corrector.p_v)
+            # det.X, det.Y = int(det.X * corrector.p_v), int(det.Y * corrector.p_v)
+            det.X, det.Y = int(det.X), int(det.Y)
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[0])
         for i, det in enumerate(obj_transformed.history):
             det.X, det.Y = corrector.get_coord(det.X, det.Y)
+            # print(det.X, det.Y)
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[1])
     plt.show()
