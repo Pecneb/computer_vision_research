@@ -1,6 +1,7 @@
 dataset:
-  path: /home/pecneb/Videos/AronVideos/History_Jonesborough_Tenessee_12h/Historic_Jonesborough_Tennessee_Live_Cam_2024-01-12_00_46__3Vc2fZxMEI8_.joblib
-  # path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th__2017-09-10_19-08-25.joblib"
+  video: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th/Bellevue_116th_NE12th__2017-09-10_19-08-25.mp4"
+  # path: "/home/pecneb/Videos/AronVideos/History_Jonesborough_Tenessee_12h/Historic_Jonesborough_Tennessee_Live_Cam_2024-01-12_00_46__3Vc2fZxMEI8_.joblib"
+  path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th__2017-09-10_19-08-25.joblib"
 fov_correction:
   # road center view angle from horizon
   alfa_zero: 50
