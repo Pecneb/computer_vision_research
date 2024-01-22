@@ -250,4 +250,4 @@ def plot_one_trajectory(trajectory, ax, color="b", label="Trajectory"):
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_title("Trajectory")
-    ax.legend(loc="lower right")
+    # ax.legend(loc="lower right")
