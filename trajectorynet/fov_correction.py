@@ -3,7 +3,7 @@ import cv2
 from yaml import load, dump
 from functools import lru_cache
 from matplotlib import pyplot as plt
-from typing import Tuple
+from typing import Tuple, List
 from copy import deepcopy
 from tqdm import tqdm
 
@@ -13,6 +13,8 @@ except ImportError:
     from yaml import Loader, Dumper
 from utility.dataset import load_dataset
 from utility.plots import plot_one_trajectory
+
+from dataManagementClasses import TrackedObject
 
 """
 x_s = x / width * (width / height)
@@ -166,8 +168,10 @@ class FOVCorrectionOpencv:
         x_0, y_0 = self.origo_transformed
         x, y = self.get_xy(u, v)
         return x - x_0, y - y_0
-    
-    def get_shifted_xy_in_meters(self, u: float, v: float, meter_per_pixel: float) -> Tuple[float, float]:
+
+    def get_shifted_xy_in_meters(
+        self, u: float, v: float, meter_per_pixel: float
+    ) -> Tuple[float, float]:
         """Get shifted x and y coordinates from u and v coordinates.
 
         Parameters
@@ -186,6 +190,55 @@ class FOVCorrectionOpencv:
         """
         x, y = self.get_shifted_xy(u, v)
         return x * meter_per_pixel, y * meter_per_pixel
+
+
+def transform_trajectories(
+    objs: List[TrackedObject], transformer: FOVCorrectionOpencv
+) -> List[TrackedObject]:
+    """Transform trajectories with geometric transform method of opencv.
+
+    Parameters
+    ----------
+    objs : List[TrackedObject]
+        Tracked objects.
+    transformer : FOVCorrectionOpencv
+        Transformer object.
+
+    Returns
+    -------
+    List[TrackedObject]
+        List of transformed tracked objects.
+    """
+    objs_transformed = []
+    for obj in objs:
+        objs_transformed.append(transform_trajectory(obj, transformer))
+    return objs_transformed
+
+
+def transform_trajectory(
+    obj: TrackedObject, transformer: FOVCorrectionOpencv
+) -> TrackedObject:
+    """Transform trajectory with geometric transform method of opencv.
+
+    Parameters
+    ----------
+    obj : TrackedObject
+        Original tracked object.
+    transformer : FOVCorrectionOpencv
+        Transformer object.
+
+    Returns
+    -------
+    TrackedObject
+        Transformed tracked object.
+    """
+    obj_transformed = deepcopy(obj)
+    for i, det in enumerate(obj_transformed.history):
+        det.X, det.Y = transformer.get_shifted_xy(
+            int(det.X * transformer.img.shape[0]), int(det.Y * transformer.img.shape[0])
+        )
+        obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
+    return obj_transformed
 
 
 def fov_correction_opencv():
@@ -219,7 +272,9 @@ def fov_correction_opencv():
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[0])
         for i, det in enumerate(obj_transformed.history):
-            det.X, det.Y = transformer.get_shifted_xy_in_meters(det.X, det.Y, magic_number)
+            det.X, det.Y = transformer.get_shifted_xy_in_meters(
+                det.X, det.Y, magic_number
+            )
             # print(det.X, det.Y)
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[1])
