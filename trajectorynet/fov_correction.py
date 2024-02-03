@@ -77,8 +77,29 @@ def fov_correction_andras():
 
 
 class FOVCorrectionOpencv:
-    def __init__(self, img: np.ndarray) -> None:
-        self.img = img.copy()
+    def __init__(self, video_frame: np.ndarray, google_maps_image: np.ndarray) -> None:
+        self.video_frame = video_frame.copy()
+        self.google_maps_image = google_maps_image.copy()
+
+    @staticmethod
+    def get_meter_per_pixel(img: np.ndarray, distance: float) -> float:
+        """Get meter per pixel.
+
+        Parameters
+        ----------
+        img : ndarray
+            The image to get the rectangle from.
+        google_maps_image : ndarray
+            The image to get the rectangle from.
+        distance : float
+            Distance in meters.
+
+        Returns
+        -------
+        float
+            Meter per pixel.
+        """
+        return distance / img.shape[1]
 
     @staticmethod
     def get_points(img: np.ndarray) -> Tuple[int, int, int, int]:
@@ -109,23 +130,37 @@ class FOVCorrectionOpencv:
         cv2.destroyAllWindows()
         return rectangle_points
 
+    def initialize_meter_per_pixel(self, distance: float) -> None:
+        """Initialize meter per pixel.
+
+        Parameters
+        ----------
+        distance : float
+            Distance in meters.
+        """
+        self.meter_per_pixel = self.get_meter_per_pixel(self.video_frame, distance)
+
     def initialize_points(self) -> None:
         """Initialize points from the image."""
-        self.pts1 = self.get_points(self.img)
-        self.pts2 = self.get_points(self.img)
+        self.pts1 = self.get_points(self.video_frame)
+        self.pts2 = self.get_points(self.google_maps_image)
         self.M = cv2.getPerspectiveTransform(
             np.float32(self.pts1), np.float32(self.pts2)
         )
 
     def initialize_origo(self) -> None:
-        """Inittialize origo."""
-        self.origo = self.get_points(self.img)
-        self.origo_transformed = self.get_origo()
+        """Get geometric center of the second images pts2."""
+        self.origo = (
+            (self.pts2[0][0] + self.pts2[1][0] + self.pts2[2][0] + self.pts2[3][0]) / 4,
+            (self.pts2[0][1] + self.pts2[1][1] + self.pts2[2][1] + self.pts2[3][1]) / 4,
+        )
 
     def get_transformed_image(self) -> np.ndarray:
         """Get transformed image."""
         return cv2.warpPerspective(
-            self.img, self.M, (self.img.shape[1], self.img.shape[0])
+            self.video_frame,
+            self.M,
+            (self.video_frame.shape[1], self.video_frame.shape[0]),
         )
 
     def get_xy(self, u, v) -> Tuple[float, float]:
@@ -146,7 +181,7 @@ class FOVCorrectionOpencv:
             / (self.M[2][0] * u + self.M[2][1] * v + self.M[2][2]),
         )
 
-    def get_origo(self) -> Tuple[float, float]:
+    def get_transformed_origo(self) -> Tuple[float, float]:
         """Get x and y coordinates from origo."""
         return self.get_xy(self.origo[0][0], self.origo[0][1])
 
@@ -165,13 +200,11 @@ class FOVCorrectionOpencv:
         Tuple[float, float]
             X,Y coordinates in the transformed image.
         """
-        x_0, y_0 = self.origo_transformed
+        x_0, y_0 = self.origo
         x, y = self.get_xy(u, v)
         return x - x_0, y - y_0
 
-    def get_shifted_xy_in_meters(
-        self, u: float, v: float, meter_per_pixel: float
-    ) -> Tuple[float, float]:
+    def get_shifted_xy_in_meters(self, u: float, v: float) -> Tuple[float, float]:
         """Get shifted x and y coordinates from u and v coordinates.
 
         Parameters
@@ -189,7 +222,7 @@ class FOVCorrectionOpencv:
             X,Y coordinates in the transformed image.
         """
         x, y = self.get_shifted_xy(u, v)
-        return x * meter_per_pixel, y * meter_per_pixel
+        return x * self.meter_per_pixel, y * self.meter_per_pixel
 
 
 def transform_trajectories(
@@ -235,7 +268,8 @@ def transform_trajectory(
     obj_transformed = deepcopy(obj)
     for i, det in enumerate(obj_transformed.history):
         det.X, det.Y = transformer.get_shifted_xy(
-            int(det.X * transformer.img.shape[0]), int(det.Y * transformer.img.shape[0])
+            int(det.X * transformer.video_frame.shape[0]),
+            int(det.Y * transformer.video_frame.shape[0]),
         )
         obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
     return obj_transformed
@@ -249,32 +283,33 @@ def fov_correction_opencv():
         config = load(f, Loader=Loader)
     dataset_path = config["dataset"]["path"]
     video_path = config["dataset"]["video"]
-    magic_number = config["fov_correction"]["magic_number"]
+    google_maps_image_path = config["dataset"]["google_maps_image"]
     cap = cv2.VideoCapture(video_path)
     _, frame = cap.read()
-    print(frame.shape)
-    transformer = FOVCorrectionOpencv(frame)
+    google_maps_image = cv2.imread(google_maps_image_path)
+    transformer = FOVCorrectionOpencv(frame, google_maps_image)
     transformer.initialize_points()
     transformer.initialize_origo()
+    transformer.initialize_meter_per_pixel(config["fov_correction"]["distance"])
     dst = transformer.get_transformed_image()
-    print(transformer.pts1, transformer.pts2)
-    print(transformer.M)
-    plt.subplot(121), plt.imshow(frame), plt.title("Input")
-    plt.subplot(122), plt.imshow(dst), plt.title("Output")
+    plt.subplot(121), plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), plt.title(
+        "Input"
+    )
+    plt.subplot(122), plt.imshow(cv2.cvtColor(dst, cv2.COLOR_BGR2RGB)), plt.title(
+        "Output"
+    )
     plt.show()
     dataset = load_dataset(dataset_path)
     fig, ax = plt.subplots(ncols=2, figsize=(7, 7))
     for obj in tqdm(dataset[550:600]):
         obj_transformed = deepcopy(obj)
         for i, det in enumerate(obj_transformed.history):
-            det.X, det.Y = int(det.X * frame.shape[0]), int(det.Y * frame.shape[0])
+            det.X, det.Y = int(det.X * frame.shape[0]), int((det.Y) * frame.shape[0])
             # det.X, det.Y = int(det.X), int(det.Y)
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[0])
         for i, det in enumerate(obj_transformed.history):
-            det.X, det.Y = transformer.get_shifted_xy_in_meters(
-                det.X, det.Y, magic_number
-            )
+            det.X, det.Y = transformer.get_shifted_xy_in_meters(det.X, det.Y)
             # print(det.X, det.Y)
             obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
         plot_one_trajectory(obj_transformed, ax[1])
