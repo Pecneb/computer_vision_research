@@ -1,5 +1,6 @@
 ### Third Party ###
 import os
+from typing import List
 from argparse import ArgumentParser
 
 import cv2
@@ -52,7 +53,7 @@ def bbox2points(bbox):
     return xmin, ymin, xmax, ymax
 
 
-def drawbbox(detection: Detection, image: np.ndarray):
+def drawbbox(detection: Detection, image: np.ndarray, objID: int, upscale: bool = True):
     """Draw bounding box of an object to the given image.
 
     Args:
@@ -67,10 +68,11 @@ def drawbbox(detection: Detection, image: np.ndarray):
         detection.Height
     )
     ret_img = image.copy()
-    bboxUpscaled = upscalebbox(bbox, image.shape[1], image.shape[0])
-    left, top, right, bottom = bbox2points(bboxUpscaled)
+    if upscale:
+        bbox = upscalebbox(bbox, image.shape[1], image.shape[0])
+    left, top, right, bottom = bbox2points(bbox)
     cv2.rectangle(ret_img, (left, top), (right, bottom), (0, 255, 0), 1)
-    cv2.putText(ret_img, "{}".format(detection.label,),  # float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
+    cv2.putText(ret_img, "{} {}".format(detection.label, objID),  # float(detection.confidence), float(detection.VX * image.shape[1] / aspect_ratio), float(detection.VY * image.shape[0]), float(detection.AX* image.shape[1] / aspect_ratio), float(detection.AY * image.shape[0])),
                 (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                 (0, 255, 0), 2)
     return ret_img
@@ -144,16 +146,26 @@ def previous_frame_id(i_frame: int, min_i: int):
     return ret_i
 
 
-def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray):
-    aspect_ratio = img.shape[1] / img.shape[0]
-    print("\nDetection number: {:3} X: {:10.6f}, Y: {:10.6f}, VX: {:10.6f}, VY: {:10.6f}, AX: {:10.6f}, AY: {:10.6f}".format(
-        i_det,
-        obj.history_X[i_det] * img.shape[1] / aspect_ratio,
-        obj.history_Y[i_det] * img.shape[0],
-        obj.history_VX_calculated[i_det] * img.shape[1] / aspect_ratio,
-        obj.history_VY_calculated[i_det] * img.shape[0],
-        obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio,
-        obj.history_AY_calculated[i_det] * img.shape[0]))
+def print_object_info(obj: TrackedObject, i_det: int, img: np.ndarray, scale: bool = True):
+    if scale:
+        aspect_ratio = img.shape[1] / img.shape[0]
+        print("\nDetection number: {:3} X: {:10.6f}, Y: {:10.6f}, VX: {:10.6f}, VY: {:10.6f}, AX: {:10.6f}, AY: {:10.6f}".format(
+            i_det,
+            obj.history_X[i_det] * img.shape[1] / aspect_ratio,
+            obj.history_Y[i_det] * img.shape[0],
+            obj.history_VX_calculated[i_det] * img.shape[1] / aspect_ratio,
+            obj.history_VY_calculated[i_det] * img.shape[0],
+            obj.history_AX_calculated[i_det] * img.shape[1] / aspect_ratio,
+            obj.history_AY_calculated[i_det] * img.shape[0]))
+    else:
+        print("\nDetection number: {:3} X: {:10.6f}, Y: {:10.6f}, VX: {:10.6f}, VY: {:10.6f}, AX: {:10.6f}, AY: {:10.6f}".format(
+            i_det,
+            obj.history_X[i_det],
+            obj.history_Y[i_det],
+            obj.history_VX_calculated[i_det],
+            obj.history_VY_calculated[i_det],
+            obj.history_AX_calculated[i_det],
+            obj.history_AY_calculated[i_det]))
 
 
 def make_feature_vectors(track: TrackedObject, max_history_len: int = 30) -> np.ndarray:
@@ -177,13 +189,19 @@ def make_feature_vectors(track: TrackedObject, max_history_len: int = 30) -> np.
 def examine_tracks(args):
     if not database_is_joblib(args.database):
         raise IOError(("Not joblib extension."))
-    tracks = load_dataset(args.database)
+    tracks: List[TrackedObject] = load_dataset(args.database)
     # model = load_model(args.model)
     i_track = 0
     while i_track >= 0 and i_track < len(tracks):
         video = cv2.VideoCapture(args.video)
         if not video.isOpened():
             raise IOError("Can not open video.")
+        if tracks[i_track].objID != 331:
+            print(tracks[i_track].objID)
+            i_track += 1
+            continue
+        else:
+            print(len(tracks[i_track].history))
 
         start_frame = tracks[i_track].history[0].frameID
         video.set(cv2.CAP_PROP_POS_FRAMES, start_frame-1)
@@ -220,12 +238,14 @@ def examine_tracks(args):
                 #         fv = feature_vs[i]
 
                 if act_frame_num == tracks[i_track].history[i_det].frameID:
-                    print_object_info(tracks[i_track], i_det, frame)
+                    print_object_info(tracks[i_track], i_det, frame, scale=args.upscale)
                     frame_traj = draw_trajectory(
-                        frame, tracks[i_track], actual_detection_id=i_det)
+                        frame, tracks[i_track], actual_detection_id=i_det, upscale=args.upscale)
                     frame_traj = drawbbox(
                         tracks[i_track].history[i_det],
-                        frame_traj
+                        frame_traj,
+                        objID=tracks[i_track].objID,
+                        upscale=args.upscale
                     )
                     # if fv is not None:
                     #     # TODO actual feature vector, not last
@@ -242,7 +262,7 @@ def examine_tracks(args):
 
                     i_det += 1
                 else:
-                    frame_traj = draw_trajectory(frame, tracks[i_track])
+                    frame_traj = draw_trajectory(frame, tracks[i_track], upscale=args.upscale)
 
                 cv2.imshow(window_name, frame_traj)
 
@@ -314,6 +334,12 @@ def main():
         type=str,
         required=True,
         help="Path to video srouce."
+    )
+    argparser.add_argument(
+        "--upscale",
+        action="store_true",
+        default=False,
+        help="Upscale bounding boxes."
     )
     argparser.set_defaults(func=examine_tracks)
 

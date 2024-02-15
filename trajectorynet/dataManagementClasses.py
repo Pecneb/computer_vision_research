@@ -239,6 +239,7 @@ class TrackedObject:
     # bugged: int = field(init=False)
     # featureVector: np.ndarray = field(init=False)
     _dataset: str = field(init=False)
+    offline: bool = field(init=False)
 
     def __init__(self, id: int, first: Detection, max_age: int = 30):
         self.objID = id
@@ -269,6 +270,7 @@ class TrackedObject:
         self.mean = []
         # self.bugged = 0
         self._dataset = ""
+        self.offline = False
 
     def __repr__(self) -> str:
         return f"ID: {self.objID}, Label: {self.label}, X: {self.X}, Y: {self.Y}, VX: {self.VX}, VY: {self.VY}, AX: {self.AX}, AY: {self.AY}, Time since update: {self.time_since_update}, Max age: {self.max_age}, Dataset: {self._dataset}"
@@ -627,6 +629,9 @@ class TrackedObject:
                 self.history_AX_calculated, [dvx])
             self.history_AY_calculated = np.append(
                 self.history_AY_calculated, [dvy])
+    
+    def deactivate(self):
+        self.offline = True
 
     # , k_velocity=10, k_acceleration=2):
     def update(self, detection: Detection = None, mean=None):

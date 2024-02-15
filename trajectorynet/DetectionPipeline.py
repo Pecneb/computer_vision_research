@@ -539,7 +539,7 @@ class DeepSORT(object):
                                   darknetDetection.Height, darknetDetection.Height],
                                  float(darknetDetection.confidence), [], darknetDetection)
 
-    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], db_connection: Optional[str] = None):
+    def update_history(self, history: List[TrackedObject], new_detections: List[DarknetDetection], db_connection: Optional[str] = None, image: Optional[np.ndarray] = None):
         """Update trajectory history with new detections.
 
         Parameters
@@ -558,17 +558,21 @@ class DeepSORT(object):
         for track in self._Tracker.tracks:
             updated = False
             for to in history:
-                if track.track_id == to.objID:
+                if not to.offline and track.track_id == to.objID:
                     if track.time_since_update == 0:
                         # , k_velocity, k_acceleration)
                         to.update(track.darknetDet, track.mean)
+                        if image is not None:
+                            self.draw_obj_info(image, to)
+                            TrajectoryNet.draw_history(to, image)
                         if len(to.history) > self.historyDepth:
                             to.history.pop(0)
                     else:
                         # if arg in update is None, then time_since_update += 1
                         to.update()
                         if to.max_age <= to.time_since_update:
-                            history.remove(to)
+                            # history.remove(to)
+                            to.deactivate()
                     updated = True
                     break
             if not updated:
@@ -577,6 +581,30 @@ class DeepSORT(object):
                 history.append(newTrack)
                 if db_connection is not None:
                     logObject(db_connection, newTrack.objID, newTrack.label)
+
+    @staticmethod
+    def draw_obj_info(image: np.ndarray, trackedObject: TrackedObject, color: Tuple[int, int, int] = (0, 255, 0), thickness: int = 3) -> np.ndarray:
+        """Draw object info on image.
+
+        Parameters
+        ----------
+        image : np.ndarray
+            Image to draw on.
+        trackedObject : TrackedObject
+            Tracked object.
+        color : Tuple[int, int, int], optional
+            Color of the line, by default (0, 255, 0)
+        thickness : int, optional
+            Thickness of the line, by default 3
+
+        Returns
+        -------
+        np.ndarray
+            Output image.
+        """
+        cv2.putText(image, f"ID: {trackedObject.objID}", (int(trackedObject.X), int(
+            trackedObject.Y)), cv2.FONT_HERSHEY_SIMPLEX, 1, color, thickness)
+        # return image
 
 
 class TrajectoryNet:
@@ -977,7 +1005,7 @@ class Detector:
         return out
 
     @staticmethod
-    def filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"]) -> List[DarknetDetection]:
+    def filter_objects(new_detections: Union[List, torch.Tensor], frame_number: int, names: List[str] = ["car"], all: bool = True) -> List[DarknetDetection]:
         """Filter out detections that are not in the names list.
 
         Parameters
@@ -997,7 +1025,7 @@ class Detector:
         targets = []
         for label, conf, bbox in new_detections:
             # bbox: x, y, w, h
-            if label in names:
+            if label in names or all:
                 targets.append(DarknetDetection(
                     label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number))
         return targets
@@ -1041,7 +1069,7 @@ class Detector:
             self._logger.debug(
                 f"New detections: {[d.label for d in new_detections]}")
             # update tracker and history
-            deepSort.update_history(history=self._history, new_detections=new_detections, db_connection=self._databases)
+            deepSort.update_history(history=self._history, new_detections=new_detections, db_connection=self._databases) #, image=im0)
             self._logger.debug(f"History: {self._history}")
             if trajectoryNet is not None:
                 # draw clusters
@@ -1072,13 +1100,14 @@ class Detector:
                 self._logger.info(f"Done processing video: {old_p}. Saving results...")
                 dump(self._history, self._joblibs[self._dataset.count-1])
                 self._logger.info(f"Saved results to {self._joblibs[self._dataset.count-1]}")
-                self._history.clear()
+                # self._history.clear()
                 cv2.destroyWindow(p)
             old_p = p
             if show:
                 cv2.imshow(p, im0)
             if cv2.waitKey(1) == ord('q'):
                 self._logger.info(f"Exiting at video: {p}. Saving results...")
+                self._logger.info(f"History length: {len(self._history)}")
                 dump(self._history, self._joblibs[self._dataset.count])
                 self._logger.info(f"Saved part results to {self._joblibs[self._dataset.count]}")
                 partly_saved = True
