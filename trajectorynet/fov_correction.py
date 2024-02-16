@@ -138,7 +138,7 @@ class FOVCorrectionOpencv:
         distance : float
             Distance in meters.
         """
-        self.meter_per_pixel = self.get_meter_per_pixel(self.video_frame, distance)
+        self.meter_per_pixel = self.get_meter_per_pixel(self.google_maps_image, distance)
 
     def initialize_points(self) -> None:
         """Initialize points from the image."""
