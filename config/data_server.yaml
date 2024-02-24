@@ -1,0 +1,7 @@
+dataset: /media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th__2017-09-11_09-08-31.joblib
+runtime:
+  dataset_dtype: '|O'
+  dataset_nbytes: 14552
+  dataset_shape:
+  - 1819
+  shm_name: psm_4260bc99
