@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 import numpy as np
 import tqdm
@@ -149,6 +149,52 @@ class FeatureVector(object):
         )
 
     @staticmethod
+    def _1_SG_velocity(
+        detections: List, window_length: int = 7, polyorder: int = 2
+    ) -> np.ndarray:
+        """Version 1 feature vectors.
+        The velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        detections : List
+            Consecutive detections creating trajectory.
+        window_lenght : int
+            Size of savgol filter window. Default: 7.
+        polyorder : int
+            The polynom degree of the savgol filter. Default: 2.
+
+        Returns
+        -------
+        ndarray
+            Feature vector.
+        """
+        _size = len(detections)
+        _half = _size // 2
+        _X = np.array([detections[i].X for i in range(_size)])
+        _Y = np.array([detections[i].Y for i in range(_size)])
+        _VX = savgol_filter(
+            _X, window_length=window_length, polyorder=polyorder, deriv=1
+        )
+        _VY = savgol_filter(
+            _Y, window_length=window_length, polyorder=polyorder, deriv=1
+        )
+        return np.array(
+            [
+                _X[0],
+                _Y[0],
+                _VX[0],
+                _VY[0],
+                _X[_half],
+                _Y[_half],
+                _X[-1],
+                _Y[-1],
+                _VX[-1],
+                _VY[-1],
+            ]
+        )
+
+    @staticmethod
     def _7(
         x: np.ndarray,
         y: np.ndarray,
@@ -251,6 +297,60 @@ class FeatureVector(object):
                     vy_s[0],
                     x_s[-1],
                     y_s[-1],
+                    vx_s[-1],
+                    vy_s[-1],
+                ]
+            )
+            * _weights
+        )
+
+    @staticmethod
+    def _7_SG_velocity(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+        weights: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        """Feature vector version 7
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+        weights : Optional[np.ndarray], optional
+            Weight vector, by default ...
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if weights is None:
+            _weights = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)
+        else:
+            _weights = weights
+        vx_s = savgol_filter(
+            x, window_length=window_length, polyorder=polyorder, deriv=1
+        )
+        vy_s = savgol_filter(
+            y, window_length=window_length, polyorder=polyorder, deriv=1
+        )
+        return (
+            np.array(
+                [
+                    x[0],
+                    y[0],
+                    vx_s[0],
+                    vy_s[0],
+                    x[-1],
+                    y[-1],
                     vx_s[-1],
                     vy_s[-1],
                 ]
@@ -583,6 +683,70 @@ class FeatureVector(object):
             np.array(track_history_metadata),
         )
 
+    @staticmethod
+    def factory_1_SG_velocity(
+        trackedObjects: List,
+        labels: np.ndarray,
+        pooled_labels: np.ndarray,
+        k: int = 6,
+        up_until: float = 1,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Generate feature vectors from the histories of trajectories.
+        Divide the trajectory into k parts, then make k number of feature vectors.
+        Apply savgol filter on the coordinates and velocities of the trajectory part.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            List of trajectories.
+        labels : np.ndarray
+            List of corresponding labels.
+        pooled_labels : np.ndarray
+            List of corresponding pooled labels.
+        k : int, optional
+            Number of subtrajectories, by default 6
+        window_length : int, optional
+            Window of savgol filter, by default 7
+        polyorder : int, optional
+            Degree of polynom used in savgol filter, by default 2
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing the generated feature vectors, corresponding labels, corresponding pooled labels, corresponding metadata.
+        """
+        featureVectors = []
+        new_labels = []
+        new_pooled_labels = []
+        track_history_metadata = []
+        for j in range(len(trackedObjects)):
+            step_calc = len(trackedObjects[j].history) // k
+            step = step_calc if step_calc >= window_length else window_length
+            if step > 0:
+                midstep = step // 2
+                for i in range(
+                    0, int(len(trackedObjects[j].history) * up_until) - step, step
+                ):
+                    featureVectors.append(
+                        FeatureVector._1_SG_velocity(
+                            trackedObjects[j].history[i : i + step + 1],
+                            window_length=window_length,
+                            polyorder=polyorder,
+                        )
+                    )
+                    if labels is not None:
+                        new_labels.append(labels[j])
+                    if pooled_labels is not None:
+                        new_pooled_labels.append(pooled_labels[j])
+        return (
+            np.array(featureVectors),
+            np.array(new_labels),
+            np.array(new_pooled_labels),
+            np.array(track_history_metadata),
+        )
+
     # @memory.cache
     @staticmethod
     def factory_7(
@@ -798,6 +962,82 @@ class FeatureVector(object):
             for j in range(0, t.history_X.shape[0] - max_stride, max_stride):
                 end_idx = j + stride - 1
                 feature_vector = FeatureVector._7_SG(
+                    x=t.history_X[j : j + max_stride],
+                    y=t.history_Y[j : j + max_stride],
+                    vx=t.history_VX_calculated[j : j + max_stride],
+                    vy=t.history_VY_calculated[j : j + max_stride],
+                    weights=weights,
+                )
+                if X_feature_vectors.shape == (0,):
+                    X_feature_vectors = np.array(feature_vector).reshape(
+                        (-1, feature_vector.shape[0])
+                    )
+                else:
+                    X_feature_vectors = np.append(
+                        X_feature_vectors, np.array([feature_vector]), axis=0
+                    )
+                y_new_labels = np.append(y_new_labels, labels[i])
+                y_new_pooled_labels = np.append(y_new_pooled_labels, pooled_labels[i])
+                metadata.append([None, None, None, None, trackedObjects[i]])
+        return (
+            np.array(X_feature_vectors),
+            np.array(y_new_labels, dtype=int),
+            np.array(y_new_pooled_labels),
+            np.array(metadata),
+        )
+
+    @staticmethod
+    def factory_7_SG_velocity(
+        trackedObjects: List,
+        labels: np.ndarray,
+        pooled_labels: np.ndarray,
+        max_stride: int,
+        weights: Optional[np.ndarray] = np.array(
+            [1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32
+        ),
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Factory method for computing feature vectors using 7th order Savitzky-Golay filter.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            List of tracked objects.
+        labels : np.ndarray
+            Array of labels.
+        pooled_labels : np.ndarray
+            Array of pooled labels.
+        max_stride : int
+            Maximum stride.
+        weights : Optional[np.ndarray], optional
+            Array of weights for each feature, by default np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)
+        window_length : int, optional
+            Window length for Savitzky-Golay filter, by default 7
+        polyorder : int, optional
+            Polynomial order for Savitzky-Golay filter, by default 2
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing feature vectors, labels, pooled labels, and metadata.
+        """
+        X_feature_vectors = np.array([])
+        y_new_labels = np.array([])
+        y_new_pooled_labels = np.array([])
+        metadata = []
+        for i, t in tqdm.tqdm(
+            enumerate(trackedObjects),
+            desc="Features for classification.",
+            total=len(trackedObjects),
+        ):
+            stride = max_stride
+            if stride > t.history_X.shape[0]:
+                continue
+            for j in range(0, t.history_X.shape[0] - max_stride, max_stride):
+                end_idx = j + stride - 1
+                feature_vector = FeatureVector._7_SG_velocity(
                     x=t.history_X[j : j + max_stride],
                     y=t.history_Y[j : j + max_stride],
                     vx=t.history_VX_calculated[j : j + max_stride],

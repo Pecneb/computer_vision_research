@@ -5,6 +5,7 @@ from clustering import (
     kmeans_mse_clustering,
     calc_cluster_centers,
 )
+from fov_correction import transform_trajectories, FOVCorrectionOpencv
 from classifier import OneVsRestClassifierWrapper
 from utility.dataset import load_dataset
 from utility.models import save_model, mask_labels
@@ -29,10 +30,12 @@ import sys
 import os
 import matplotlib.pyplot as plt
 from logging import DEBUG, INFO, Logger, StreamHandler, getLogger
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict, Any
 from time import perf_counter
 import pandas as pd
 import threading
+import yaml
+import cv2
 
 
 cache_dir = os.path.join(os.path.dirname(__file__), "cache")
@@ -126,6 +129,12 @@ def get_arguments() -> argparse.Namespace:
     return arguments
 
 
+def parse_config() -> Dict[str, Any]:
+    with open("config/training_config.yaml", "r") as file:
+        config: Dict[str, Any] = yaml.safe_load(file)
+    return config
+
+
 def make_classifier(
     model: str, n_jobs: int = -1, **estimator_args
 ) -> OneVsRestClassifierWrapper:
@@ -186,6 +195,10 @@ def generate_feature_vectors(
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SY(
             trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6, scale_y=1.5
         )
+    elif version == "1_SG_velocity":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SG_velocity(
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6
+        )
     elif version == "7":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
             trackedObjects=X, labels=Y, pooled_labels=Y_pooled, max_stride=30
@@ -198,20 +211,31 @@ def generate_feature_vectors(
             max_stride=30,
             weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
         )
+    elif version == "7_SG_velocity":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7_SG_velocity(
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+            weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
+        )
     return X_fv, Y_fv, Y_pooled_fv
 
 
 def main():
     T0 = perf_counter()
     logger = init_logger()
-    args = get_arguments()
+    # args = get_arguments()
+    args = parse_config()
+    if args["debug"]:
+        logger.setLevel(DEBUG)
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
-    dataset = load_dataset(args.dataset)
+    dataset = load_dataset(args["dataset"])
     dataset = filter_trajectories(
         dataset,
-        threshold=args.edge_distance_threshold,
-        enter_exit_dist=args.enter_exit_threshold,
+        threshold=args["edge_distance_threshold"],
+        enter_exit_dist=args["enter_exit_threshold"],
         detectionDistanceFiltering=False,
     )
     logger.debug(len(dataset))
@@ -223,9 +247,9 @@ def main():
     _, labels = clustering_on_feature_vectors(
         feature_vectors_clustering,
         OPTICS,
-        min_samples=args.min_samples,
-        xi=args.xi,
-        max_eps=args.max_eps,
+        min_samples=args["min_samples"],
+        xi=args["xi"],
+        max_eps=args["max_eps"],
     )
     logger.debug(f"Clustering took {perf_counter() - t0} seconds")
     # get class labels
@@ -237,7 +261,7 @@ def main():
     logger.debug(f"X: {X.shape}, Y: {Y.shape}")
     # pool classes
     Y_pooled, _, _, _, pooled_classes = kmeans_mse_clustering(
-        X, Y, n_jobs=args.n_jobs, mse_threshold=args.mse
+        X, Y, n_jobs=args["n_jobs"], mse_threshold=args["mse"]
     )
     logger.debug(f"Y_pooled: {Y_pooled.shape}, pooled_classes: {pooled_classes}")
     logger.info(f"Pooled classes: {pooled_classes}")
@@ -247,6 +271,13 @@ def main():
     logger.debug(
         f"cluster_centers: {cluster_centers.shape}, cluster_centers_pooled: {cluster_centers_pooled.shape}"
     )
+    if args["fov_correction"]:
+        cap = cv2.VideoCapture(args["video_path"])
+        ret, img = cap.read()
+        img_google_maps = cv2.imread(args["google_map_image"])
+        transformer = FOVCorrectionOpencv(img, img_google_maps, args["distance"])
+        X = np.array(transform_trajectories(X, transformer, upscale=True))
+        FPS = cap.get(cv2.CAP_PROP_FPS)
     # split dataset into train and test sets
     X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
         X, Y, Y_pooled, test_size=0.2, random_state=42
@@ -277,7 +308,7 @@ def main():
             "time (s)",
         ]
     )
-    if args.grid_search:
+    if args["grid_search"]:
         param_grid = {
             "DT": {"max_depth": [None, 10, 15]},
             "KNN": {"n_neighbors": [3, 5, 10]},
@@ -289,7 +320,7 @@ def main():
             "KNN": {"n_neighbors": [7]},
             "SVM": {"C": [1], "max_iter": [30000]},
         }
-    for v in args.feature_vector_version:
+    for v in args["feature_vector_version"]:
         X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
             X_train, Y_train, Y_pooled_train, version=v
         )
@@ -299,18 +330,22 @@ def main():
         logger.debug(
             f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
         )
-        for m in args.model:
+        for m in args["model"]:
             for params in ParameterGrid(param_grid[m]):
                 # create classifier
-                estimator = make_classifier(m, n_jobs=args.n_jobs, **params)
+                estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
                 logger.debug(f"Estimator: {estimator}")
                 # run cross validation
-                if args.cross_validation:
+                if args["cross_validation"]:
                     logger.debug("Plotting cross validation data")
                     fig, ax = plt.subplots()
                     cv = KFold(n_splits=5)
-                    plot_cross_validation_data(cv, X_fv_train, Y_fv_train, ax, n_splits=5)
-                    fig.savefig(os.path.join(args.output, "cross_validation_data.png"))
+                    plot_cross_validation_data(
+                        cv, X_fv_train, Y_fv_train, ax, n_splits=5
+                    )
+                    fig.savefig(
+                        os.path.join(args["output"], "cross_validation_data.png")
+                    )
                     t0 = perf_counter()
                     scores = cross_val_score(
                         estimator,
@@ -318,14 +353,16 @@ def main():
                         Y_fv_train,
                         cv=cv,
                         scoring="balanced_accuracy",
-                        n_jobs=args.n_jobs,
+                        n_jobs=args["n_jobs"],
                     )
                     t1 = perf_counter()
                     logger.info(
                         f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
                     )
                     entry_num = len(cross_validation_results)
-                    cross_validation_results.loc[entry_num, "classifier"] = "".join([m, " ", str(params)])
+                    cross_validation_results.loc[entry_num, "classifier"] = "".join(
+                        [m, " ", str(params)]
+                    )
                     cross_validation_results.loc[entry_num, "version"] = v
                     for i, s in enumerate(scores):
                         cross_validation_results.loc[
@@ -339,7 +376,7 @@ def main():
                     )
                 # train classifier and evaluate on test set
                 t0 = perf_counter()
-                estimator = make_classifier(m, n_jobs=args.n_jobs, **params)
+                estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
                 estimator.fit(X_fv_train, Y_fv_train)
                 t1 = perf_counter()
                 Y_predicted = estimator.predict(X_fv_test)
@@ -358,24 +395,31 @@ def main():
                 confusion_matrix_display.ax_.set_title("Confusion Matrix")
                 logger.debug(f"Confusion matrix: {confusion_matrix_display}")
                 confusion_matrix_display.figure_.savefig(
-                    os.path.join(args.output, f"confusion_matrix_{v}_{m}.png")
+                    os.path.join(args["output"], f"confusion_matrix_{v}_{m}.png")
                 )
-                confusion_matrix_display_pooled = ConfusionMatrixDisplay.from_predictions(
-                    y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+                confusion_matrix_display_pooled = (
+                    ConfusionMatrixDisplay.from_predictions(
+                        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+                    )
                 )
-                confusion_matrix_display_pooled.ax_.set_title("Confusion Matrix (Pooled)")
+                confusion_matrix_display_pooled.ax_.set_title(
+                    "Confusion Matrix (Pooled)"
+                )
                 logger.debug(
                     f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
                 )
                 confusion_matrix_display_pooled.figure_.savefig(
-                    os.path.join(args.output, f"confusion_matrix_pooled_{v}_{m}.png")
+                    os.path.join(args["output"], f"confusion_matrix_pooled_{v}_{m}.png")
                 )
                 # save model with additional data about dataset
                 estimator.cluster_centroids = cluster_centers
                 estimator.pooled_cluster_centroids = cluster_centers_pooled
                 estimator.pooled_classes = pooled_classes
                 save_model(
-                    savedir=args.output, classifier_type=m, model=estimator, version=v
+                    savedir=args["output"],
+                    classifier_type=m,
+                    model=estimator,
+                    version=v,
                 )
                 results.loc[len(results)] = [
                     "".join([m, " ", str(params)]),

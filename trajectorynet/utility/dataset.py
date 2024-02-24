@@ -2,7 +2,8 @@ import logging
 import time
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
+from multiprocessing import shared_memory
 
 import joblib
 import numpy as np
@@ -63,7 +64,7 @@ def loadDatasetsFromDirectory(path: Union[str, Path]) -> Union[np.ndarray, bool]
     if not dirPath.is_dir():
         return False
     dataset = np.array([], dtype=object)
-    for p in tqdm.tqdm(dirPath.glob("*.joblib")):
+    for p in tqdm.tqdm(dirPath.glob("*.joblib"), desc="Loading datasets"):
         tmpDataset = load_dataset(p)
         dataset = np.append(dataset, tmpDataset, axis=0)
         # print(len(tmpDataset))
@@ -140,7 +141,7 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     """
     if type(path2dataset) == list:
         datasets = []
-        for p in path2dataset:
+        for p in tqdm.tqdm(path2dataset):
             datasets.append(load_dataset(p))
         return mergeDatasets(datasets)
     datasetPath = Path(path2dataset)
@@ -149,6 +150,7 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
         try:
             dataset = joblib.load(path2dataset)
         except:
+            print(f"Error loading {path2dataset}")
             return np.array([])
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset]
@@ -178,3 +180,25 @@ def mergeDatasets(datasets: np.ndarray):
     for d in datasets:
         merged = np.append(merged, d)
     return merged
+
+
+def load_shared_dataset(config: Dict[str, Any]) -> np.ndarray:
+    """Load a shared dataset from a file.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary.
+
+    Returns
+    -------
+    np.ndarray
+        Numpy array containing the dataset. 
+
+    """
+    shm = shared_memory.SharedMemory(name=config["runtime"]["shm_name"])
+    shape = tuple(config["runtime"]["dataset_shape"])
+    dtype = np.dtype(config["runtime"]["dataset_dtype"])
+    dataset = np.ndarray(shape, dtype=dtype, buffer=shm.buf).copy()
+    shm.close()
+    return dataset

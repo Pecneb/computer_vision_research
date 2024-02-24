@@ -77,9 +77,14 @@ def fov_correction_andras():
 
 
 class FOVCorrectionOpencv:
-    def __init__(self, video_frame: np.ndarray, google_maps_image: np.ndarray) -> None:
+    def __init__(
+        self, video_frame: np.ndarray, google_maps_image: np.ndarray, distance: int
+    ) -> None:
         self.video_frame = video_frame.copy()
         self.google_maps_image = google_maps_image.copy()
+        self.initialize_points()
+        self.initialize_origo()
+        self.initialize_meter_per_pixel(distance)
 
     @staticmethod
     def get_meter_per_pixel(img: np.ndarray, distance: float) -> float:
@@ -138,7 +143,9 @@ class FOVCorrectionOpencv:
         distance : float
             Distance in meters.
         """
-        self.meter_per_pixel = self.get_meter_per_pixel(self.google_maps_image, distance)
+        self.meter_per_pixel = self.get_meter_per_pixel(
+            self.google_maps_image, distance
+        )
 
     def initialize_points(self) -> None:
         """Initialize points from the image."""
@@ -225,31 +232,8 @@ class FOVCorrectionOpencv:
         return x * self.meter_per_pixel, y * self.meter_per_pixel
 
 
-def transform_trajectories(
-    objs: List[TrackedObject], transformer: FOVCorrectionOpencv
-) -> List[TrackedObject]:
-    """Transform trajectories with geometric transform method of opencv.
-
-    Parameters
-    ----------
-    objs : List[TrackedObject]
-        Tracked objects.
-    transformer : FOVCorrectionOpencv
-        Transformer object.
-
-    Returns
-    -------
-    List[TrackedObject]
-        List of transformed tracked objects.
-    """
-    objs_transformed = []
-    for obj in objs:
-        objs_transformed.append(transform_trajectory(obj, transformer))
-    return objs_transformed
-
-
 def transform_trajectory(
-    obj: TrackedObject, transformer: FOVCorrectionOpencv
+    obj: TrackedObject, transformer: FOVCorrectionOpencv, upscale: bool = False
 ) -> TrackedObject:
     """Transform trajectory with geometric transform method of opencv.
 
@@ -267,12 +251,39 @@ def transform_trajectory(
     """
     obj_transformed = deepcopy(obj)
     for i, det in enumerate(obj_transformed.history):
-        det.X, det.Y = transformer.get_shifted_xy(
-            int(det.X * transformer.video_frame.shape[0]),
-            int(det.Y * transformer.video_frame.shape[0]),
+        det.X, det.Y = (
+            transformer.get_shifted_xy(
+                int(det.X * transformer.video_frame.shape[0]),
+                int(det.Y * transformer.video_frame.shape[0]),
+            )
+            if upscale
+            else transformer.get_shifted_xy(det.X, det.Y)
         )
         obj_transformed.history_X[i], obj_transformed.history_Y[i] = det.X, det.Y
     return obj_transformed
+
+
+def transform_trajectories(
+    objs: List[TrackedObject], transformer: FOVCorrectionOpencv, upscale: bool = False
+) -> List[TrackedObject]:
+    """Transform trajectories with geometric transform method of opencv.
+
+    Parameters
+    ----------
+    objs : List[TrackedObject]
+        Tracked objects.
+    transformer : FOVCorrectionOpencv
+        Transformer object.
+
+    Returns
+    -------
+    List[TrackedObject]
+        List of transformed tracked objects.
+    """
+    objs_transformed = []
+    for obj in objs:
+        objs_transformed.append(transform_trajectory(obj, transformer, upscale))
+    return objs_transformed
 
 
 def fov_correction_opencv():
@@ -288,9 +299,9 @@ def fov_correction_opencv():
     _, frame = cap.read()
     google_maps_image = cv2.imread(google_maps_image_path)
     transformer = FOVCorrectionOpencv(frame, google_maps_image)
-    transformer.initialize_points()
-    transformer.initialize_origo()
-    transformer.initialize_meter_per_pixel(config["fov_correction"]["distance"])
+    # transformer.initialize_points()
+    # transformer.initialize_origo()
+    # transformer.initialize_meter_per_pixel(config["fov_correction"]["distance"])
     dst = transformer.get_transformed_image()
     plt.subplot(121), plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), plt.title(
         "Input"
