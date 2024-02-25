@@ -8,10 +8,18 @@
 |   1 | KNN {'n_neighbors': 7}          |       1 |                       92.5139 |                              98.7744 |  1.61854 |
 |   2 | DT {'max_depth': None}          |       1 |                       93.1055 |                              97.2613 |  1.65309 |
 
-## 1_SG_velocity
+## 1_SG_velocity m/tick
 
 |     | classifier                      | version | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
 | --: | :------------------------------ | ------: | ----------------------------: | -----------------------------------: | -------: |
 |   0 | SVM {'C': 1, 'max_iter': 30000} |       1 |                       86.4484 |                              97.8886 |  348.035 |
 |   1 | KNN {'n_neighbors': 7}          |       1 |                       92.4827 |                              98.7733 |  1.10096 |
 |   2 | DT {'max_depth': None}          |       1 |                       93.0317 |                              97.2565 |  2.33479 |
+
+### m/s
+
+|     | classifier                      | version       | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
+| --: | :------------------------------ | :------------ | ----------------------------: | -----------------------------------: | -------: |
+|   0 | SVM {'C': 1, 'max_iter': 30000} | 1_SG_velocity |                       87.8581 |                              98.0174 |  231.323 |
+|   1 | KNN {'n_neighbors': 7}          | 1_SG_velocity |                       90.6668 |                              98.5414 | 0.576066 |
+|   2 | DT {'max_depth': None}          | 1_SG_velocity |                       89.6207 |                              95.9668 |  3.05878 |

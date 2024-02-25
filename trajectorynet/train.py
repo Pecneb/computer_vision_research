@@ -48,6 +48,7 @@ def warn(*args, **kwargs):
 warnings.warn = warn
 
 DEBUG_FLAG = os.getenv("DEBUG") == "1"
+FPS = 30.0
 
 
 def init_logger() -> Logger:
@@ -167,7 +168,7 @@ def make_classifier(
 
 
 def generate_feature_vectors(
-    X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray, version: str = "1"
+    X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray, version: str = "1", fps: float = 30.0
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate feature vectors from X, Y and Y_pooled
 
@@ -195,9 +196,9 @@ def generate_feature_vectors(
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SY(
             trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6, scale_y=1.5
         )
-    elif version == "1_SG_velocity":
-        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SG_velocity(
-            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6
+    elif version == "1_SG_transform":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_1_SG_fov_transform(
+            trackedObjects=X, labels=Y, pooled_labels=Y_pooled, k=6, fps=fps
         )
     elif version == "7":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7(
@@ -211,13 +212,14 @@ def generate_feature_vectors(
             max_stride=30,
             weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
         )
-    elif version == "7_SG_velocity":
+    elif version == "7_SG_transform":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.factory_7_SG_velocity(
             trackedObjects=X,
             labels=Y,
             pooled_labels=Y_pooled,
             max_stride=30,
             weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
+            fps=fps
         )
     return X_fv, Y_fv, Y_pooled_fv
 
@@ -271,6 +273,7 @@ def main():
     logger.debug(
         f"cluster_centers: {cluster_centers.shape}, cluster_centers_pooled: {cluster_centers_pooled.shape}"
     )
+    FPS = 30.0
     if args["fov_correction"]:
         cap = cv2.VideoCapture(args["video_path"])
         ret, img = cap.read()
@@ -322,10 +325,10 @@ def main():
         }
     for v in args["feature_vector_version"]:
         X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
-            X_train, Y_train, Y_pooled_train, version=v
+            X_train, Y_train, Y_pooled_train, version=v, fps=FPS
         )
         X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
-            X_test, Y_test, Y_pooled_test, version=v
+            X_test, Y_test, Y_pooled_test, version=v, fps=FPS
         )
         logger.debug(
             f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
