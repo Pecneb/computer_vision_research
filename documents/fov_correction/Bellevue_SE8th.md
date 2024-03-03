@@ -23,3 +23,19 @@
 |   0 | SVM {'C': 1, 'max_iter': 30000} | 1_SG_velocity |                       87.3579 |                              97.2084 |  60.8504 |
 |   1 | KNN {'n_neighbors': 7}          | 1_SG_velocity |                       92.8677 |                              97.8838 | 0.361149 |
 |   2 | DT {'max_depth': None}          | 1_SG_velocity |                       89.2013 |                              94.7971 |   1.3093 |
+
+# 7
+
+|     | classifier                      | version | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
+| --: | :------------------------------ | ------: | ----------------------------: | -----------------------------------: | -------: |
+|   0 | SVM {'C': 1, 'max_iter': 30000} |       7 |                       77.4167 |                              91.7891 |  318.671 |
+|   1 | KNN {'n_neighbors': 7}          |       7 |                        87.541 |                              97.4455 | 0.409755 |
+|   2 | DT {'max_depth': None}          |       7 |                       84.3732 |                              94.4111 | 0.537709 |
+
+# 7_SG_velocity
+
+|     | classifier                      | version        | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
+| --: | :------------------------------ | :------------- | ----------------------------: | -----------------------------------: | -------: |
+|   0 | SVM {'C': 1, 'max_iter': 30000} | 7_SG_transform |                       80.9155 |                              97.6757 |  229.525 |
+|   1 | KNN {'n_neighbors': 7}          | 7_SG_transform |                       84.6023 |                              97.0226 | 0.389651 |
+|   2 | DT {'max_depth': None}          | 7_SG_transform |                       80.8274 |                              94.1086 |  1.36229 |

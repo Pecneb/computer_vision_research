@@ -34,3 +34,8 @@
 
 ## 7_SG_velocity
 
+|     | classifier                      | version        | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
+| --: | :------------------------------ | :------------- | ----------------------------: | -----------------------------------: | -------: |
+|   0 | SVM {'C': 1, 'max_iter': 30000} | 7_SG_transform |                       85.3939 |                              97.8557 |  6.75061 |
+|   1 | KNN {'n_neighbors': 7}          | 7_SG_transform |                       87.6115 |                              98.1038 | 0.044303 |
+|   2 | DT {'max_depth': None}          | 7_SG_transform |                       83.9477 |                              95.2886 | 0.157845 |
