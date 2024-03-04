@@ -603,6 +603,6 @@ if __name__ == "__main__":
     yolo = Yolov7(
         weights="/media/pecneb/970evoplus/gitclones/computer_vision_research/computer_vision_research/yolov7/yolov7.pt", debug=True)
     deepSort = DeepSORT(debug=True)
-    det = Pipeline(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
+    det = Detector(source="/media/pecneb/DataStorage/computer_vision_research_test_videos/test_videos/rouen_video.avi",
                    outdir="./research_data/rouren_video/", database=False, joblib=True, debug=True)
     det.run(yolo=yolo, deepSort=deepSort, show=True)

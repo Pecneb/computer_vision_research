@@ -1,29 +1,20 @@
-computer_vision_research
-========================
+trajectorynet
+=============
 
 .. toctree::
    :maxdepth: 4
 
-   DetectionPipeline
-   app
-   classification
-   classifier
-   clustering
-   converter
-   darknet
-   dataManagementClasses
-   database_metadata
-   deepsortTracking
-   detector
-   distanceBasedTracker
-   evaluate
-   examine_tracks
-   hldnapi
-   masker
-   predict
-   processing_utils
-   traffic_statistics
-   train
-   utility
-   visualizer
-   yolov7api
+   modules/DetectionPipeline
+   modules/classification
+   modules/classifier
+   modules/clustering
+   modules/converter
+   modules/dataManagementClasses
+   modules/database_metadata
+   modules/detect
+   modules/evaluate
+   modules/examine_tracks
+   modules/masker
+   modules/traffic_statistics
+   modules/train
+   modules/utility

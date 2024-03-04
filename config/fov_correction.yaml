@@ -1,0 +1,16 @@
+dataset:
+  video: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th/Bellevue_116th_NE12th__2017-09-10_19-08-25.mp4"
+  # path: "/home/pecneb/Videos/AronVideos/History_Jonesborough_Tenessee_12h/Historic_Jonesborough_Tennessee_Live_Cam_2024-01-12_00_46__3Vc2fZxMEI8_.joblib"
+  path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th__2017-09-10_19-08-25.joblib"
+  google_maps_image: "/media/pecneb/970evoplus/gitclones/computer_vision_research/research_data/Bellevue_NE116th_test/Bellevue_116th_NE12th_google_maps.png"
+fov_correction:
+  # road center view angle from horizon
+  alfa_zero: 50
+  # distance of road horizontally
+  distance: 254
+  # horizontal field of view
+  delta: 120
+  # resolution
+  resolution:
+    horizontal: 1920
+    vertical: 1080

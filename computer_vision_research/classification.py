@@ -41,13 +41,11 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from icecream import ic
 from scipy.signal import savgol_filter
 from tqdm import tqdm
 
 icecream.install()
-load_dotenv()
 
 np.seterr(divide='ignore', invalid='ignore')
 
