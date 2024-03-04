@@ -149,8 +149,8 @@ class FeatureVector(object):
         )
 
     @staticmethod
-    def _1_SG_velocity(
-        detections: List, window_length: int = 7, polyorder: int = 2
+    def _1_SG_fov_transform(
+        detections: List, window_length: int = 7, polyorder: int = 2, fps: float = 30.0
     ) -> np.ndarray:
         """Version 1 feature vectors.
         The velocities are calculated and smoothed with Savitzky Goaly filter.
@@ -173,11 +173,13 @@ class FeatureVector(object):
         _half = _size // 2
         _X = np.array([detections[i].X for i in range(_size)])
         _Y = np.array([detections[i].Y for i in range(_size)])
-        _VX = savgol_filter(
-            _X, window_length=window_length, polyorder=polyorder, deriv=1
+        _VX = (
+            savgol_filter(_X, window_length=window_length, polyorder=polyorder, deriv=1)
+            * fps
         )
-        _VY = savgol_filter(
-            _Y, window_length=window_length, polyorder=polyorder, deriv=1
+        _VY = (
+            savgol_filter(_Y, window_length=window_length, polyorder=polyorder, deriv=1)
+            * fps
         )
         return np.array(
             [
@@ -246,8 +248,6 @@ class FeatureVector(object):
     def _7_SG(
         x: np.ndarray,
         y: np.ndarray,
-        vx: np.ndarray,
-        vy: np.ndarray,
         weights: Optional[np.ndarray] = None,
         window_length: int = 7,
         polyorder: int = 2,
@@ -305,12 +305,13 @@ class FeatureVector(object):
         )
 
     @staticmethod
-    def _7_SG_velocity(
+    def _7_SG_fov_transform(
         x: np.ndarray,
         y: np.ndarray,
         window_length: int = 7,
         polyorder: int = 2,
         weights: Optional[np.ndarray] = None,
+        fps: float = 30.0,
     ) -> np.ndarray:
         """Feature vector version 7
 
@@ -326,6 +327,8 @@ class FeatureVector(object):
             Polynom degree of Savitzky Goaly filter, by default 2
         weights : Optional[np.ndarray], optional
             Weight vector, by default ...
+        fps : float
+            Frames per second, by default 30.0
 
         Returns
         -------
@@ -333,7 +336,9 @@ class FeatureVector(object):
             Feature Vector.
         """
         if weights is None:
-            _weights = np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)
+            _weights = np.array(
+                [1, 1, fps, fps, 2, 2, 2 * fps, 2 * fps], dtype=np.float32
+            )
         else:
             _weights = weights
         vx_s = savgol_filter(
@@ -684,7 +689,7 @@ class FeatureVector(object):
         )
 
     @staticmethod
-    def factory_1_SG_velocity(
+    def factory_1_SG_fov_transform(
         trackedObjects: List,
         labels: np.ndarray,
         pooled_labels: np.ndarray,
@@ -692,6 +697,7 @@ class FeatureVector(object):
         up_until: float = 1,
         window_length: int = 7,
         polyorder: int = 2,
+        fps: float = 30.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate feature vectors from the histories of trajectories.
         Divide the trajectory into k parts, then make k number of feature vectors.
@@ -707,10 +713,14 @@ class FeatureVector(object):
             List of corresponding pooled labels.
         k : int, optional
             Number of subtrajectories, by default 6
+        up_until : float, optional
+            Up until what part of the trajectory to use, by default 1
         window_length : int, optional
             Window of savgol filter, by default 7
         polyorder : int, optional
             Degree of polynom used in savgol filter, by default 2
+        fps : float, optional
+            Frames per second, by default 30.0
 
         Returns
         -------
@@ -730,10 +740,11 @@ class FeatureVector(object):
                     0, int(len(trackedObjects[j].history) * up_until) - step, step
                 ):
                     featureVectors.append(
-                        FeatureVector._1_SG_velocity(
+                        FeatureVector._1_SG_fov_transform(
                             trackedObjects[j].history[i : i + step + 1],
                             window_length=window_length,
                             polyorder=polyorder,
+                            fps=fps,
                         )
                     )
                     if labels is not None:
@@ -992,11 +1003,10 @@ class FeatureVector(object):
         labels: np.ndarray,
         pooled_labels: np.ndarray,
         max_stride: int,
-        weights: Optional[np.ndarray] = np.array(
-            [1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32
-        ),
+        weights: Optional[np.ndarray] = None,
         window_length: int = 7,
         polyorder: int = 2,
+        fps: float = 30.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Factory method for computing feature vectors using 7th order Savitzky-Golay filter.
@@ -1012,11 +1022,13 @@ class FeatureVector(object):
         max_stride : int
             Maximum stride.
         weights : Optional[np.ndarray], optional
-            Array of weights for each feature, by default np.array([1, 1, 100, 100, 2, 2, 200, 200], dtype=np.float32)
+            Array of weights for each feature, by default None
         window_length : int, optional
             Window length for Savitzky-Golay filter, by default 7
         polyorder : int, optional
             Polynomial order for Savitzky-Golay filter, by default 2
+        fps : float, optional
+            Frames per second, by default 30.0
 
         Returns
         -------
@@ -1037,12 +1049,12 @@ class FeatureVector(object):
                 continue
             for j in range(0, t.history_X.shape[0] - max_stride, max_stride):
                 end_idx = j + stride - 1
-                feature_vector = FeatureVector._7_SG_velocity(
+                feature_vector = FeatureVector._7_SG_fov_transform(
                     x=t.history_X[j : j + max_stride],
                     y=t.history_Y[j : j + max_stride],
-                    vx=t.history_VX_calculated[j : j + max_stride],
-                    vy=t.history_VY_calculated[j : j + max_stride],
-                    weights=weights,
+                    window_length=window_length,
+                    polyorder=polyorder,
+                    fps=fps,
                 )
                 if X_feature_vectors.shape == (0,):
                     X_feature_vectors = np.array(feature_vector).reshape(
