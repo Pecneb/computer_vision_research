@@ -39,3 +39,11 @@
 |   0 | SVM {'C': 1, 'max_iter': 30000} | 7_SG_transform |                       89.1126 |                              94.1642 |  334.603 |
 |   1 | KNN {'n_neighbors': 7}          | 7_SG_transform |                       91.7958 |                              94.3582 | 0.662708 |
 |   2 | DT {'max_depth': None}          | 7_SG_transform |                        89.779 |                              92.2885 |  1.07402 |
+
+# 11
+
+|     | classifier                        | version | balanced_test_score (percent) | balanced_pooled_test_score (percent) | time (s) |
+| --: | :-------------------------------- | ------: | ----------------------------: | -----------------------------------: | -------: |
+|   0 | SVM {'C': 100, 'max_iter': 30000} |      11 |                       90.0592 |                              95.3329 |   268.61 |
+|   1 | KNN {'n_neighbors': 7}            |      11 |                       88.5156 |                              93.8716 | 0.234437 |
+|   2 | DT {'max_depth': None}            |      11 |                        86.757 |                              91.5316 | 0.547478 |
