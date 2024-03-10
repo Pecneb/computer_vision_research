@@ -3,7 +3,7 @@ import cv2
 from yaml import load, dump
 from functools import lru_cache
 from matplotlib import pyplot as plt
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 from copy import deepcopy
 from tqdm import tqdm
 
@@ -78,11 +78,23 @@ def fov_correction_andras():
 
 class FOVCorrectionOpencv:
     def __init__(
-        self, video_frame: np.ndarray, google_maps_image: np.ndarray, distance: int
+        self,
+        video_frame: np.ndarray,
+        google_maps_image: np.ndarray,
+        distance: int,
+        transform_params: Optional[str] = None,
     ) -> None:
         self.video_frame = video_frame.copy()
         self.google_maps_image = google_maps_image.copy()
-        self.initialize_points()
+        # load transform params if they exist, if not initialize them, then save them
+        if transform_params:
+            try:
+                self.load_transform_params(transform_params)
+            except OSError:
+                self.initialize_transform_matrix()
+                self.save_transform_params(transform_params)
+        else:
+            self.initialize_transform_matrix()
         self.initialize_origo()
         self.initialize_meter_per_pixel(distance)
 
@@ -147,13 +159,22 @@ class FOVCorrectionOpencv:
             self.google_maps_image, distance
         )
 
-    def initialize_points(self) -> None:
-        """Initialize points from the image."""
+    def initialize_transform_matrix(self) -> None:
+        """Initialize the transform matrix from the image."""
         self.pts1 = self.get_points(self.video_frame)
         self.pts2 = self.get_points(self.google_maps_image)
         self.M = cv2.getPerspectiveTransform(
             np.float32(self.pts1), np.float32(self.pts2)
         )
+
+    def save_transform_params(self, path: str) -> None:
+        """Save the transform matrix to a file."""
+        np.savez(path, M=self.M, pts1=self.pts1, pts2=self.pts2)
+
+    def load_transform_params(self, path: str) -> None:
+        """Load the transform matrix from a file."""
+        data = np.load(path)
+        self.M, self.pts1, self.pts2 = data["M"], data["pts1"], data["pts2"]
 
     def initialize_origo(self) -> None:
         """Get geometric center of the second images pts2."""
