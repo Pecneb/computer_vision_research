@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple, Any, Callable
 
 import numpy as np
 import tqdm
@@ -9,7 +9,7 @@ from joblib import Parallel, delayed, Memory
 ic.disable()
 
 
-memory = Memory(location="cache", verbose=0)
+# memory = Memory(location="cache", verbose=0)
 
 
 class FeatureVector(object):
@@ -469,6 +469,165 @@ class FeatureVector(object):
         vx = savgol_filter(x, window_length=window_length, polyorder=polyorder, deriv=1)
         vy = savgol_filter(y, window_length=window_length, polyorder=polyorder, deriv=1)
         return np.array([x[-1], y[-1], vx[-1], vy[-1]]) * weights
+
+    @staticmethod
+    def Re(
+        x: np.ndarray,
+        y: np.ndarray,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        return np.array([x[-1], y[-1]])
+    
+    @staticmethod
+    def ReVe(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5]
+    )
+
+    @staticmethod
+    def ReVeAe(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+            ax = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=2)
+            ay = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=2)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        ax = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        ay = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5, ax[-1]*50, ay[-1]*50])
+
+    @staticmethod
+    def _12(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 5,
+        polyorder: int = 1,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(
+                x[-len(x) - 1 :], window_length=1, polyorder=polyorder, deriv=1
+            )
+            vy = savgol_filter(
+                y[-len(y) - 1 :], window_length=1, polyorder=polyorder, deriv=1
+            )
+            ax = savgol_filter(
+                x[-len(x) - 1 :], window_length=1, polyorder=polyorder, deriv=2
+            )
+            ay = savgol_filter(
+                y[-len(y) - 1 :], window_length=1, polyorder=polyorder, deriv=2
+            )
+            return np.array([x[-1], y[-1], vx[-1], vy[-1], ax[-1], ay[-1]])
+        vx = savgol_filter(
+            x[-window_length:],
+            window_length=window_length,
+            polyorder=polyorder,
+            deriv=1,
+        )
+        vy = savgol_filter(
+            y[-window_length:],
+            window_length=window_length,
+            polyorder=polyorder,
+            deriv=1,
+        )
+        ax = savgol_filter(
+            x[-window_length:],
+            window_length=window_length,
+            polyorder=polyorder,
+            deriv=2,
+        )
+        ay = savgol_filter(
+            y[-window_length:],
+            window_length=window_length,
+            polyorder=polyorder,
+            deriv=2,
+        )
+        return np.array([x[-1], y[-1], vx[-1], vy[-1], ax[-1], ay[-1]])
 
     @staticmethod
     def factory_1(
@@ -1287,3 +1446,75 @@ class FeatureVector(object):
             np.array(y_new_pooled_labels),
             np.array(metadata),
         )
+
+    @staticmethod
+    def make_feature_vectors(
+        func: Callable,
+        trackedObjects: List,
+        labels: np.ndarray,
+        pooled_labels: np.ndarray,
+        max_stride: int = 30,
+        **kwargs
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Generate feature vectors from the histories of trajectories.
+
+        Parameters
+        ----------
+        trackedObjects : List
+            List of trajectories.
+        labels : np.ndarray
+            List of corresponding labels.
+        pooled_labels : np.ndarray
+            List of corresponding pooled labels.
+        max_stride : int, optional
+            Maximum size of trajectory part, by default 30
+        window_length : int, optional
+            Savitzky Golay window length, by default 5
+        polyorder : int, optional
+            Savitzky Golay polyorder, by default 1
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+            Feature vectors with coresponding labels, pooled labels and metadata.
+        """
+        X_feature_vectors = []
+        y_new_labels = []
+        y_new_pooled_labels = []
+        metadata = []
+        for i, t in tqdm.tqdm(
+            enumerate(trackedObjects),
+            desc="Features for classification.",
+            total=len(trackedObjects),
+        ):
+            stride = max_stride
+            if stride > t.history_X.shape[0]:
+                continue
+            for j in range(0, t.history_X.shape[0] - max_stride, max_stride):
+                feature_vector = func(
+                    x=t.history_X[j : j + max_stride],
+                    y=t.history_Y[j : j + max_stride],
+                    **kwargs
+                )
+                X_feature_vectors.append(feature_vector)
+                y_new_labels.append(labels[i])
+                y_new_pooled_labels.append(pooled_labels[i])
+                metadata.append(trackedObjects[i])
+        return (
+            np.array(X_feature_vectors),
+            np.array(y_new_labels, dtype=int),
+            np.array(y_new_pooled_labels, dtype=int),
+            np.array(metadata),
+        )
+
+
+def track2features(trackedObject, stride, label=None, pooled_label=None):
+    X_feature_vectors = np.array(
+        [
+            FeatureVector.Re(x=trackedObject.history_X[i : i + stride])
+            for i in range(0, len(trackedObject.history_X) - stride, stride)
+        ]
+    )
+    labels = np.array([label for _ in range(0, len(X_feature_vectors))])
+    pooled_labels_ = np.array([pooled_label for _ in range(0, len(X_feature_vectors))])
+    return X_feature_vectors, labels, pooled_labels_
