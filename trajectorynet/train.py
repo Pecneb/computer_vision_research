@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 from sklearn.cluster import OPTICS
 from sklearn.model_selection import cross_val_score, KFold, ParameterGrid
 from sklearn.metrics import (
@@ -24,6 +25,7 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     RocCurveDisplay,
 )
+from scipy.stats import stats
 import numpy as np
 import argparse
 import sys
@@ -32,6 +34,7 @@ import matplotlib.pyplot as plt
 from logging import DEBUG, INFO, Logger, StreamHandler, getLogger
 from typing import Union, Tuple, Dict, Any
 from time import perf_counter
+from datetime import datetime
 import pandas as pd
 import threading
 import yaml
@@ -162,13 +165,19 @@ def make_classifier(
         classifier = KNeighborsClassifier(**estimator_args)
     elif model == "DT":
         classifier = DecisionTreeClassifier(**estimator_args)
+    elif model == "MLP":
+        classifier = MLPClassifier(**estimator_args)
     else:
         raise ValueError(f"Unknown model: {model}")
     return OneVsRestClassifierWrapper(classifier, n_jobs=n_jobs, verbose=1)
 
 
 def generate_feature_vectors(
-    X: np.ndarray, Y: np.ndarray, Y_pooled: np.ndarray, version: str = "1", fps: float = 30.0
+    X: np.ndarray,
+    Y: np.ndarray,
+    Y_pooled: np.ndarray,
+    version: str = "1",
+    fps: float = 30.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate feature vectors from X, Y and Y_pooled
 
@@ -219,7 +228,31 @@ def generate_feature_vectors(
             pooled_labels=Y_pooled,
             max_stride=30,
             weights=np.array([1, 1.5, 100, 150, 2, 3, 200, 300]),
-            fps=fps
+            fps=fps,
+        )
+    elif version == "Re":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.Re,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+        )
+    elif version == "ReVe":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.ReVe,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+        )
+    elif version == "ReVeAe":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.ReVeAe,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
         )
     return X_fv, Y_fv, Y_pooled_fv
 
@@ -278,7 +311,10 @@ def main():
         cap = cv2.VideoCapture(args["video_path"])
         ret, img = cap.read()
         img_google_maps = cv2.imread(args["google_map_image"])
-        transformer = FOVCorrectionOpencv(img, img_google_maps, args["distance"])
+        transform_params_path = os.path.join(args["output"], "transform_params.npz")
+        transformer = FOVCorrectionOpencv(
+            img, img_google_maps, args["distance"], transform_params_path
+        )
         X = np.array(transform_trajectories(X, transformer, upscale=True))
         FPS = cap.get(cv2.CAP_PROP_FPS)
     # split dataset into train and test sets
@@ -316,14 +352,25 @@ def main():
             "DT": {"max_depth": [None, 10, 15]},
             "KNN": {"n_neighbors": [3, 5, 10]},
             "SVM": {"C": [10, 100, 1000], "max_iter": [30000]},
+            "MLP": {
+                "hidden_layer_sizes": [(100, 100), (100, 100, 100, 100)],
+                "solver": ["adam"],
+                "learning_rate": ["adaptive"],
+                "max_iter": [1500, 3000],
+                "alpha": [0.01, 0.1],
+                "learning_rate_init": [0.001, 0.01],
+                "verbose": [False]
+            },
         }
     else:
         param_grid = {
             "DT": {"max_depth": [None]},
             "KNN": {"n_neighbors": [7]},
-            "SVM": {"C": [1], "max_iter": [30000]},
+            "SVM": {"C": [100], "max_iter": [60000]},
+            "MLP": {"hidden_layer_sizes": [(100, 100, 100, 100)], "solver": ["adam"], "learning_rate": ["adaptive"], "max_iter": [3000], "alpha": [0.01], "learning_rate_init": [0.001], "verbose": [False]}
         }
     for v in args["feature_vector_version"]:
+        logger.debug(f"Version: {v}")
         X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
             X_train, Y_train, Y_pooled_train, version=v, fps=FPS
         )
@@ -333,110 +380,121 @@ def main():
         logger.debug(
             f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
         )
+        logger.debug(f"X_fv_train: {X_fv_train[:20]}")
         for m in args["model"]:
             for params in ParameterGrid(param_grid[m]):
-                # create classifier
-                estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
-                logger.debug(f"Estimator: {estimator}")
-                # run cross validation
-                if args["cross_validation"]:
-                    logger.debug("Plotting cross validation data")
-                    fig, ax = plt.subplots()
-                    cv = KFold(n_splits=5)
-                    plot_cross_validation_data(
-                        cv, X_fv_train, Y_fv_train, ax, n_splits=5
-                    )
-                    fig.savefig(
-                        os.path.join(args["output"], "cross_validation_data.png")
-                    )
+                try:
+                    # create classifier
+                    estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
+                    logger.debug(f"Estimator: {estimator}")
+                    # run cross validation
+                    if args["cross_validation"]:
+                        logger.debug("Plotting cross validation data")
+                        fig, ax = plt.subplots()
+                        cv = KFold(n_splits=5)
+                        plot_cross_validation_data(
+                            cv, X_fv_train, Y_fv_train, ax, n_splits=5
+                        )
+                        fig.savefig(
+                            os.path.join(args["output"], "cross_validation_data.png")
+                        )
+                        t0 = perf_counter()
+                        scores = cross_val_score(
+                            estimator,
+                            X_fv_train,
+                            Y_fv_train,
+                            cv=cv,
+                            scoring="balanced_accuracy",
+                            n_jobs=args["n_jobs"],
+                        )
+                        t1 = perf_counter()
+                        logger.info(
+                            f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
+                        )
+                        entry_num = len(cross_validation_results)
+                        cross_validation_results.loc[entry_num, "classifier"] = "".join(
+                            [m, " ", str(params)]
+                        )
+                        cross_validation_results.loc[entry_num, "version"] = v
+                        for i, s in enumerate(scores):
+                            cross_validation_results.loc[
+                                entry_num, "split_" + str(i) + " (percent)"
+                            ] = (s * 100)
+                        cross_validation_results.loc[entry_num, "mean (percent)"] = (
+                            scores.mean() * 100
+                        )
+                        cross_validation_results.loc[entry_num, "std (percent)"] = (
+                            scores.std() * 100
+                        )
+                    # train classifier and evaluate on test set
                     t0 = perf_counter()
-                    scores = cross_val_score(
-                        estimator,
-                        X_fv_train,
-                        Y_fv_train,
-                        cv=cv,
-                        scoring="balanced_accuracy",
-                        n_jobs=args["n_jobs"],
-                    )
+                    # estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
+                    estimator.fit(X_fv_train, Y_fv_train)
                     t1 = perf_counter()
-                    logger.info(
-                        f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
-                    )
-                    entry_num = len(cross_validation_results)
-                    cross_validation_results.loc[entry_num, "classifier"] = "".join(
-                        [m, " ", str(params)]
-                    )
-                    cross_validation_results.loc[entry_num, "version"] = v
-                    for i, s in enumerate(scores):
-                        cross_validation_results.loc[
-                            entry_num, "split_" + str(i) + " (percent)"
-                        ] = (s * 100)
-                    cross_validation_results.loc[entry_num, "mean (percent)"] = (
-                        scores.mean() * 100
-                    )
-                    cross_validation_results.loc[entry_num, "std (percent)"] = (
-                        scores.std() * 100
-                    )
-                # train classifier and evaluate on test set
-                t0 = perf_counter()
-                estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
-                estimator.fit(X_fv_train, Y_fv_train)
-                t1 = perf_counter()
-                Y_predicted = estimator.predict(X_fv_test)
-                Y_score = estimator.predict_proba(X_fv_test)
-                score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
-                logger.info(f"Balanced Test score: {score}")
-                Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
-                pooled_score = balanced_accuracy_score(
-                    y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
-                )
-                logger.info(f"Balanced Pooled Test score: {pooled_score}")
-                # calculate confusion matrix
-                confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
-                    y_true=Y_fv_test, y_pred=Y_predicted
-                )
-                confusion_matrix_display.ax_.set_title("Confusion Matrix")
-                logger.debug(f"Confusion matrix: {confusion_matrix_display}")
-                confusion_matrix_display.figure_.savefig(
-                    os.path.join(args["output"], f"confusion_matrix_{v}_{m}.png")
-                )
-                confusion_matrix_display_pooled = (
-                    ConfusionMatrixDisplay.from_predictions(
+                    Y_predicted = estimator.predict(X_fv_test)
+                    Y_score = estimator.predict_proba(X_fv_test)
+                    score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
+                    logger.info(f"Balanced Test score: {score}")
+                    Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
+                    pooled_score = balanced_accuracy_score(
                         y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
                     )
-                )
-                confusion_matrix_display_pooled.ax_.set_title(
-                    "Confusion Matrix (Pooled)"
-                )
-                logger.debug(
-                    f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
-                )
-                confusion_matrix_display_pooled.figure_.savefig(
-                    os.path.join(args["output"], f"confusion_matrix_pooled_{v}_{m}.png")
-                )
-                # save model with additional data about dataset
-                estimator.cluster_centroids = cluster_centers
-                estimator.pooled_cluster_centroids = cluster_centers_pooled
-                estimator.pooled_classes = pooled_classes
-                save_model(
-                    savedir=args["output"],
-                    classifier_type=m,
-                    model=estimator,
-                    version=v,
-                )
-                results.loc[len(results)] = [
-                    "".join([m, " ", str(params)]),
-                    v,
-                    score * 100,
-                    pooled_score * 100,
-                    t1 - t0,
-                ]
-        print(cross_validation_results.to_markdown())
-        print(results.to_markdown())
-        print(f"Total time: {perf_counter() - T0} seconds")
-        for thread in threading.enumerate():
-            print(thread.name)
-        sys.exit()
+                    logger.info(f"Balanced Pooled Test score: {pooled_score}")
+                    # calculate confusion matrix
+                    confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
+                        y_true=Y_fv_test, y_pred=Y_predicted
+                    )
+                    confusion_matrix_display.ax_.set_title("Confusion Matrix")
+                    logger.debug(f"Confusion matrix: {confusion_matrix_display}")
+                    confusion_matrix_display.figure_.savefig(
+                        os.path.join(args["output"], f"confusion_matrix_{v}_{m}.png")
+                    )
+                    confusion_matrix_display_pooled = (
+                        ConfusionMatrixDisplay.from_predictions(
+                            y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+                        )
+                    )
+                    confusion_matrix_display_pooled.ax_.set_title(
+                        "Confusion Matrix (Pooled)"
+                    )
+                    logger.debug(
+                        f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
+                    )
+                    confusion_matrix_display_pooled.figure_.savefig(
+                        os.path.join(args["output"], f"confusion_matrix_pooled_{v}_{m}.png")
+                    )
+                    # save model with additional data about dataset
+                    estimator.cluster_centroids = cluster_centers
+                    estimator.pooled_cluster_centroids = cluster_centers_pooled
+                    estimator.pooled_classes = pooled_classes
+                    save_model(
+                        savedir=args["output"],
+                        classifier_type=m,
+                        model=estimator,
+                        version=v,
+                    )
+                    results.loc[len(results)] = [
+                        "".join([m, " ", str(params)]),
+                        v,
+                        score * 100,
+                        pooled_score * 100,
+                        t1 - t0,
+                    ]
+                except ValueError as e:
+                    logger.error(f"Error: {e}")
+                    continue
+    print(cross_validation_results.to_markdown())
+    print(results.to_markdown())
+    date = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args["cross_validation"]:
+        cross_validation_results.to_csv(
+            os.path.join(args["output"], f"cross_validation_results_{date}.csv")
+        )
+    results.to_csv(os.path.join(args["output"], f"results_{date}.csv"))
+    print(f"Total time: {perf_counter() - T0} seconds")
+    for thread in threading.enumerate():
+        print(thread.name)
+    sys.exit()
 
 
 if __name__ == "__main__":
