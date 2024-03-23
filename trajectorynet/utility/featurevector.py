@@ -562,6 +562,104 @@ class FeatureVector(object):
         ax = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
         ay = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
         return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5, ax[-1]*50, ay[-1]*50])
+    
+    @staticmethod
+    def ReRs(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        return np.array([x[-1], y[-1], x[0], y[0]])
+
+    @staticmethod
+    def ReVeRs(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5, x[0], y[0]])
+    
+    @staticmethod
+    def ReVeAeRs(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2,
+    ) -> np.ndarray:
+        """Feature vector version 11, uses only the end coordinates and the end velocities.
+        Velocities are calculated and smoothed with Savitzky Goaly filter.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+        window_length : int
+            Window size of Savitzky Goaly filter, by default 7
+        polyorder : int
+            Polynom degree of Savitzky Goaly filter, by default 2
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+            ax = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=2)
+            ay = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=2)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        ax = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        ay = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5, ax[-1]*50, ay[-1]*50, x[0], y[0]])
 
     @staticmethod
     def _12(
