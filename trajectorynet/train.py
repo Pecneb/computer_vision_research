@@ -278,6 +278,30 @@ def generate_feature_vectors(
             pooled_labels=Y_pooled,
             max_stride=30,
         )
+    elif version == "ReRm":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.ReRm,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+        )
+    elif version == "ReVeRm":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.ReVeRm,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+        )
+    elif version == "ReVeAeRm":
+        X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
+            FeatureVector.ReVeAeRm,
+            trackedObjects=X,
+            labels=Y,
+            pooled_labels=Y_pooled,
+            max_stride=30,
+        )
     return X_fv, Y_fv, Y_pooled_fv
 
 
