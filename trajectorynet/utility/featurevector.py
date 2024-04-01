@@ -5,6 +5,7 @@ import tqdm
 from icecream import ic
 from scipy.signal import savgol_filter
 from joblib import Parallel, delayed, Memory
+from numba import jit
 
 ic.disable()
 
@@ -741,6 +742,94 @@ class FeatureVector(object):
         _size = len(x)
         _half = _size // 2
         return np.array([x[-1], y[-1], vx[-1]*5, vy[-1]*5, ax[-1]*50, ay[-1]*50, x[_half], y[_half]])
+    
+    @staticmethod
+    @jit(nopython=True)
+    def ReRsRm(
+        x: np.ndarray,
+        y: np.ndarray,
+    ) -> np.ndarray:
+        """Use the end coordinates, the start coordinates and the middle coordinates.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        _size = len(x)
+        _half = _size // 2
+        return np.array([x[-1], y[-1], x[0], y[0], x[_half], y[_half]])
+    
+    @staticmethod
+    def ReVeRsRm(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2
+    ) -> np.ndarray:
+        """Use the end coordinates, the end velocities, the start coordinates and the middle coordinates.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        _size = len(x)
+        _half = _size // 2
+        return np.array([x[-1], y[-1], vx[-1], vy[-1], x[0], y[0], x[_half], y[_half]]) * np.array([1,1,5,5,1,1,1,1])
+    
+    @staticmethod
+    def ReVeAeRsRm(
+        x: np.ndarray,
+        y: np.ndarray,
+        window_length: int = 7,
+        polyorder: int = 2
+    ) -> np.ndarray:
+        """Use the end coordinates, the end velocities, the end accelerations, the start coordinates and the middle coordinates.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            X coordinates.
+        y : np.ndarray
+            Y coordinates.
+
+        Returns
+        -------
+        np.ndarray
+            Feature Vector.
+        """
+        if len(x) < window_length:
+            vx = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=1)
+            vy = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=1)
+            ax = savgol_filter(x, window_length=1, polyorder=polyorder, deriv=2)
+            ay = savgol_filter(y, window_length=1, polyorder=polyorder, deriv=2)
+        vx = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        vy = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=1)
+        ax = savgol_filter(x[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        ay = savgol_filter(y[-window_length:], window_length=window_length, polyorder=polyorder, deriv=2)
+        _size = len(x)
+        _half = _size // 2
+        return np.array([x[-1], y[-1], vx[-1], vy[-1], ax[-1], ay[-1], x[0], y[0], x[_half], y[_half]]) * np.array([1,1,5,5,50,50,1,1,1,1])
 
     @staticmethod
     def _12(
