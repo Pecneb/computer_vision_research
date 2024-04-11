@@ -21,6 +21,13 @@ def get_args():
         help="Path to the evaluation results",
         nargs="+",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="Path to the output file",
+    )
     return parser.parse_args()
 
 
@@ -46,15 +53,40 @@ def load_data(paths: List[str]) -> pd.DataFrame:
     return pd.concat(dataframes)
 
 
+def markdown_layout(df1: pd.DataFrame, df2: pd.DataFrame) -> str:
+    return f"""
+    MLP  
+    KNN  
+
+          Re                    ReVe                    ReVeAe
+    {df1.where(df1["version"] == "Re").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "Re").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}         {df1.where(df1["version"] == "ReVe").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVe").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeAe").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeAe").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+    {df2.where(df2["version"] == "Re").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "Re").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}         {df2.where(df2["version"] == "ReVe").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVe").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeAe").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeAe").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+
+                                ReRs                    ReVeRs                   ReVeAeRs
+                          {df1.where(df1["version"] == "ReRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeAeRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeAeRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+                          {df2.where(df2["version"] == "ReRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeAeRs").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeAeRs").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+
+    
+                                ReRm                    ReVeRm                   ReVeAeRm
+                          {df1.where(df1["version"] == "ReRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeAeRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeAeRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+                          {df2.where(df2["version"] == "ReRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeAeRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeAeRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+    
+                                                        ReRsRm                   ReVeRsRm                 ReVeAeRsRm
+                                                    {df1.where(df1["version"] == "ReRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df1.where(df1["version"] == "ReVeAeRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df1.where(df1["version"] == "ReVeAeRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+                                                    {df2.where(df2["version"] == "ReRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}             {df2.where(df2["version"] == "ReVeAeRsRm").dropna()["balanced_test_score (percent)"].values[0]:.2f} | {df2.where(df2["version"] == "ReVeAeRsRm").dropna()["balanced_pooled_test_score (percent)"].values[0]:.2f}
+    """
+
+
 def main():
     args = get_args()
-    df = load_data(args.evaluation_results) 
+    df = load_data(args.evaluation_results)
     mlp_results = df.where(df["classifier"].str.contains("MLP")).dropna()
-    svm_results = df.where(df["classifier"].str.contains("SVM")).dropna()
+    knn_results = df.where(df["classifier"].str.contains("KNN")).dropna()
     mlp_results["classifier"] = "MLP"
-    svm_results["classifier"] = "SVM"
-    print(mlp_results.sort_values("version"))
-    print(svm_results.sort_values("version"))
+    knn_results["classifier"] = "KNN"
+    print(markdown_layout(mlp_results, knn_results))
+    with open(args.output, "w") as f:
+        f.write(markdown_layout(mlp_results, knn_results))
 
 
 if __name__ == "__main__":
