@@ -45,6 +45,8 @@ def load_data(paths: List[str]) -> pd.DataFrame:
         Dataframe containing the concatenated data
     """
     dataframes = []
+    if Path(paths[0]).is_dir():
+        paths = [str(path) for path in Path(paths[0]).rglob("results_*.csv")]
     for path in paths:
         if not Path(path).exists():
             print(f"Path {path} does not exist")
@@ -80,13 +82,20 @@ def markdown_layout(df1: pd.DataFrame, df2: pd.DataFrame) -> str:
 def main():
     args = get_args()
     df = load_data(args.evaluation_results)
-    mlp_results = df.where(df["classifier"].str.contains("MLP")).dropna()
-    knn_results = df.where(df["classifier"].str.contains("KNN")).dropna()
+    mlp_results = df.where(df["classifier"].str.contains("MLP")).dropna().drop_duplicates(subset=["version"])
+    knn_results = df.where(df["classifier"].str.contains("KNN")).dropna().drop_duplicates(subset=["version"])
     mlp_results["classifier"] = "MLP"
     knn_results["classifier"] = "KNN"
-    print(markdown_layout(mlp_results, knn_results))
+    try:
+        results = markdown_layout(mlp_results, knn_results)
+    except Exception as e:
+        print(mlp_results)
+        print(knn_results)
+        print(e)
+        results = "Error"
+    print(results)
     with open(args.output, "w") as f:
-        f.write(markdown_layout(mlp_results, knn_results))
+        f.write(results)
 
 
 if __name__ == "__main__":

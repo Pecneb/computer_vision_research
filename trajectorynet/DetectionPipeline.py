@@ -605,6 +605,7 @@ class DeepSORT(object):
         metric: NearestNeighborDistanceMetric,
         max_iou_distance: float,
         historyDepth: int,
+        max_age: int = 10,
     ) -> Tracker:
         """Create tracker object.
 
@@ -646,7 +647,7 @@ class DeepSORT(object):
             [
                 (darknetDetection.X - darknetDetection.Width / 2),
                 (darknetDetection.Y - darknetDetection.Height / 2),
-                darknetDetection.Height,
+                darknetDetection.Width,
                 darknetDetection.Height,
             ],
             float(darknetDetection.confidence),
