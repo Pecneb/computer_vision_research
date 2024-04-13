@@ -1269,10 +1269,12 @@ class Detector:
         List[DarknetDetection]
             List of Detection objects
         """
+        if all:
+            names = ["car", "truck", "bus", "motorcycle", "bicycle", "person"]
         targets = []
         for label, conf, bbox in new_detections:
             # bbox: x, y, w, h
-            if label in names or all:
+            if label in names:
                 targets.append(
                     DarknetDetection(
                         label, conf, bbox[0], bbox[1], bbox[2], bbox[3], frame_number
