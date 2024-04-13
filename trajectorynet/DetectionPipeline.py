@@ -522,6 +522,11 @@ class DeepSORT(object):
         Maximum size of the appearence descriptor gallery, by default 100
     historyDepth : int, optional
         Length of history, by default 30
+        This is the max size of the history buffer, if a track has more than this number of detections, then the oldest detection will be removed
+        This needed to save memory, so this should be adjusted so that the memory usage is optimal and the most of the detections are saved
+    max_age : int, optional
+        Maximum age of a track, by default 30
+        If object is not seen for max_age frames, then it is removed from the history
     debug : bool, optional
         Debug flag, by default True
 
@@ -556,7 +561,8 @@ class DeepSORT(object):
         max_cosine_distance: float = 10.0,
         max_iou_distance: float = 0.7,
         nn_budget: float = 100,
-        historyDepth: int = 30,
+        history_depth: int = 30,
+        max_age: int = 30,
         debug: bool = False,
     ) -> None:
         self._logger = init_logger(
@@ -569,8 +575,9 @@ class DeepSORT(object):
         self._logger.debug(f"Max IoU distance: {self.max_iou_distance}")
         self.nn_budget = nn_budget
         self._logger.debug(f"NN budget: {self.nn_budget}")
-        self.historyDepth = historyDepth
-        self._logger.debug(f"History depth: {self.historyDepth}")
+        self.history_depth = history_depth
+        self.max_age = max_age
+        self._logger.debug(f"History depth: {self.history_depth}")
 
         self._Metric = self.init_tracker_metric(
             max_cosine_distance=max_cosine_distance, nn_budget=nn_budget
@@ -579,7 +586,7 @@ class DeepSORT(object):
         self._Tracker = self.tracker_factory(
             metric=self._Metric,
             max_iou_distance=max_iou_distance,
-            historyDepth=historyDepth,
+            history_depth=history_depth,
         )
         self._logger.debug(f"Tracker: {self._Tracker}")
 
@@ -604,7 +611,7 @@ class DeepSORT(object):
     def tracker_factory(
         metric: NearestNeighborDistanceMetric,
         max_iou_distance: float,
-        historyDepth: int,
+        history_depth: int,
         max_age: int = 10,
     ) -> Tracker:
         """Create tracker object.
@@ -624,8 +631,8 @@ class DeepSORT(object):
         """
         return Tracker(
             metric=metric,
-            max_age=10,
-            historyDepth=historyDepth,
+            max_age=max_age,
+            history_depth=history_depth,
             max_iou_distance=max_iou_distance,
         )
 
@@ -686,7 +693,7 @@ class DeepSORT(object):
                         if image is not None:
                             self.draw_obj_info(image, to)
                             TrajectoryNet.draw_history(to, image)
-                        if len(to.history) > self.historyDepth:
+                        if len(to.history) > self.history_depth:
                             to.history.pop(0)
                     else:
                         # if arg in update is None, then time_since_update += 1
@@ -698,7 +705,7 @@ class DeepSORT(object):
                     break
             if not updated:
                 newTrack = TrackedObject(
-                    track.track_id, track.darknetDet, track._max_age
+                    track.track_id, track.darknetDet, self.history_depth
                 )
                 history.append(newTrack)
                 if db_connection is not None:
