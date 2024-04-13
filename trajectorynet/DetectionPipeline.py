@@ -689,7 +689,7 @@ class DeepSORT(object):
                 if not to.offline and track.track_id == to.objID:
                     if track.time_since_update == 0:
                         # , k_velocity, k_acceleration)
-                        to.update(track.darknetDet, track.mean)
+                        to.update(track.darknet_det, track.mean)
                         if image is not None:
                             self.draw_obj_info(image, to)
                             TrajectoryNet.draw_history(to, image)
@@ -705,7 +705,7 @@ class DeepSORT(object):
                     break
             if not updated:
                 newTrack = TrackedObject(
-                    track.track_id, track.darknetDet, self.history_depth
+                    track.track_id, track.darknet_det, self.history_depth
                 )
                 history.append(newTrack)
                 if db_connection is not None:
