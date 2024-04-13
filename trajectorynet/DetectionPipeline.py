@@ -1173,6 +1173,8 @@ class Detector:
             self._fov_correction = True
             self._google_maps_img_path = google_maps_img_path
             self._distance = distance
+        else:
+            self._fov_correction = False
 
     def _init_output_directory(self, path: Optional[str] = None) -> None:
         """Init output directory.
