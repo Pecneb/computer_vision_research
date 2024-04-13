@@ -7,8 +7,6 @@ import joblib
 import numpy as np
 import tqdm
 
-memory = joblib.Memory(location="cache", verbose=0)
-
 
 def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
     """Normalize the values of the detections with the given np.ndarray image.
