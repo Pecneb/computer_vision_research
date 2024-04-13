@@ -1,16 +1,11 @@
-import logging
-import time
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Union, Dict, Any
 from multiprocessing import shared_memory
 
 import joblib
 import numpy as np
 import tqdm
-
-from . import databaseLoader
-
 
 memory = joblib.Memory(location="cache", verbose=0)
 
