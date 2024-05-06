@@ -1219,6 +1219,35 @@ class Detector:
         n_runs = len(list(self._record_path.glob("*.mp4")))
         # self._capture = cv2.VideoWriter(filename=self._record_path.joinpath("run_{}.mp4".format(n_runs)), fourcc=fourcc, fps=30)
 
+    def _init_db_files(self) -> None:
+        """Init database files.
+
+        Returns
+        -------
+        None
+        """
+        self._databases = [
+            self.generate_db_path(
+                f, self._outdir, suffix=".db", logger=self._logger
+            )
+            for f in self._dataset.files
+        ]
+    
+    def _init_joblib_files(self) -> None:
+        """Init joblib files.
+
+        Returns
+        -------
+        None
+        """
+        self._joblibs = [
+            self.generate_db_path(
+                f, self._outdir, suffix=".joblib", logger=self._logger
+            )
+            for f in self._dataset.files
+        ]
+        self._joblibbuffers = [[] for _ in self._dataset.files]
+
     @staticmethod
     def generate_db_path(
         source: Union[str, Path],
@@ -1393,7 +1422,7 @@ class Detector:
                 self._logger.info(
                     f"Saved results to {self._joblibs[self._dataset.count-1]}"
                 )
-                # self._history.clear()
+                self._history.clear()
                 cv2.destroyWindow(p)
             old_p = p
             if show:
