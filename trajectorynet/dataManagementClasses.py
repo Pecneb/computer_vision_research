@@ -134,7 +134,7 @@ class TrackedObject:
     ----------
     objID : int
         The ID of the object.
-    label : int
+    label : str 
         The label of the object.
     futureX : list
         A list of future X positions of the object.

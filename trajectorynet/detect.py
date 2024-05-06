@@ -33,6 +33,7 @@ def get_args():
     # endregion
     # region deepsort arguments
     parser.add_argument("--max-age", type=int, default=30, help="Max age of a track.")
+    parser.add_argument("--history-depth", type=int, default=1000, help="History depth.")
     # endregion
     # region trajectorynet arguments
     parser.add_argument(
@@ -52,7 +53,7 @@ def main():
         device=args.device,
         debug=DEBUG,
     )
-    deepSort = DeepSORT(historyDepth=args.max_age, debug=DEBUG)
+    deepSort = DeepSORT(history_depth=args.history_depth, max_age=args.max_age, debug=DEBUG)
     detector = Detector(
         source=args.video,
         outdir=args.outdir,

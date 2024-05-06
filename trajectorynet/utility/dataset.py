@@ -1,18 +1,11 @@
-import logging
-import time
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Union, Dict, Any
 from multiprocessing import shared_memory
 
 import joblib
 import numpy as np
 import tqdm
-
-from . import databaseLoader
-
-
-memory = joblib.Memory(location="cache", verbose=0)
 
 
 def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
@@ -149,8 +142,8 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     if ext == ".joblib":
         try:
             dataset = joblib.load(path2dataset)
-        except:
-            print(f"Error loading {path2dataset}")
+        except Exception as e:
+            print(f"Error loading {path2dataset}: {e}")
             return np.array([])
         if type(dataset[0]) == dict:
             ret_dataset = [d['track'] for d in dataset]

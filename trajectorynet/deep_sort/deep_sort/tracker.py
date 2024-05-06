@@ -38,7 +38,7 @@ class Tracker:
         Max number of darknetDetection objects stored in a track
     """
 
-    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, historyDepth=3, _next_id=1):
+    def __init__(self, metric, max_iou_distance=0.7, max_age=30, n_init=3, history_depth=3, _next_id=1):
         self.metric = metric
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
@@ -47,7 +47,7 @@ class Tracker:
         self.kf = kalman_filter.KalmanFilter()
         self.tracks = []
         self._next_id = _next_id 
-        self.historyDepth = historyDepth
+        self.history_depth = history_depth
 
     def predict(self):
         """Propagate track state distributions one time step forward.
@@ -136,5 +136,5 @@ class Tracker:
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track(
             mean, covariance, self._next_id, self.n_init, self.max_age,
-            detection.feature, detection.darknetDetection, self.historyDepth))
+            detection.feature, detection.darknetDetection, self.history_depth))
         self._next_id += 1
