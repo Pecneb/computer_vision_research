@@ -34,7 +34,7 @@ from sklearn.cluster import KMeans, OPTICS
 from utility.dataset import load_dataset, loadDatasetsFromDirectory
 from utility.preprocessing import (
     euclidean_distance, filter_by_class,
-    filter_out_false_positive_detections_by_enter_exit_distance,
+    enter_exit_distance_filter,
     filter_trajectories, shuffle_data)
 from utility.logging import init_logger
 
@@ -238,7 +238,7 @@ def affinityPropagation_on_enter_and_exit_points(path2db: str, threshold: float)
         for det in rawDets:
             tmpDets.append(detectionParser(det))
         trackedObjects.append(trackedObjectFactory(tmpDets))
-    filteredTrackedObjects = filter_out_false_positive_detections_by_enter_exit_distance(
+    filteredTrackedObjects = enter_exit_distance_filter(
         trackedObjects, threshold)
     featureVectors = make_4D_feature_vectors(filteredTrackedObjects)
     labels, cluster_center_indices_ = affinityPropagation_on_featureVector(
@@ -347,7 +347,7 @@ def kmeans_clustering_on_nx2(path2db: str, n_clusters: int, threshold: float):
         n_clusters (int): number of initial clusters for kmeans 
         threshold (float): the threshold for the filtering algorithm 
     """
-    filteredEnterDets, filteredExitDets = filter_out_false_positive_detections_by_enter_exit_distance(
+    filteredEnterDets, filteredExitDets = enter_exit_distance_filter(
         path2db, threshold)
     filteredEnterFeatures = makeFeatureVectors_Nx2(filteredEnterDets)
     filteredExitFeatures = makeFeatureVectors_Nx2(filteredExitDets)
@@ -1756,7 +1756,7 @@ def elbow_plot_worker(path2db: str, threshold=(0.1, 0.7), n_jobs=None):
                 os.mkdir(dirpath)
             dirpaths[model][metric] = dirpath
     while thres < threshold[1]:
-        filteredTracks = filter_out_false_positive_detections_by_enter_exit_distance(
+        filteredTracks = enter_exit_distance_filter(
             tracks, thres)
         X = make_4D_feature_vectors(filteredTracks)
         for model in models:

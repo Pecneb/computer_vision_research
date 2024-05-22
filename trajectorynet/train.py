@@ -7,10 +7,16 @@ from clustering import (
 )
 from fov_correction import transform_trajectories, FOVCorrectionOpencv
 from classifier import OneVsRestClassifierWrapper
-from utility.dataset import load_dataset
+from utility.dataset import load_dataset, dataset_statistics
 from utility.models import save_model, mask_labels
 from utility.featurevector import FeatureVector
-from utility.preprocessing import filter_trajectories
+from utility.preprocessing import (
+    filter_trajectories,
+    enter_exit_distance_filter,
+    edge_distance_filter,
+    detection_distance_filter,
+    fill_trajectories,
+)
 from utility.plots import plot_cross_validation_data
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -178,6 +184,7 @@ def generate_feature_vectors(
     Y_pooled: np.ndarray,
     version: str = "1",
     fps: float = 30.0,
+    **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate feature vectors from X, Y and Y_pooled
 
@@ -268,7 +275,8 @@ def generate_feature_vectors(
             trackedObjects=X,
             labels=Y,
             pooled_labels=Y_pooled,
-            max_stride=30,
+            max_stride=kwargs["max_stride"],
+            window_length=kwargs["window_length"],
         )
     elif version == "ReVeAeRs":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
@@ -292,7 +300,8 @@ def generate_feature_vectors(
             trackedObjects=X,
             labels=Y,
             pooled_labels=Y_pooled,
-            max_stride=30,
+            max_stride=kwargs["max_stride"],
+            window_length=kwargs["window_length"],
         )
     elif version == "ReVeAeRm":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
@@ -316,7 +325,8 @@ def generate_feature_vectors(
             trackedObjects=X,
             labels=Y,
             pooled_labels=Y_pooled,
-            max_stride=30,
+            max_stride=kwargs["max_stride"],
+            window_length=kwargs["window_length"],
         )
     elif version == "ReVeAeRsRm":
         X_fv, Y_fv, Y_pooled_fv, _ = FeatureVector.make_feature_vectors(
@@ -339,13 +349,61 @@ def main():
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
     dataset = load_dataset(args["dataset"])
-    dataset = filter_trajectories(
-        dataset,
-        threshold=args["edge_distance_threshold"],
-        enter_exit_dist=args["enter_exit_threshold"],
-        detectionDistanceFiltering=False,
-    )
-    logger.debug(len(dataset))
+    (
+        num_tracks,
+        num_detections,
+        avg_detections,
+        max_detections,
+        min_detections,
+        std_detections,
+        max_distance,
+        min_distance,
+    ) = dataset_statistics(dataset)
+    logger.info("Dataset statistics before preprocessing:")
+    logger.info(f"Number of tracks: {num_tracks}")
+    logger.info(f"Number of detections: {num_detections}")
+    logger.info(f"Average detections per track: {avg_detections}")
+    logger.info(f"Max detections per track: {max_detections}")
+    logger.info(f"Min detections per track: {min_detections}")
+    logger.info(f"Standard deviation: {std_detections}")
+    logger.info(f"Max distance: {max_distance}")
+    logger.info(f"Min distance: {min_distance}")
+    if args["preprocessing"]["enter_exit_distance"]["switch"]:
+        dataset = enter_exit_distance_filter(
+            trackedObjects=dataset,
+            threshold=args["preprocessing"]["enter_exit_distance"]["threshold"],
+        )
+    if args["preprocessing"]["edge_distance"]["switch"]:
+        dataset = edge_distance_filter(
+            trackedObjects=dataset,
+            threshold=args["preprocessing"]["edge_distance"]["threshold"],
+        )
+    if args["preprocessing"]["detection_distance"]["switch"]:
+        dataset = detection_distance_filter(
+            trackedObjects=dataset,
+            threshold=args["preprocessing"]["detection_distance"]["threshold"],
+        )
+    if args["preprocessing"]["filling"]:
+        dataset = fill_trajectories(dataset)
+    (
+        num_tracks,
+        num_detections,
+        avg_detections,
+        max_detections,
+        min_detections,
+        std_detections,
+        max_distance,
+        min_distance,
+    ) = dataset_statistics(dataset)
+    logger.info("Dataset statistics after preprocessing:")
+    logger.info(f"Number of tracks: {num_tracks}")
+    logger.info(f"Number of detections: {num_detections}")
+    logger.info(f"Average detections per track: {avg_detections}")
+    logger.info(f"Max detections per track: {max_detections}")
+    logger.info(f"Min detections per track: {min_detections}")
+    logger.info(f"Standard deviation: {std_detections}")
+    logger.info(f"Max distance: {max_distance}")
+    logger.info(f"Min distance: {min_distance}")
     # extract enter and exit points of trajectories
     feature_vectors_clustering = make_4D_feature_vectors(dataset)
     logger.debug(len(feature_vectors_clustering))
@@ -362,6 +420,9 @@ def main():
     # get class labels
     classes = np.unique(labels)
     logger.info(f"Classes: {classes}")
+    logger.debug(f"Dataset sample: {dataset[0]}")
+    logger.debug(f"Dataset: {dataset.shape} {type(dataset)}")
+    logger.debug(f"Labels: {labels[:20]}")
     # remove outliers
     X = dataset[labels != -1]
     Y = labels[labels != -1]
@@ -393,7 +454,7 @@ def main():
     X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
         X, Y, Y_pooled, test_size=0.2, random_state=42
     )
-    logger.debug(
+    logger.info(
         f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}"
     )
     # # plot cross validation data
@@ -431,7 +492,7 @@ def main():
                 "max_iter": [1500, 3000],
                 "alpha": [0.01, 0.1],
                 "learning_rate_init": [0.001, 0.01],
-                "verbose": [False]
+                "verbose": [False],
             },
         }
     else:
@@ -439,15 +500,35 @@ def main():
             "DT": {"max_depth": [None]},
             "KNN": {"n_neighbors": [7]},
             "SVM": {"C": [100], "max_iter": [60000]},
-            "MLP": {"hidden_layer_sizes": [(100, 100, 100, 100)], "solver": ["adam"], "learning_rate": ["adaptive"], "max_iter": [3000], "alpha": [0.01], "learning_rate_init": [0.001], "verbose": [False]}
+            "MLP": {
+                "hidden_layer_sizes": [(100, 100, 100, 100)],
+                "solver": ["adam"],
+                "learning_rate": ["adaptive"],
+                "max_iter": [3000],
+                "alpha": [0.01],
+                "learning_rate_init": [0.001],
+                "verbose": [False],
+            },
         }
     for v in args["feature_vector_version"]:
         logger.debug(f"Version: {v}")
         X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
-            X_train, Y_train, Y_pooled_train, version=v, fps=FPS
+            X_train,
+            Y_train,
+            Y_pooled_train,
+            version=v,
+            fps=FPS,
+            max_stride=args["max_stride"],
+            window_length=args["window_length"],
         )
         X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
-            X_test, Y_test, Y_pooled_test, version=v, fps=FPS
+            X_test,
+            Y_test,
+            Y_pooled_test,
+            version=v,
+            fps=FPS,
+            max_stride=args["max_stride"],
+            window_length=args["window_length"],
         )
         logger.debug(
             f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
@@ -505,7 +586,9 @@ def main():
                     t1 = perf_counter()
                     Y_predicted = estimator.predict(X_fv_test)
                     Y_score = estimator.predict_proba(X_fv_test)
-                    score = balanced_accuracy_score(y_true=Y_fv_test, y_pred=Y_predicted)
+                    score = balanced_accuracy_score(
+                        y_true=Y_fv_test, y_pred=Y_predicted
+                    )
                     logger.info(f"Balanced Test score: {score}")
                     Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
                     pooled_score = balanced_accuracy_score(
@@ -533,7 +616,9 @@ def main():
                         f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
                     )
                     confusion_matrix_display_pooled.figure_.savefig(
-                        os.path.join(args["output"], f"confusion_matrix_pooled_{v}_{m}.png")
+                        os.path.join(
+                            args["output"], f"confusion_matrix_pooled_{v}_{m}.png"
+                        )
                     )
                     # save model with additional data about dataset
                     estimator.cluster_centroids = cluster_centers

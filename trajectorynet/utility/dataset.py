@@ -1,19 +1,21 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, Tuple
 from multiprocessing import shared_memory
 
 import joblib
 import numpy as np
 import tqdm
 
+from .preprocessing import euclidean_distance
+
 
 def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
     """Normalize the values of the detections with the given np.ndarray image.
 
     Args:
-        trackedObjects (list[TrackedObject]): list of tracked objects 
-        img (np.ndarray): image to downscale from 
+        trackedObjects (list[TrackedObject]): list of tracked objects
+        img (np.ndarray): image to downscale from
     """
     ret_trackedObjects = []
     aspect_ratio = img.shape[1] / img.shape[0]
@@ -21,11 +23,9 @@ def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
         t = deepcopy(o)
         t.history_X = t.history_X / img.shape[1] * aspect_ratio
         t.history_Y = t.history_Y / img.shape[0]
-        t.history_VX_calculated = t.history_VX_calculated / \
-            img.shape[1] * aspect_ratio
+        t.history_VX_calculated = t.history_VX_calculated / img.shape[1] * aspect_ratio
         t.history_VY_calculated = t.history_VY_calculated / img.shape[0]
-        t.history_AX_calculated = t.history_AX_calculated / \
-            img.shape[1] * aspect_ratio
+        t.history_AX_calculated = t.history_AX_calculated / img.shape[1] * aspect_ratio
         t.history_AY_calculated = t.history_AY_calculated / img.shape[0]
         for d in t.history:
             d.X = d.X / img.shape[1] * aspect_ratio
@@ -76,6 +76,7 @@ def loadDatasetMultiprocessedCallback(result):
 
 def loadDatasetMultiprocessed(path, n_jobs=-1):
     from multiprocessing import Pool
+
     dirPath = Path(path)
     if not dirPath.is_dir():
         return False
@@ -84,12 +85,20 @@ def loadDatasetMultiprocessed(path, n_jobs=-1):
     with Pool(processes=n_jobs) as pool:
         for i, p in enumerate(datasetPaths):
             tmpDatasetLabeled = pool.apply_async(
-                load_dataset_with_labels, (p,), callback=loadDatasetMultiprocessedCallback)
+                load_dataset_with_labels,
+                (p,),
+                callback=loadDatasetMultiprocessedCallback,
+            )
             dataset.append(tmpDatasetLabeled.get())
     return np.array(dataset)
 
 
-def save_trajectories(trajectories: Union[List, np.ndarray], output: Union[str, Path], classifier: str = "SVM", name: str = "trajectories") -> List[str]:
+def save_trajectories(
+    trajectories: Union[List, np.ndarray],
+    output: Union[str, Path],
+    classifier: str = "SVM",
+    name: str = "trajectories",
+) -> List[str]:
     """Save trajectories to a file.
 
     Parameters
@@ -124,7 +133,7 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        Numpy array containing the dataset. 
+        Numpy array containing the dataset.
 
     Raises
     ------
@@ -146,7 +155,7 @@ def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
             print(f"Error loading {path2dataset}: {e}")
             return np.array([])
         if type(dataset[0]) == dict:
-            ret_dataset = [d['track'] for d in dataset]
+            ret_dataset = [d["track"] for d in dataset]
             dataset = ret_dataset
         for d in dataset:
             d._dataset = path2dataset
@@ -162,8 +171,8 @@ def mergeDatasets(datasets: np.ndarray):
     """Merge datasets into one.
 
     Args:
-        datasets (ndarray): List of datasets to merge. 
-            shape(n, m) where n is the number of datasets 
+        datasets (ndarray): List of datasets to merge.
+            shape(n, m) where n is the number of datasets
             and m is the number of tracks in the dataset.
 
     Returns:
@@ -186,7 +195,7 @@ def load_shared_dataset(config: Dict[str, Any]) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        Numpy array containing the dataset. 
+        Numpy array containing the dataset.
 
     """
     shm = shared_memory.SharedMemory(name=config["runtime"]["shm_name"])
@@ -195,3 +204,48 @@ def load_shared_dataset(config: Dict[str, Any]) -> np.ndarray:
     dataset = np.ndarray(shape, dtype=dtype, buffer=shm.buf).copy()
     shm.close()
     return dataset
+
+
+def dataset_statistics(trackedObjects) -> Tuple[float, float, float, float, float]:
+    """Calculate statistics of a dataset.
+
+    Parameters
+    ----------
+    trackedObjects : list
+        List of tracked objects.
+
+    Returns
+    -------
+    Tuple[float, float, float, float, float]
+        Tuple containing number of tracks, number of detections,
+        average detections per track, max detections per track, min detections per track.
+    """
+    num_tracks = len(trackedObjects)
+    num_detections = 0
+    for o in trackedObjects:
+        num_detections += len(o.history)
+    avg_detections = num_detections / num_tracks
+    max_detections = max([len(o.history) for o in trackedObjects])
+    min_detections = min([len(o.history) for o in trackedObjects])
+    std = np.std([len(o.history) for o in trackedObjects])
+    distances = [
+        euclidean_distance(
+            p1=o.history_X[0],
+            p2=o.history_Y[0],
+            q1=o.history_X[-1],
+            q2=o.history_Y[-1],
+        )
+        for o in trackedObjects
+    ]
+    max_distance = max(distances)
+    min_distance = min(distances)
+    return (
+        num_tracks,
+        num_detections,
+        avg_detections,
+        max_detections,
+        min_detections,
+        std,
+        max_distance,
+        min_distance,
+    )
