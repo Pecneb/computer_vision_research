@@ -3,7 +3,7 @@ import cv2
 from yaml import load, dump
 from functools import lru_cache
 from matplotlib import pyplot as plt
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Union
 from copy import deepcopy
 from tqdm import tqdm
 
@@ -285,7 +285,7 @@ def transform_trajectory(
 
 
 def transform_trajectories(
-    objs: List[TrackedObject], transformer: FOVCorrectionOpencv, upscale: bool = False
+    objs: Union[List[TrackedObject], np.ndarray], transformer: FOVCorrectionOpencv, upscale: bool = False
 ) -> List[TrackedObject]:
     """Transform trajectories with geometric transform method of opencv.
 

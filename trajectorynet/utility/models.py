@@ -1,6 +1,7 @@
 import os
 import numpy as np
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, Union
+from pathlib import Path
 
 import joblib
 from .logging import init_logger
@@ -42,22 +43,24 @@ def save_model(savedir: str, classifier_type: str, model, version: Optional[str]
     return True
 
 
-def load_model(path2model: str) -> Any:
-    """
-    Load model from disk.
+def load_model(path2model: Union[str, Path]) -> Tuple[bool, Any]:
+    """Load ML Model.
 
     Parameters
     ----------
-    path2model : str
-        Path to model
+    path2model : Union[str, Path]
+        Path to the model file.
 
     Returns
     -------
-    Any
-        Model object
+    Tuple[bool, Any]
+        Return True and the model object if loading was successful, False and None otherwise.
     """
-    return joblib.load(path2model)
-
+    try:
+        return True, joblib.load(path2model)
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return False, None
 
 def mask_labels(Y_1: np.ndarray, Y_mask: np.ndarray) -> np.ndarray:
     """Mask Y_1 labels using Y_mask

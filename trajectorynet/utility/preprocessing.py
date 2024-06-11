@@ -1,6 +1,9 @@
 import numpy as np
 import tqdm
 from itertools import filterfalse
+from copy import deepcopy
+from scipy.ndimage import median_filter
+from typing import Any
 
 
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
@@ -26,7 +29,7 @@ def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
     return (((q1-p1)**2)+((q2-p2)**2))**0.5
 
 
-def filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects, threshold):
+def enter_exit_distance_filter(trackedObjects, threshold: float = 0.4):
     """
     Filter out false positive detections based on the distance between their enter and exit points.
 
@@ -52,7 +55,7 @@ def filter_out_false_positive_detections_by_enter_exit_distance(trackedObjects, 
     """
     filteredTracks = list(filterfalse(lambda obj: euclidean_distance(
         obj.history[0].X, obj.history[-1].X, obj.history[0].Y, obj.history[-1].Y) < threshold, trackedObjects))
-    return filteredTracks
+    return np.array(filteredTracks)
 
 
 def is_noise(trackedObject, threshold: float = 0.1):
@@ -84,7 +87,7 @@ def is_noise(trackedObject, threshold: float = 0.1):
     return False
 
 
-def filter_out_noise_trajectories(trackedObjects: list, distance: float = 0.05):
+def detection_distance_filter(trackedObjects: list, distance: float = 0.05):
     """
     Filter out noise trajectories from a list of tracked objects.
 
@@ -131,7 +134,7 @@ def search_min_max_coordinates(trackedObjects):
     return min_x, min_y, max_x, max_y
 
 
-def filter_out_edge_detections(trackedObjects, threshold):
+def edge_distance_filter(trackedObjects, threshold):
     """
     Filter out objects based on their entering and exiting detection coordinates.
 
@@ -155,7 +158,7 @@ def filter_out_edge_detections(trackedObjects, threshold):
             ((obj.history[-1].X <= min_x+threshold or obj.history[-1].X >= max_x-threshold) or
             (obj.history[-1].Y <= min_y+threshold or obj.history[-1].Y >= max_y-threshold))):
             filteredTracks.append(obj)
-    return filteredTracks
+    return np.array(filteredTracks)
 
 
 def filter_trajectories(trackedObjects, threshold=0.7, enter_exit_dist=0.4, detectionDistanceFiltering=True, detDist=0.05):
@@ -180,11 +183,11 @@ def filter_trajectories(trackedObjects, threshold=0.7, enter_exit_dist=0.4, dete
     numpy.ndarray
         Filtered trajectories without noise.
     """
-    edge_trajectories = filter_out_edge_detections(trackedObjects, threshold)
-    filtered_trajectories = filter_out_false_positive_detections_by_enter_exit_distance(
+    edge_trajectories = edge_distance_filter(trackedObjects, threshold)
+    filtered_trajectories = enter_exit_distance_filter(
         edge_trajectories, enter_exit_dist)
     if detectionDistanceFiltering:
-        denoised_trajectories = filter_out_noise_trajectories(
+        denoised_trajectories = detection_distance_filter(
             filtered_trajectories, detDist)
         return np.array(denoised_trajectories, dtype=object)
     return np.array(filtered_trajectories, dtype=object)
@@ -216,3 +219,65 @@ def shuffle_data(trackedObjects: list) -> list:
         tmpObj = trackedObjects[i]
         trackedObjects[i] = trackedObjects[randIDX]
         trackedObjects[randIDX] = tmpObj
+
+def fill_trajectories(trackedObjects: np.ndarray) -> np.ndarray:
+    """Fill missing detections in the trajectories of a list of tracked objects.
+
+    Parameters
+    ----------
+    trackedObject : TrackedObject
+        Tracked objects to fill missing detections of.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of tracked objects with filled missing detections.
+    """
+    return np.array([fill_trajectory(to) for to in trackedObjects], dtype=object)
+
+def fill_trajectory(trackedObject: Any) -> Any:
+    """Fill missing detections in the trajectory.
+
+    Parameters
+    ----------
+    trackedObject : TrackedObject
+        Tracked object to fill missing detections of.
+
+    Returns
+    -------
+    TrackedObject
+        Tracked object with filled missing detections.
+    """
+    trajectory = deepcopy(trackedObject)
+    X = [d.X for d in trajectory.history]
+    Y = [d.Y for d in trajectory.history]
+    frame_id_list = np.array([d.frameID for d in trajectory.history], dtype=np.int64)
+    widths = np.array([d.Width for d in trajectory.history], dtype=np.float32)
+    heights = np.array([d.Height for d in trajectory.history], dtype=np.float32)
+    bboxes = np.zeros(shape=(widths.shape[0], 4))
+    bboxes[:, 0] = X - (widths / 2)
+    bboxes[:, 1] = Y - (heights / 2)
+    bboxes[:, 2] = X + (widths / 2)
+    bboxes[:, 3] = Y + (heights / 2)
+    for i in range(4):
+        bboxes[:, i] = median_filter(bboxes[:, i], size=20)
+    X_filtered = (bboxes[:, 0] + bboxes[:, 2]) / 2
+    Y_filtered = (bboxes[:, 1] + bboxes[:, 3]) / 2
+    for i in range(len(trajectory.history)):
+        trajectory.history[i].Width = bboxes[i, 2] - bboxes[i, 0]
+        trajectory.history[i].Height = bboxes[i, 3] - bboxes[i, 1]
+    frame_id_list_filled = list(range(frame_id_list[0], frame_id_list[-1] + 1))
+    trajectory.history_X = np.interp(frame_id_list_filled, frame_id_list, X_filtered)
+    trajectory.history_Y = np.interp(frame_id_list_filled, frame_id_list, Y_filtered)
+    for i in range(len(frame_id_list_filled)):
+        if frame_id_list_filled[i] not in frame_id_list:
+            detection = deepcopy(trajectory.history[i])
+            detection.frameID = frame_id_list_filled[i]
+            detection.label = trajectory.history[i-1].label
+            detection.confidence = trajectory.history[i-1].confidence
+            detection.X = trajectory.history_X[i]
+            detection.Y = trajectory.history_Y[i]
+            detection.Width = trajectory.history[i-1].Width
+            detection.Height = trajectory.history[i-1].Height
+            trajectory.history.insert(i, detection)
+    return trajectory
