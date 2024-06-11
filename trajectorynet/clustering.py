@@ -20,7 +20,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 
 import matplotlib
 import numpy as np
@@ -31,6 +31,7 @@ from dataManagementClasses import (TrackedObject, detectionParser,
                                    trackedObjectFactory)
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans, OPTICS
+from sklearn.base import BaseEstimator
 from utility.dataset import load_dataset, loadDatasetsFromDirectory
 from utility.preprocessing import (
     euclidean_distance, filter_by_class,
@@ -92,7 +93,7 @@ def make_2D_feature_vectors(trackedObjects: List) -> np.ndarray:
     return featureVectors
 
 
-def make_4D_feature_vectors(trackedObjects: List) -> np.ndarray:
+def make_4D_feature_vectors(trackedObjects: Union[List, np.ndarray]) -> np.ndarray:
     """
     Create 4D feature vectors from tracks.
 
@@ -1509,7 +1510,15 @@ def clustering_search_on_2D_feature_vectors(estimator, database: str, outdir: st
         thres += thres_interval
 
 
-def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, param_search: bool = False, **estkwargs):
+def clustering_search_on_4D_feature_vectors(
+        estimator: BaseEstimator, 
+        database: str, 
+        outdir: str, 
+        filter_threshold: Tuple[float, float] = (0.1, 0.7), 
+        n_jobs: int = -1, 
+        param_search: bool = False, 
+        **estkwargs
+        ):
     """
     Perform clustering on 4D feature vectors of tracked objects in a given database.
 
@@ -1534,7 +1543,8 @@ def clustering_search_on_4D_feature_vectors(estimator, database: str, outdir: st
     None
     """
     # Initialize parameter generator
-    params = estkwargs["params"]
+    if param_search:
+        params = estkwargs["params"]
     # Load tack dataset
     trackedObjects = load_dataset(database)
     # Filter by yolov7 labels, ie. car, person, cycle
@@ -1863,7 +1873,8 @@ def kmeans_mse_search(database: str, dirpath: str, threshold: float = 0.7, n_job
     return clr_best, n_clusters_best, mse
 
 
-def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> Tuple[np.ndarray, KMeans, int, float]:
+def kmeans_mse_clustering(
+        X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_threshold: float = 0.5) -> Tuple[np.ndarray, Optional[KMeans], int, float, np.ndarray]:
     """
     Run kmeans clustering with different number of clusters, and calculate mean squared error for each cluster.
 
@@ -1904,7 +1915,7 @@ def kmeans_mse_clustering(X: np.ndarray, Y: np.ndarray, n_jobs: int = 10, mse_th
     Y_reduced_labels = np.zeros(shape=Y.shape, dtype=np.int32)
     for i, l in tqdm.tqdm(enumerate(Y), desc="Reduce labels"):
         Y_reduced_labels[i] = aoi_labels_best[l]
-    return Y_reduced_labels, clr_best, n_clusters_best, mse, aoi_labels_best
+    return Y_reduced_labels, clr_best, n_clusters_best, mse, np.array(aoi_labels_best)
 
 
 def elbow_plotter(path2db: str, threshold: float, model: str, metric: str, n_jobs=None):

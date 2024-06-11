@@ -336,6 +336,8 @@ def generate_feature_vectors(
             pooled_labels=Y_pooled,
             max_stride=30,
         )
+    else:
+        return
     return X_fv, Y_fv, Y_pooled_fv
 
 
@@ -530,7 +532,10 @@ def main():
             max_stride=args["max_stride"],
             window_length=args["window_length"],
         )
-        logger.debug(
+        logger.info(
+            f"X_fv_train: {X_fv_train.shape}, Y_fv_train: {Y_fv_train.shape}, Y_pooled_fv_train: {Y_pooled_fv_train.shape}"
+        )
+        logger.info(
             f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
         )
         logger.debug(f"X_fv_train: {X_fv_train[:20]}")
