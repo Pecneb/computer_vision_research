@@ -2345,11 +2345,15 @@ def main():
     birch_parser.add_argument("--n-clusters", type=int, default=None,
                               help="Number of clusters after the final clustering step, which treats the subclusters from the leaves as new samples."
                               )
+    birch_parser.add_argument("--param-search", action="store_true",
+                               default=False, help="Use this flag to run parameter search.")
     birch_parser.set_defaults(func=submodule_birch)
 
     kmeans_parser = subparser.add_parser("kmeans", help="KMeans clustering.")
     kmeans_parser.add_argument(
         "--n-clusters", type=int, default=10, help="Number of clusters.")
+    kmeans_parser.add_argument("--param-search", action="store_true",
+                                 default=False, help="Use this flag to run parameter search.")
     kmeans_parser.set_defaults(func=submodule_kmeans)
 
     dbscan_parser = subparser.add_parser("dbscan", help="DBSCAN clustering.")
@@ -2359,6 +2363,8 @@ def main():
                                help="Set epsilon distance that can be between samples of a cluster.")
     dbscan_parser.add_argument("-p", "--p-norm", type=int, default=2,
                                help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    dbscan_parser.add_argument("--param-search", action="store_true",
+                               default=False, help="Use this flag to run parameter search.")
     dbscan_parser.set_defaults(func=submodule_dbscan)
 
     aoi_optics = subparser.add_parser(
