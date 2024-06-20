@@ -2237,15 +2237,34 @@ def submodule_dbscan(args):
                                          p=args.p_norm)
     else:
         if args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=DBSCAN,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                eps=args.eps,
-                min_samples=args.min_samples,
-                p=args.p_norm
-            )
+            if args.param_search:
+                def param_generator():
+                    eps = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, np.inf]
+                    min_samples = [5, 10, 20, 50, 100, 200, 500]
+                    for e in eps:
+                        for ms in min_samples:
+                            yield {"eps": e, "min_samples": ms}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=DBSCAN,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    eps=args.eps,
+                    min_samples=args.min_samples,
+                    p=args.p_norm,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=DBSCAN,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    eps=args.eps,
+                    min_samples=args.min_samples,
+                    p=args.p_norm
+                )
         if args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=DBSCAN,
