@@ -70,6 +70,11 @@ def run_inference(model: OneVsRestClassifierWrapper, X: np.ndarray):
     return model.predict_proba(X)
 
 
+@profile
+def load_model_wrapper(model_path: Path) -> Tuple[bool, OneVsRestClassifierWrapper]:
+    return load_model(model_path)
+
+
 def main():
     # initialize logger
     logger = init_logger(DEBUG if DEBUG_ENV else INFO)
@@ -186,7 +191,7 @@ def main():
     # benchmark the time and memory usage
     for model_name in items:
         logger.info(f"Model: {model_name}")
-        suc, model = load_model(model_name)
+        suc, model = load_model_wrapper(model_name)
         if not suc:
             continue
         t_p0 = process_time()
