@@ -2129,15 +2129,34 @@ def submodule_birch(args):
                 n_clusters=args.n_clusters
             )
         elif args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=Birch,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                threshold=args.threshold,
-                branching_factor=args.branching,
-                n_clusters=args.n_clusters
-            )
+            if args.param_search:
+                def param_generator():
+                    branching = [2, 5, 10, 15, 20, 25, 30, 35, 40, 50, 100, 200, 500, 1000, 2000, 5000]
+                    n_clusters = [2, 5, 10, 20, 50, 100, 200]
+                    for b in branching:
+                        for n in n_clusters:
+                            yield {"branching_factor": b, "n_clusters": n}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=Birch,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    threshold=args.threshold,
+                    branching_factor=args.branching,
+                    n_clusters=args.n_clusters,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=Birch,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    threshold=args.threshold,
+                    branching_factor=args.branching,
+                    n_clusters=args.n_clusters
+                )
         elif args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=Birch,
