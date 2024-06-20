@@ -1,9 +1,9 @@
 debug: False 
 dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/"
 model:
-  - SVM
-  - KNN
-  - DT
+  # - SVM
+  # - KNN
+  # - DT
   - MLP
 output: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/"
 feature_vector_version:

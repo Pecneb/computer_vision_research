@@ -1,10 +1,10 @@
 debug: False 
 dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_Newport_24h_v2"
 model:
-  - SVM
+  # - SVM
   # - KNN
   # - DT
-  # - MLP
+  - MLP
 output: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_Newport_24h_v2"
 feature_vector_version:
   # - "1"
