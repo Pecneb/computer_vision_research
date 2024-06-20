@@ -2186,13 +2186,28 @@ def submodule_kmeans(args):
                                          n_clusters=args.n_clusters)
     else:
         if args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=KMeans,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                n_clusters=args.n_clusters
-            )
+            if args.param_search:
+                def param_generator():
+                    n_clusters = [2, 3, 4, 5, 10, 20, 50, 100, 200]
+                    for n in n_clusters:
+                        yield {"n_clusters": n}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=KMeans,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    n_clusters=args.n_clusters,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=KMeans,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    n_clusters=args.n_clusters
+                )
         if args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=KMeans,
