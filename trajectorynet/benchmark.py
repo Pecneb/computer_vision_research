@@ -1,5 +1,6 @@
 import sys
 import os
+import signal
 import argparse
 import random
 from typing import Tuple, Dict, Any
@@ -191,6 +192,7 @@ def main():
     # benchmark the time and memory usage
     for model_name in items:
         logger.info(f"Model: {model_name}")
+        logger.info(f"Model size: {os.path.getsize(model_name) / 1024 / 1024} MB")
         suc, model = load_model_wrapper(model_name)
         if not suc:
             continue
@@ -199,6 +201,7 @@ def main():
         run_inference(model, X_fv_test)
         t_p1 = process_time()
         print(f"Time taken: {t_p1 - t_p0} seconds (process time)")
+    os.killpg(os.getpgid(0), signal.SIGTERM)
 
 
 if __name__ == "__main__":
