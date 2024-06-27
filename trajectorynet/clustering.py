@@ -2131,7 +2131,7 @@ def submodule_birch(args):
         elif args.dimensions == "4D":
             if args.param_search:
                 def param_generator():
-                    branching = [2, 5, 10, 15, 20, 25, 30, 35, 40, 50, 100, 200, 500, 1000, 2000, 5000]
+                    branching = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20]
                     n_clusters = [2, 5, 10, 20, 50, 100, 200]
                     for b in branching:
                         for n in n_clusters:
