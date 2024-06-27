@@ -68,7 +68,11 @@ def init_logger(log_level: int) -> Logger:
 
 @profile
 def run_inference(model: OneVsRestClassifierWrapper, X: np.ndarray):
-    return model.predict_proba(X)
+    try:
+        return model.predict_proba(X)
+    except Exception as e:
+        print(f"Error running inference: {e}")
+        return None
 
 
 @profile
@@ -201,8 +205,8 @@ def main():
         run_inference(model, X_fv_test)
         t_p1 = process_time()
         print(f"Time taken: {t_p1 - t_p0} seconds (process time)")
-    os.killpg(os.getpgid(0), signal.SIGTERM)
 
 
 if __name__ == "__main__":
     main()
+    # os.killpg(os.getpgid(0), signal.SIGTERM)
