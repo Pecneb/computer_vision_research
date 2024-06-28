@@ -3,7 +3,7 @@ import tqdm
 from itertools import filterfalse
 from copy import deepcopy
 from scipy.ndimage import median_filter
-from typing import Any
+from typing import Any, List, Union
 
 
 def euclidean_distance(q1: float, p1: float, q2: float, p2: float):
@@ -134,7 +134,7 @@ def search_min_max_coordinates(trackedObjects):
     return min_x, min_y, max_x, max_y
 
 
-def edge_distance_filter(trackedObjects, threshold):
+def edge_distance_filter(trackedObjects: np.ndarray, threshold: float):
     """
     Filter out objects based on their entering and exiting detection coordinates.
 
@@ -193,7 +193,7 @@ def filter_trajectories(trackedObjects, threshold=0.7, enter_exit_dist=0.4, dete
     return np.array(filtered_trajectories, dtype=object)
 
 
-def filter_by_class(trackedObjects: list, label="car"):
+def filter_by_class(trackedObjects: Union[List, np.ndarray], label="car") -> np.ndarray:
     """
     Only return objects with the given label.
 
@@ -209,7 +209,7 @@ def filter_by_class(trackedObjects: list, label="car"):
     list
         List of objects with the specified label.
     """
-    return [obj for obj in trackedObjects if obj.label == label]
+    return np.array([obj for obj in trackedObjects if obj.label == label], dtype=object)
 
 
 def shuffle_data(trackedObjects: list) -> list:
