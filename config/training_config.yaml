@@ -1,6 +1,6 @@
 debug: False
 # dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_Newport_24h_v2"
-dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th.json"
+dataset: "/Users/bencegaborpeter/gitclones/computer_vision_research/datasets/cv_research_video_dataset/Bellevue_116th_NE12th_24h/Bellevue_116th_NE12th.json"
 # dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_SE38th_24h/"
 # dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_NE8th_24h_v2/"
 # dataset: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_Eastgate_24h/"
@@ -11,7 +11,7 @@ model:
   - MLP
 # output: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_NE8th_24h_v2/"
 # output: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_SE38th_24h/"
-output: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_NE8th_24h_v2/"
+output: "/Users/bencegaborpeter/gitclones/computer_vision_research/datasets/cv_research_video_dataset/"
 feature_vector_version:
   # - "1"
   # - "1_SG_transform"
@@ -29,14 +29,14 @@ feature_vector_version:
   # - ReRsRm
   - ReVeRsRm
   - ReVeAeRsRm
-min_samples: 400
+min_samples: 100
 xi: 0.1
-max_eps: 0.15
+max_eps: 0.25
 mse: 0.2
-n_jobs: 6
+n_jobs: 4
 cross_validation: False
 grid_search: False
-fov_correction: True
+fov_correction: False 
 # video_path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_150th_Newport/Bellevue_150th_Newport__2017-09-11_05-08-29.mp4"
 # video_path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_116th_NE12th/Bellevue_116th_NE12th__2017-09-11_00-08-29.mp4"
 video_path: "/media/pecneb/970evoplus/cv_research_video_dataset/Bellevue_Bellevue_NE8th/Bellevue_Bellevue_NE8th__2017-09-11_04-08-29.mp4"
@@ -48,10 +48,10 @@ google_map_image: "/media/pecneb/970evoplus/cv_research_video_dataset/Google_Map
 # google_map_image: "/media/pecneb/970evoplus/cv_research_video_dataset/Google_Maps_Pics/Bellevue_150th_Newport_google_maps.png"
 # google_map_image: "/media/pecneb/970evoplus/cv_research_video_dataset/Google_Maps_Pics/Bellevue_150th_Eastgate_google_maps.png"
 # google_map_image: "/media/pecneb/970evoplus/cv_research_video_dataset/Google_Maps_Pics/Bellevue_NE8th.png"
-# distance: 254 # Bellevue 116th NE12th
+distance: 254 # Bellevue 116th NE12th
 # distance: 300 # Bellevue 150th Newport/Eastgate
 # distance: 260 # Bellevue 150th SE38th
-distance: 250 # Bellevue NE8th 116th
+# distance: 250 # Bellevue NE8th 116th
 max_stride: 30
 window_length: 7
 preprocessing:
