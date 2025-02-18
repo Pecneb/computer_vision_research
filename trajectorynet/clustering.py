@@ -36,7 +36,8 @@ from utility.dataset import load_dataset, loadDatasetsFromDirectory
 from utility.preprocessing import (
     euclidean_distance, filter_by_class,
     enter_exit_distance_filter,
-    filter_trajectories, shuffle_data)
+    filter_trajectories, shuffle_data,
+    edge_distance_filter)
 from utility.logging import init_logger
 
 matplotlib.use('Agg')
@@ -1131,7 +1132,14 @@ def clustering_on_2D_feature_vectors(estimator, trackedObjects: List[TrackedObje
     plt.close()
 
 
-def clustering_on_4D_feature_vectors(estimator, trackedObjects: List[TrackedObject], outdir: str, n_jobs: int = -1, filter_threshold: float = None, **estkwargs):
+def clustering_on_4D_feature_vectors(
+        estimator, 
+        trackedObjects: Union[List[TrackedObject], np.ndarray], 
+        outdir: str, 
+        n_jobs: int = -1, 
+        filter_threshold: float = None, 
+        **estkwargs
+    ):
     """
     Run clustering on 4 dimensional feature vectors.
     Create plots of every cluster with their tracks,
@@ -1517,6 +1525,8 @@ def clustering_search_on_4D_feature_vectors(
         filter_threshold: Tuple[float, float] = (0.1, 0.7), 
         n_jobs: int = -1, 
         param_search: bool = False, 
+        edge_distance_switch: bool = True,
+        enter_exit_distance_switch: bool = True,
         **estkwargs
         ):
     """
@@ -1554,36 +1564,63 @@ def clustering_search_on_4D_feature_vectors(
     thres_interval = 0.1
     max_progress = int(filter_threshold[1] / thres_interval)
     thres = filter_threshold[0]
-    while thres <= filter_threshold[1]:
-        filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
-        if len(filteredTrackedObjects) > 0:
-            try:
-                if param_search:
-                    for p in params:
+    if edge_distance_switch:
+        while thres <= filter_threshold[1]:
+            # filteredTrackedObjects = filter_trajectories(trackedObjects, thres)
+            filteredTrackedObjects = edge_distance_filter(trackedObjects, thres)
+            if enter_exit_distance_switch:
+                filteredTrackedObjects = enter_exit_distance_filter(trackedObjects)
+            if len(filteredTrackedObjects) > 0:
+                try:
+                    if param_search:
+                        for p in params:
+                            clustering_on_4D_feature_vectors(
+                                estimator=estimator,
+                                trackedObjects=filteredTrackedObjects,
+                                outdir=outdir,
+                                n_jobs=n_jobs,
+                                filter_threshold=thres,
+                                **p
+                            )
+                    else:
                         clustering_on_4D_feature_vectors(
                             estimator=estimator,
                             trackedObjects=filteredTrackedObjects,
                             outdir=outdir,
                             n_jobs=n_jobs,
                             filter_threshold=thres,
-                            **p
+                            **estkwargs
                         )
-                else:
+                except Exception as e:
+                    print(e)
+            print(200 * '\n', '[', (progress-2) * '=', '>',
+                int(max_progress-progress) * ' ', ']', flush=True)
+            progress += 1
+            print(f"Threshold value: {thres}")
+            thres += thres_interval
+    else:
+        try:
+            if param_search:
+                for p in params:
                     clustering_on_4D_feature_vectors(
                         estimator=estimator,
-                        trackedObjects=filteredTrackedObjects,
+                        trackedObjects=trackedObjects,
                         outdir=outdir,
                         n_jobs=n_jobs,
                         filter_threshold=thres,
-                        **estkwargs
+                        **p
                     )
-            except Exception as e:
-                print(e)
-        print(200 * '\n', '[', (progress-2) * '=', '>',
-              int(max_progress-progress) * ' ', ']', flush=True)
-        progress += 1
-        print(f"Threshold value: {thres}")
-        thres += thres_interval
+            else:
+                clustering_on_4D_feature_vectors(
+                    estimator=estimator,
+                    trackedObjects=trackedObjects,
+                    outdir=outdir,
+                    n_jobs=n_jobs,
+                    filter_threshold=thres,
+                    **estkwargs
+                )
+        except Exception as e:
+            print(e)
 
 
 def clustering_search_on_6D_feature_vectors(estimator, database: str, outdir: str, filter_threshold: float = (0.1, 0.7), n_jobs: int = -1, **estkwargs):
@@ -2072,7 +2109,9 @@ def submodule_optics(args):
                     min_cluster_size=args.min_cluster_size,
                     p=args.p_norm,
                     param_search=args.param_search,
-                    params=param_generator()
+                    params=param_generator(),
+                    edge_distance_switch=args.edge_distance,
+                    enter_exit_distance_switch=args.enter_exit_distance 
                 )
             else:
                 clustering_search_on_4D_feature_vectors(
@@ -2084,7 +2123,9 @@ def submodule_optics(args):
                     max_eps=args.max_eps,
                     xi=args.xi,
                     min_cluster_size=args.min_cluster_size,
-                    p=args.p_norm
+                    p=args.p_norm,
+                    edge_distance_switch=args.edge_distance,
+                    enter_exit_distance_switch=args.enter_exit_distance
                 )
         elif args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
@@ -2129,15 +2170,34 @@ def submodule_birch(args):
                 n_clusters=args.n_clusters
             )
         elif args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=Birch,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                threshold=args.threshold,
-                branching_factor=args.branching,
-                n_clusters=args.n_clusters
-            )
+            if args.param_search:
+                def param_generator():
+                    branching = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 20]
+                    n_clusters = [2, 5, 10, 20, 50, 100, 200]
+                    for b in branching:
+                        for n in n_clusters:
+                            yield {"branching_factor": b, "n_clusters": n}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=Birch,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    threshold=args.threshold,
+                    branching_factor=args.branching,
+                    n_clusters=args.n_clusters,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=Birch,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    threshold=args.threshold,
+                    branching_factor=args.branching,
+                    n_clusters=args.n_clusters
+                )
         elif args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=Birch,
@@ -2167,13 +2227,28 @@ def submodule_kmeans(args):
                                          n_clusters=args.n_clusters)
     else:
         if args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=KMeans,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                n_clusters=args.n_clusters
-            )
+            if args.param_search:
+                def param_generator():
+                    n_clusters = [2, 3, 4, 5, 10, 20, 50, 100, 200]
+                    for n in n_clusters:
+                        yield {"n_clusters": n}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=KMeans,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    n_clusters=args.n_clusters,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=KMeans,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    n_clusters=args.n_clusters
+                )
         if args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=KMeans,
@@ -2203,15 +2278,34 @@ def submodule_dbscan(args):
                                          p=args.p_norm)
     else:
         if args.dimensions == "4D":
-            clustering_search_on_4D_feature_vectors(
-                estimator=DBSCAN,
-                database=args.database,
-                outdir=args.outdir,
-                n_jobs=args.n_jobs,
-                eps=args.eps,
-                min_samples=args.min_samples,
-                p=args.p_norm
-            )
+            if args.param_search:
+                def param_generator():
+                    eps = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, np.inf]
+                    min_samples = [5, 10, 20, 50, 100, 200, 500]
+                    for e in eps:
+                        for ms in min_samples:
+                            yield {"eps": e, "min_samples": ms}
+                clustering_search_on_4D_feature_vectors(
+                    estimator=DBSCAN,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    eps=args.eps,
+                    min_samples=args.min_samples,
+                    p=args.p_norm,
+                    param_search=args.param_search,
+                    params=param_generator()
+                )
+            else:
+                clustering_search_on_4D_feature_vectors(
+                    estimator=DBSCAN,
+                    database=args.database,
+                    outdir=args.outdir,
+                    n_jobs=args.n_jobs,
+                    eps=args.eps,
+                    min_samples=args.min_samples,
+                    p=args.p_norm
+                )
         if args.dimensions == "6D":
             clustering_search_on_6D_feature_vectors(
                 estimator=DBSCAN,
@@ -2280,6 +2374,10 @@ def main():
                                help="Set p norm parameter of OPTICS clustering, to affect metrics.")
     optics_parser.add_argument("--param-search", action="store_true",
                                default=False, help="Use this flag to run parameter search.")
+    optics_parser.add_argument("--edge-distance", action="store_true",
+                                default=False, help="Use this flag to run edge distance clustering.")
+    optics_parser.add_argument("--enter-exit-distance", action="store_true",
+                                default=False, help="Use this flag to run enter exit distance clustering.")
     optics_parser.set_defaults(func=submodule_optics)
 
     birch_parser = subparser.add_parser("birch", help="Birch clustering.")
@@ -2292,11 +2390,15 @@ def main():
     birch_parser.add_argument("--n-clusters", type=int, default=None,
                               help="Number of clusters after the final clustering step, which treats the subclusters from the leaves as new samples."
                               )
+    birch_parser.add_argument("--param-search", action="store_true",
+                               default=False, help="Use this flag to run parameter search.")
     birch_parser.set_defaults(func=submodule_birch)
 
     kmeans_parser = subparser.add_parser("kmeans", help="KMeans clustering.")
     kmeans_parser.add_argument(
         "--n-clusters", type=int, default=10, help="Number of clusters.")
+    kmeans_parser.add_argument("--param-search", action="store_true",
+                                 default=False, help="Use this flag to run parameter search.")
     kmeans_parser.set_defaults(func=submodule_kmeans)
 
     dbscan_parser = subparser.add_parser("dbscan", help="DBSCAN clustering.")
@@ -2306,6 +2408,8 @@ def main():
                                help="Set epsilon distance that can be between samples of a cluster.")
     dbscan_parser.add_argument("-p", "--p-norm", type=int, default=2,
                                help="Set p norm parameter of OPTICS clustering, to affect metrics.")
+    dbscan_parser.add_argument("--param-search", action="store_true",
+                               default=False, help="Use this flag to run parameter search.")
     dbscan_parser.set_defaults(func=submodule_dbscan)
 
     aoi_optics = subparser.add_parser(
