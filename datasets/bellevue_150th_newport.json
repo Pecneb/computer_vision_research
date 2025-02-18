@@ -1,0 +1,12 @@
+{
+  "OPTICS": {
+    "min-samples": 200,
+    "max-eps": 0.1,
+    "xi": 0.1
+  },
+  "K-Means": {
+    "MSE_threshold": 0.2,
+    "Number_of_Clusters": 11,
+    "Number_of_reduced_clusters": 4
+  }
+}
