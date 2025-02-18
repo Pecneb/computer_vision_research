@@ -358,9 +358,9 @@ def main():
         logger.setLevel(DEBUG)
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
-    dataset = load_dataset(args["dataset"])
+    # dataset = load_dataset(args["dataset"])
     # dataset = load_dataset_from_h5py(args["dataset"], verbose=True)
-    # dataset = load_dataset_from_json(args["dataset"])
+    dataset = load_dataset_from_json(args["dataset"])
     (
         num_tracks,
         num_detections,
