@@ -1267,7 +1267,7 @@ class FeatureVector(object):
         pooled_labels: np.ndarray,
         max_stride: int,
         weights: Optional[np.ndarray] = np.array(
-            [1, 1, 100, 100, 2, 2, 200, 200], dtype=np.int8
+            [1, 1, 100, 100, 2, 2, 200, 200], dtype=np.int16
         ),
         n_jobs: int = -1,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
