@@ -23,7 +23,7 @@ feature_vector_version:
   # - ReRsRm
   # - ReVeRsRm
   # - ReVeAeRsRm
-min_samples: 100
+min_samples: 400
 xi: 0.05
 max_eps: 0.15
 mse: 0.2

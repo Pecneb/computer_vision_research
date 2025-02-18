@@ -1,10 +1,11 @@
 import sys
 import os
-import signal
+import traceback
+import threading
 import argparse
 import random
 from typing import Tuple, Dict, Any
-from time import perf_counter, process_time
+from time import process_time
 import yaml
 import cv2
 import numpy as np
@@ -35,10 +36,12 @@ from clustering import (
 
 DEBUG_ENV = os.getenv("DEBUG", False)
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="config/benchmark_config.yaml")
     return parser.parse_args()
+
 
 def parse_config(config_path: str) -> Tuple[bool, Dict[str, Any]]:
     try:
@@ -152,6 +155,7 @@ def main():
         max_eps=config["max_eps"],
     )
     logger.info(f"Labels: {labels.shape}")
+    logger.info(f"Number of unique labels: {np.unique(labels)}")
 
     # throw away unclustered data
     X = dataset[labels != -1]
@@ -209,4 +213,8 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # os.killpg(os.getpgid(0), signal.SIGTERM)
+    thread_names = {t.ident: t.name for t in threading.enumerate()}
+    for thread_id, frame in sys._current_frames().items():
+        print(f"Thread: {thread_names.get(thread_id)}")
+        traceback.print_stack(frame)
+        print()
