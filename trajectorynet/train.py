@@ -1,5 +1,4 @@
 import warnings
-from typing import List, Dict, Tuple, Any
 from clustering import (
     make_4D_feature_vectors,
     clustering_on_feature_vectors,
@@ -8,7 +7,7 @@ from clustering import (
 )
 from fov_correction import transform_trajectories, FOVCorrectionOpencv
 from classifier import OneVsRestClassifierWrapper
-from utility.dataset import load_dataset, dataset_statistics, load_dataset_from_h5py, load_dataset_from_json
+from utility.dataset import load_dataset, dataset_statistics
 from utility.models import save_model, mask_labels
 from utility.featurevector import FeatureVector
 from utility.preprocessing import (
@@ -134,12 +133,6 @@ def get_arguments() -> argparse.Namespace:
         action="store_true",
         default=False,
         help="Run grid search.",
-    )
-    main_parser.add_argument(
-        "--num-runs",
-        type=int,
-        default=5,
-        help="Number of runs average and std calculation.",
     )
 
     arguments = main_parser.parse_args()
@@ -353,14 +346,11 @@ def main():
     logger = init_logger()
     # args = get_arguments()
     args = parse_config()
-    num_runs = args["num_runs"]
     if args["debug"]:
         logger.setLevel(DEBUG)
     logger.debug(f"Arguments: {args}")
     # load dataset from path, either a single file or a directory
     dataset = load_dataset(args["dataset"])
-    # dataset = load_dataset_from_h5py(args["dataset"], verbose=True)
-    # dataset = load_dataset_from_json(args["dataset"])
     (
         num_tracks,
         num_detections,
@@ -522,196 +512,148 @@ def main():
                 "verbose": [False],
             },
         }
-    all_scores: Dict[str, Dict[str, List]] = {}
-    for run in range(num_runs):
-        logger.info(f"Starting run {run + 1}/{num_runs}")
-        for v in args["feature_vector_version"]:
-            logger.debug(f"Version: {v}")
-            X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
-                X_train,
-                Y_train,
-                Y_pooled_train,
-                version=v,
-                fps=FPS,
-                max_stride=args["max_stride"],
-                window_length=args["window_length"],
-            )
-            X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
-                X_test,
-                Y_test,
-                Y_pooled_test,
-                version=v,
-                fps=FPS,
-                max_stride=args["max_stride"],
-                window_length=args["window_length"],
-            )
-            logger.info(
-                f"X_fv_train: {X_fv_train.shape}, Y_fv_train: {Y_fv_train.shape}, Y_pooled_fv_train: {Y_pooled_fv_train.shape}"
-            )
-            logger.info(
-                f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
-            )
-            logger.debug(f"X_fv_train: {X_fv_train[:20]}")
-            for m in args["model"]:
-                for params in ParameterGrid(param_grid[m]):
-                    try:
-                        # create classifier
-                        estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
-                        logger.debug(f"Estimator: {estimator}")
-                        # run cross validation
-                        if args["cross_validation"]:
-                            logger.debug("Plotting cross validation data")
-                            fig, ax = plt.subplots()
-                            cv = KFold(n_splits=5)
-                            plot_cross_validation_data(
-                                cv, X_fv_train, Y_fv_train, ax, n_splits=5
-                            )
-                            fig.savefig(
-                                os.path.join(
-                                    args["output"], "cross_validation_data.png"
-                                )
-                            )
-                            t0 = perf_counter()
-                            scores = cross_val_score(
-                                estimator,
-                                X_fv_train,
-                                Y_fv_train,
-                                cv=cv,
-                                scoring="balanced_accuracy",
-                                n_jobs=args["n_jobs"],
-                            )
-                            t1 = perf_counter()
-                            logger.info(
-                                f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
-                            )
-                            entry_num = len(cross_validation_results)
-                            cross_validation_results.loc[entry_num, "classifier"] = (
-                                "".join([m, " ", str(params)])
-                            )
-                            cross_validation_results.loc[entry_num, "version"] = v
-                            for i, s in enumerate(scores):
-                                cross_validation_results.loc[
-                                    entry_num, "split_" + str(i) + " (percent)"
-                                ] = (s * 100)
-                            cross_validation_results.loc[
-                                entry_num, "mean (percent)"
-                            ] = (scores.mean() * 100)
-                            cross_validation_results.loc[entry_num, "std (percent)"] = (
-                                scores.std() * 100
-                            )
-                        # train classifier and evaluate on test set
-                        t0 = perf_counter()
-                        # estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
-                        estimator.fit(X_fv_train, Y_fv_train)
-                        t1 = perf_counter()
-                        Y_predicted = estimator.predict(X_fv_test)
-                        Y_score = estimator.predict_proba(X_fv_test)
-                        score = balanced_accuracy_score(
-                            y_true=Y_fv_test, y_pred=Y_predicted
+    for v in args["feature_vector_version"]:
+        logger.debug(f"Version: {v}")
+        X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
+            X_train,
+            Y_train,
+            Y_pooled_train,
+            version=v,
+            fps=FPS,
+            max_stride=args["max_stride"],
+            window_length=args["window_length"],
+        )
+        X_fv_test, Y_fv_test, Y_pooled_fv_test = generate_feature_vectors(
+            X_test,
+            Y_test,
+            Y_pooled_test,
+            version=v,
+            fps=FPS,
+            max_stride=args["max_stride"],
+            window_length=args["window_length"],
+        )
+        logger.info(
+            f"X_fv_train: {X_fv_train.shape}, Y_fv_train: {Y_fv_train.shape}, Y_pooled_fv_train: {Y_pooled_fv_train.shape}"
+        )
+        logger.info(
+            f"X_fv_test: {X_fv_test.shape}, Y_fv_test: {Y_fv_test.shape}, Y_pooled_fv_test: {Y_pooled_fv_test.shape}"
+        )
+        logger.debug(f"X_fv_train: {X_fv_train[:20]}")
+        for m in args["model"]:
+            for params in ParameterGrid(param_grid[m]):
+                try:
+                    # create classifier
+                    estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
+                    logger.debug(f"Estimator: {estimator}")
+                    # run cross validation
+                    if args["cross_validation"]:
+                        logger.debug("Plotting cross validation data")
+                        fig, ax = plt.subplots()
+                        cv = KFold(n_splits=5)
+                        plot_cross_validation_data(
+                            cv, X_fv_train, Y_fv_train, ax, n_splits=5
                         )
-                        logger.info(f"Balanced Test score: {score}")
-                        Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
-                        pooled_score = balanced_accuracy_score(
+                        fig.savefig(
+                            os.path.join(args["output"], "cross_validation_data.png")
+                        )
+                        t0 = perf_counter()
+                        scores = cross_val_score(
+                            estimator,
+                            X_fv_train,
+                            Y_fv_train,
+                            cv=cv,
+                            scoring="balanced_accuracy",
+                            n_jobs=args["n_jobs"],
+                        )
+                        t1 = perf_counter()
+                        logger.info(
+                            f"Cross validation scores: {scores}, mean: {scores.mean()}, deviation: {scores.std()}"
+                        )
+                        entry_num = len(cross_validation_results)
+                        cross_validation_results.loc[entry_num, "classifier"] = "".join(
+                            [m, " ", str(params)]
+                        )
+                        cross_validation_results.loc[entry_num, "version"] = v
+                        for i, s in enumerate(scores):
+                            cross_validation_results.loc[
+                                entry_num, "split_" + str(i) + " (percent)"
+                            ] = (s * 100)
+                        cross_validation_results.loc[entry_num, "mean (percent)"] = (
+                            scores.mean() * 100
+                        )
+                        cross_validation_results.loc[entry_num, "std (percent)"] = (
+                            scores.std() * 100
+                        )
+                    # train classifier and evaluate on test set
+                    t0 = perf_counter()
+                    # estimator = make_classifier(m, n_jobs=args["n_jobs"], **params)
+                    estimator.fit(X_fv_train, Y_fv_train)
+                    t1 = perf_counter()
+                    Y_predicted = estimator.predict(X_fv_test)
+                    Y_score = estimator.predict_proba(X_fv_test)
+                    score = balanced_accuracy_score(
+                        y_true=Y_fv_test, y_pred=Y_predicted
+                    )
+                    logger.info(f"Balanced Test score: {score}")
+                    Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
+                    pooled_score = balanced_accuracy_score(
+                        y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
+                    )
+                    logger.info(f"Balanced Pooled Test score: {pooled_score}")
+                    # calculate confusion matrix
+                    confusion_matrix_display = ConfusionMatrixDisplay.from_predictions(
+                        y_true=Y_fv_test, y_pred=Y_predicted
+                    )
+                    confusion_matrix_display.ax_.set_title("Confusion Matrix")
+                    logger.debug(f"Confusion matrix: {confusion_matrix_display}")
+                    confusion_matrix_display.figure_.savefig(
+                        os.path.join(args["output"], f"confusion_matrix_{v}_{m}.png")
+                    )
+                    confusion_matrix_display_pooled = (
+                        ConfusionMatrixDisplay.from_predictions(
                             y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
                         )
-                        logger.info(f"Balanced Pooled Test score: {pooled_score}")
-                        # check if score vector is empty
-                        if all_scores.get("".join([m, " ", str(params)]) + v) is None:
-                            all_scores["".join([m, " ", str(params)]) + v] = {
-                                "balanced_score": [score],
-                                "pooled_score": [pooled_score],
-                            }
-                        else:
-                            all_scores["".join([m, " ", str(params)]) + v][
-                                "balanced_score"
-                            ].append(score)
-                            all_scores["".join([m, " ", str(params)]) + v][
-                                "pooled_score"
-                            ].append(pooled_score)
-                        # calculate confusion matrix
-                        confusion_matrix_display = (
-                            ConfusionMatrixDisplay.from_predictions(
-                                y_true=Y_fv_test, y_pred=Y_predicted
-                            )
+                    )
+                    confusion_matrix_display_pooled.ax_.set_title(
+                        "Confusion Matrix (Pooled)"
+                    )
+                    logger.debug(
+                        f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
+                    )
+                    confusion_matrix_display_pooled.figure_.savefig(
+                        os.path.join(
+                            args["output"], f"confusion_matrix_pooled_{v}_{m}.png"
                         )
-                        confusion_matrix_display.ax_.set_title("Confusion Matrix")
-                        logger.debug(f"Confusion matrix: {confusion_matrix_display}")
-                        confusion_matrix_display.figure_.savefig(
-                            os.path.join(
-                                args["output"], f"confusion_matrix_{v}_{m}.png"
-                            )
-                        )
-                        confusion_matrix_display_pooled = (
-                            ConfusionMatrixDisplay.from_predictions(
-                                y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
-                            )
-                        )
-                        confusion_matrix_display_pooled.ax_.set_title(
-                            "Confusion Matrix (Pooled)"
-                        )
-                        logger.debug(
-                            f"Confusion matrix (pooled): {confusion_matrix_display_pooled}"
-                        )
-                        confusion_matrix_display_pooled.figure_.savefig(
-                            os.path.join(
-                                args["output"], f"confusion_matrix_pooled_{v}_{m}.png"
-                            )
-                        )
-                        # save model with additional data about dataset
-                        estimator.cluster_centroids = cluster_centers
-                        estimator.pooled_cluster_centroids = cluster_centers_pooled
-                        estimator.pooled_classes = pooled_classes
-                        save_model(
-                            savedir=args["output"],
-                            classifier_type=m,
-                            model=estimator,
-                            version=v,
-                        )
-                        results.loc[len(results)] = [
-                            "".join([m, " ", str(params)]),
-                            v,
-                            score * 100,
-                            pooled_score * 100,
-                            t1 - t0,
-                        ]
-                    except ValueError as e:
-                        logger.error(f"Error: {e}")
-                        continue
-        print(cross_validation_results.to_markdown())
-        print(results.to_markdown())
-        date = datetime.now().strftime("%Y%m%d_%H%M%S")
-        if args["cross_validation"]:
-            cross_validation_results.to_csv(
-                os.path.join(args["output"], f"cross_validation_results_{date}.csv")
-            )
-        results.to_csv(os.path.join(args["output"], f"results_{date}.csv"))
-        print(f"Total time: {perf_counter() - T0} seconds")
-    # calculate average and standard deviation of scores
-    avg_std_scores = {}
-    for score in all_scores:
-        print(f"{score}: {all_scores[score]}")
-        avg_balanced_score = np.mean(all_scores[score]["balanced_score"])
-        std_balanced_score = np.std(all_scores[score]["balanced_score"])
-        avg_pooled_score = np.mean(all_scores[score]["pooled_score"])
-        std_pooled_score = np.std(all_scores[score]["pooled_score"])
-        avg_std_scores[score] = {
-            "avg_balanced_score": avg_balanced_score,
-            "std_balanced_score": std_balanced_score,
-            "avg_pooled_score": avg_pooled_score,
-            "std_pooled_score": std_pooled_score,
-        }
-        print(f"Average balanced score: {avg_balanced_score}")
-        print(f"Standard deviation balanced score: {std_balanced_score}")
-        print(f"Average pooled balanced score: {avg_pooled_score}")
-        print(f"Standard deviation pooled balanced score: {std_pooled_score}")
-    # save avg_score and std_score to file
+                    )
+                    # save model with additional data about dataset
+                    estimator.cluster_centroids = cluster_centers
+                    estimator.pooled_cluster_centroids = cluster_centers_pooled
+                    estimator.pooled_classes = pooled_classes
+                    save_model(
+                        savedir=args["output"],
+                        classifier_type=m,
+                        model=estimator,
+                        version=v,
+                    )
+                    results.loc[len(results)] = [
+                        "".join([m, " ", str(params)]),
+                        v,
+                        score * 100,
+                        pooled_score * 100,
+                        t1 - t0,
+                    ]
+                except ValueError as e:
+                    logger.error(f"Error: {e}")
+                    continue
+    print(cross_validation_results.to_markdown())
+    print(results.to_markdown())
     date = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Write data into table with Pandas
-    with open(
-        os.path.join(args["output"], f"{args['dataset'].strip('/').split('/')[-1]}_avg_std_scores_{date}.csv"),
-        "w",
-    ) as file:
-        pd.DataFrame.from_dict(avg_std_scores, orient="index").to_csv(file)
+    if args["cross_validation"]:
+        cross_validation_results.to_csv(
+            os.path.join(args["output"], f"cross_validation_results_{date}.csv")
+        )
+    results.to_csv(os.path.join(args["output"], f"results_{date}.csv"))
+    print(f"Total time: {perf_counter() - T0} seconds")
     for thread in threading.enumerate():
         print(thread.name)
     sys.exit()

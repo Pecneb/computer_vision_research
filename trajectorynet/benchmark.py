@@ -1,6 +1,5 @@
 import sys
 import os
-import signal
 import argparse
 import random
 from typing import Tuple, Dict, Any
@@ -68,16 +67,7 @@ def init_logger(log_level: int) -> Logger:
 
 @profile
 def run_inference(model: OneVsRestClassifierWrapper, X: np.ndarray):
-    try:
-        return model.predict_proba(X)
-    except Exception as e:
-        print(f"Error running inference: {e}")
-        return None
-
-
-@profile
-def load_model_wrapper(model_path: Path) -> Tuple[bool, OneVsRestClassifierWrapper]:
-    return load_model(model_path)
+    return model.predict_proba(X)
 
 
 def main():
@@ -196,8 +186,7 @@ def main():
     # benchmark the time and memory usage
     for model_name in items:
         logger.info(f"Model: {model_name}")
-        logger.info(f"Model size: {os.path.getsize(model_name) / 1024 / 1024} MB")
-        suc, model = load_model_wrapper(model_name)
+        suc, model = load_model(model_name)
         if not suc:
             continue
         t_p0 = process_time()
@@ -209,4 +198,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # os.killpg(os.getpgid(0), signal.SIGTERM)

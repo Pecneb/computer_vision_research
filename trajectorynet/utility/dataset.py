@@ -1,16 +1,13 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Union, Dict, Any, Tuple, Optional
+from typing import List, Union, Dict, Any, Tuple
 from multiprocessing import shared_memory
 
 import joblib
 import numpy as np
 import tqdm
-import h5py
-import mpi4py.MPI as MPI
 
 from .preprocessing import euclidean_distance
-from dataManagementClasses import TrackedObject, Detection
 
 
 def downscale_TrackedObjects(trackedObjects: list, img: np.ndarray):
@@ -125,9 +122,7 @@ def save_trajectories(
     return joblib.dump(trajectories, filename=_filename)
 
 
-def load_dataset(
-    path2dataset: Union[str, List[str], Path], memmap_mode: Optional[str] = None
-) -> np.ndarray:
+def load_dataset(path2dataset: Union[str, List[str], Path]) -> np.ndarray:
     """Load a dataset from a file or a directory.
 
     Parameters
@@ -155,7 +150,7 @@ def load_dataset(
     ext = datasetPath.suffix
     if ext == ".joblib":
         try:
-            dataset = joblib.load(path2dataset, memmap_mode)
+            dataset = joblib.load(path2dataset)
         except Exception as e:
             print(f"Error loading {path2dataset}: {e}")
             return np.array([])
@@ -254,270 +249,3 @@ def dataset_statistics(trackedObjects) -> Tuple[float, float, float, float, floa
         max_distance,
         min_distance,
     )
-
-
-def joblib2h5py(joblib_file: Union[str, Path], h5py_file: Union[str, Path]):
-    """Convert a joblib file to a h5py file.
-
-    Parameters
-    ----------
-    joblib_file : Union[str, Path]
-        Path to joblib file.
-    h5py_file : Union[str, Path]
-        Path to h5py file.
-
-    """
-    dataset: np.ndarray = load_dataset(joblib_file)
-    with h5py.File(h5py_file, "w") as f:
-        for i, tracked_object in tqdm.tqdm(enumerate(dataset), total=len(dataset)):
-            grp = f.create_group(str(i))
-            grp.create_dataset("id", data=tracked_object.objID)
-            grp.create_dataset("history_X", data=tracked_object.history_X)
-            grp.create_dataset("history_Y", data=tracked_object.history_Y)
-            grp.create_dataset(
-                "history_VX_calculated", data=tracked_object.history_VX_calculated
-            )
-            grp.create_dataset(
-                "history_VY_calculated", data=tracked_object.history_VY_calculated
-            )
-            grp.create_dataset(
-                "history_AX_calculated", data=tracked_object.history_AX_calculated
-            )
-            grp.create_dataset(
-                "history_AY_calculated", data=tracked_object.history_AY_calculated
-            )
-            for j, detection in enumerate(tracked_object.history):
-                dset = grp.create_group(f"detection_{j}")
-                dset.create_dataset("label", data=detection.label)
-                dset.create_dataset("confidence", data=detection.confidence)
-                dset.create_dataset("frame_id", data=detection.frameID)
-                dset.create_dataset("X", data=detection.X)
-                dset.create_dataset("Y", data=detection.Y)
-                dset.create_dataset("VX", data=detection.VX)
-                dset.create_dataset("VY", data=detection.VY)
-                dset.create_dataset("AX", data=detection.AX)
-                dset.create_dataset("AY", data=detection.AY)
-                dset.create_dataset("Width", data=detection.Width)
-                dset.create_dataset("Height", data=detection.Height)
-
-
-def load_dataset_from_h5py(
-    h5py_file: Union[str, Path], verbose: bool = False
-) -> np.ndarray:
-    """Load a dataset from a h5py file.
-
-    Parameters
-    ----------
-    h5py_file : Union[str, Path]
-        Path to h5py file.
-
-    Returns
-    -------
-    np.ndarray
-        Numpy array containing the dataset.
-
-    """
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-
-    dataset = []
-    with h5py.File(h5py_file, "r", driver="mpio", comm=comm) as f:
-        keys = list(f.keys())
-        for i in tqdm.tqdm(keys[rank::size], total=len(keys) // size):
-            grp = f[i]
-            first_detection = grp[f"detection_0"]
-            first_detection_obj = Detection(
-                label=first_detection["label"][()],
-                confidence=first_detection["confidence"][()],
-                X=first_detection["X"][()],
-                Y=first_detection["Y"][()],
-                Width=first_detection["Width"][()],
-                Height=first_detection["Height"][()],
-                frameID=first_detection["frame_id"][()],
-            )
-            tracked_object = TrackedObject(
-                id=grp["id"][()],
-                first=first_detection_obj,
-            )
-            tracked_object.history_X = grp["history_X"][()]
-            tracked_object.history_Y = grp["history_Y"][()]
-            tracked_object.history_VX_calculated = grp["history_VX_calculated"][()]
-            tracked_object.history_VY_calculated = grp["history_VY_calculated"][()]
-            tracked_object.history_AX_calculated = grp["history_AX_calculated"][()]
-            tracked_object.history_AY_calculated = grp["history_AY_calculated"][()]
-            for j in grp.keys():
-                if j.startswith("detection_"):
-                    dset = grp[j]
-                    detection = Detection(
-                        label=dset["label"][()],
-                        confidence=dset["confidence"][()],
-                        X=dset["X"][()],
-                        Y=dset["Y"][()],
-                        Width=dset["Width"][()],
-                        Height=dset["Height"][()],
-                        frameID=dset["frame_id"][()],
-                    )
-                    detection.VX = dset["VX"][()]
-                    detection.VY = dset["VY"][()]
-                    detection.AX = dset["AX"][()]
-                    detection.AY = dset["AY"][()]
-                    tracked_object.history.append(detection)
-            dataset.append(tracked_object)
-            if verbose:
-                print(
-                    f"TrackedObject {tracked_object.objID} loaded with {len(tracked_object.history)} detections."
-                )
-    return np.array(dataset)
-
-
-import json
-from pathlib import Path
-from typing import Union
-
-
-def dataset_to_json(
-    dataset: np.ndarray, json_file: Union[str, Path], verbose: bool = False
-):
-    """Convert a dataset to JSON format.
-
-    Parameters
-    ----------
-    dataset : np.ndarray
-        Numpy array containing the dataset.
-    json_file : Union[str, Path]
-        Path to the output JSON file.
-    """
-    json_data = []
-    for tracked_object in tqdm.tqdm(dataset, desc="Converting to JSON"):
-        obj_dict = {
-            "id": tracked_object.objID,
-            "history_X": tracked_object.history_X.tolist(),
-            "history_Y": tracked_object.history_Y.tolist(),
-            "history_VX_calculated": tracked_object.history_VX_calculated.tolist(),
-            "history_VY_calculated": tracked_object.history_VY_calculated.tolist(),
-            "history_AX_calculated": tracked_object.history_AX_calculated.tolist(),
-            "history_AY_calculated": tracked_object.history_AY_calculated.tolist(),
-            "detections": [
-                {
-                    "label": detection.label,
-                    "confidence": detection.confidence,
-                    "X": detection.X,
-                    "Y": detection.Y,
-                    "Width": detection.Width,
-                    "Height": detection.Height,
-                    "frameID": detection.frameID,
-                    "VX": detection.VX,
-                    "VY": detection.VY,
-                    "AX": detection.AX,
-                    "AY": detection.AY,
-                }
-                for detection in tracked_object.history
-            ],
-        }
-        json_data.append(obj_dict)
-        if verbose:
-            print(f"TrackedObject {tracked_object.objID} converted to JSON.")
-            print(f"History length: {len(tracked_object.history)}")
-            # Check detection values
-            for detection in zip(tracked_object.history, obj_dict["detections"]):
-                assert detection[0].label == detection[1]["label"], "Label mismatch."
-                assert (
-                    detection[0].confidence == detection[1]["confidence"]
-                ), "Confidence mismatch."
-                assert detection[0].X == detection[1]["X"], "X mismatch."
-                assert detection[0].Y == detection[1]["Y"], "Y mismatch."
-                assert detection[0].Width == detection[1]["Width"], "Width mismatch."
-                assert detection[0].Height == detection[1]["Height"], "Height mismatch."
-                assert (
-                    detection[0].frameID == detection[1]["frameID"]
-                ), "FrameID mismatch."
-                assert detection[0].VX == detection[1]["VX"], "VX mismatch."
-                assert detection[0].VY == detection[1]["VY"], "VY mismatch."
-                assert detection[0].AX == detection[1]["AX"], "AX mismatch."
-                assert detection[0].AY == detection[1]["AY"], "AY mismatch."
-
-    with open(json_file, "w") as f:
-        json.dump(json_data, f, indent=4)
-
-
-def load_dataset_from_json(json_file: Union[str, Path]) -> np.ndarray:
-    """Load a dataset from a JSON file.
-
-    Parameters
-    ----------
-    json_file : Union[str, Path]
-        Path to the JSON file.
-
-    Returns
-    -------
-    np.ndarray
-        Numpy array containing the dataset.
-    """
-    with open(json_file, "rb") as f:
-        try:
-            json_data = json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading JSON file: {e}")
-            json_data = json.loads(f.read())
-        except UnicodeDecodeError as e:
-            print(f"Error loading JSON file: {e}")
-            json_data = json.loads(f.read())
-
-    dataset = []
-    for obj_dict in tqdm.tqdm(json_data, desc="Loading JSON"):
-        first_detection_dict = obj_dict["detections"][0]
-        first_detection = Detection(
-            label=first_detection_dict["label"],
-            confidence=first_detection_dict["confidence"],
-            X=first_detection_dict["X"],
-            Y=first_detection_dict["Y"],
-            Width=first_detection_dict["Width"],
-            Height=first_detection_dict["Height"],
-            frameID=first_detection_dict["frameID"],
-        )
-        first_detection.VX = first_detection_dict["VX"]
-        first_detection.VY = first_detection_dict["VY"]
-        first_detection.AX = first_detection_dict["AX"]
-        first_detection.AY = first_detection_dict["AY"]
-
-        tracked_object = TrackedObject(
-            id=obj_dict["id"],
-            first=first_detection,
-        )
-        tracked_object.history_X = np.array(obj_dict["history_X"])
-        tracked_object.history_Y = np.array(obj_dict["history_Y"])
-        tracked_object.history_VX_calculated = np.array(
-            obj_dict["history_VX_calculated"]
-        )
-        tracked_object.history_VY_calculated = np.array(
-            obj_dict["history_VY_calculated"]
-        )
-        tracked_object.history_AX_calculated = np.array(
-            obj_dict["history_AX_calculated"]
-        )
-        tracked_object.history_AY_calculated = np.array(
-            obj_dict["history_AY_calculated"]
-        )
-
-        tmp_detections = []
-        for detection_dict in obj_dict["detections"]:
-            detection = Detection(
-                label=detection_dict["label"],
-                confidence=detection_dict["confidence"],
-                X=detection_dict["X"],
-                Y=detection_dict["Y"],
-                Width=detection_dict["Width"],
-                Height=detection_dict["Height"],
-                frameID=detection_dict["frameID"],
-            )
-            detection.VX = detection_dict["VX"]
-            detection.VY = detection_dict["VY"]
-            detection.AX = detection_dict["AX"]
-            detection.AY = detection_dict["AY"]
-            tmp_detections.append(detection)
-        tracked_object.history = tmp_detections
-
-        dataset.append(tracked_object)
-
-    return np.array(dataset)
