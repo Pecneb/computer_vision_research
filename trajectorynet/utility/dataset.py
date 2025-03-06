@@ -1,7 +1,9 @@
+import json
 from copy import deepcopy
 from pathlib import Path
 from typing import List, Union, Dict, Any, Tuple, Optional
 from multiprocessing import shared_memory
+import gc
 
 import joblib
 import numpy as np
@@ -371,13 +373,52 @@ def load_dataset_from_h5py(
     return np.array(dataset)
 
 
-import json
-from pathlib import Path
-from typing import Union
+def object_to_dict(obj: TrackedObject) -> Dict[str, Any]:
+    """Convert a TrackedObject to a dictionary.
+
+    Parameters
+    ----------
+    obj : TrackedObject
+        TrackedObject to convert.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Dictionary containing the TrackedObject.
+    """
+    obj_dict = {
+        "id": obj.objID,
+        "history_X": obj.history_X.tolist(),
+        "history_Y": obj.history_Y.tolist(),
+        "history_VX_calculated": obj.history_VX_calculated.tolist(),
+        "history_VY_calculated": obj.history_VY_calculated.tolist(),
+        "history_AX_calculated": obj.history_AX_calculated.tolist(),
+        "history_AY_calculated": obj.history_AY_calculated.tolist(),
+        "detections": [
+            {
+                "label": detection.label,
+                "confidence": detection.confidence,
+                "X": detection.X,
+                "Y": detection.Y,
+                "Width": detection.Width,
+                "Height": detection.Height,
+                "frameID": detection.frameID,
+                "VX": detection.VX,
+                "VY": detection.VY,
+                "AX": detection.AX,
+                "AY": detection.AY,
+            }
+            for detection in obj.history
+        ],
+    }
+    return obj_dict
 
 
 def dataset_to_json(
-    dataset: np.ndarray, json_file: Union[str, Path], verbose: bool = False
+    dataset: np.ndarray,
+    json_file: Union[str, Path],
+    verbose: bool = False,
+    append: bool = False,
 ):
     """Convert a dataset to JSON format.
 
@@ -390,31 +431,7 @@ def dataset_to_json(
     """
     json_data = []
     for tracked_object in tqdm.tqdm(dataset, desc="Converting to JSON"):
-        obj_dict = {
-            "id": tracked_object.objID,
-            "history_X": tracked_object.history_X.tolist(),
-            "history_Y": tracked_object.history_Y.tolist(),
-            "history_VX_calculated": tracked_object.history_VX_calculated.tolist(),
-            "history_VY_calculated": tracked_object.history_VY_calculated.tolist(),
-            "history_AX_calculated": tracked_object.history_AX_calculated.tolist(),
-            "history_AY_calculated": tracked_object.history_AY_calculated.tolist(),
-            "detections": [
-                {
-                    "label": detection.label,
-                    "confidence": detection.confidence,
-                    "X": detection.X,
-                    "Y": detection.Y,
-                    "Width": detection.Width,
-                    "Height": detection.Height,
-                    "frameID": detection.frameID,
-                    "VX": detection.VX,
-                    "VY": detection.VY,
-                    "AX": detection.AX,
-                    "AY": detection.AY,
-                }
-                for detection in tracked_object.history
-            ],
-        }
+        obj_dict = object_to_dict(tracked_object)
         json_data.append(obj_dict)
         if verbose:
             print(f"TrackedObject {tracked_object.objID} converted to JSON.")
@@ -437,8 +454,59 @@ def dataset_to_json(
                 assert detection[0].AX == detection[1]["AX"], "AX mismatch."
                 assert detection[0].AY == detection[1]["AY"], "AY mismatch."
 
-    with open(json_file, "w") as f:
+    if append and Path(json_file).exists():
+        with open(json_file, "r", encoding="utf-8") as f:
+            try:
+                orig_json_data = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"Error loading JSON file: {e}")
+                orig_json_data = []
+            except UnicodeDecodeError as e:
+                print(f"Error loading JSON file: {e}")
+                orig_json_data = []
+        json_data = orig_json_data + json_data
+
+    with open(json_file, "w", encoding="utf-8") as f:
         json.dump(json_data, f, indent=4)
+
+
+def append_to_json_file(data: List, json_file: Union[str, Path]):
+    """Append data to a JSON file."""
+    if Path(json_file).exists():
+        with open(json_file, "r", encoding="utf-8") as f:
+            try:
+                orig_json_data = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"Error loading JSON file: {e}")
+                orig_json_data = []
+            except UnicodeDecodeError as e:
+                print(f"Error loading JSON file: {e}")
+                orig_json_data = []
+        json_data = orig_json_data + data
+    else:
+        json_data = data
+
+    with open(json_file, "w", encoding="utf-8") as f:
+        json.dump(json_data, f, indent=4)
+
+
+def convert_joblib_to_json_chunked(
+    joblib_files: List[Union[str, Path]],
+    json_file: Union[str, Path],
+    verbose: bool = False,
+):
+    """Convert multiple joblib files to a single JSON file."""
+    for joblib_file in tqdm.tqdm(joblib_files, desc="Processing joblib files"):
+        dataset = joblib.load(joblib_file)
+        json_data = [object_to_dict(tracked_object) for tracked_object in dataset]
+        append_to_json_file(json_data, json_file)
+        if verbose:
+            print(f"Appended data from {joblib_file} to {json_file}")
+        # Free up memory
+        del dataset
+        del json_data
+        gc.collect()
+        
 
 
 def load_dataset_from_json(json_file: Union[str, Path]) -> np.ndarray:
