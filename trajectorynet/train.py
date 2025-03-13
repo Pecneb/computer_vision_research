@@ -8,7 +8,12 @@ from clustering import (
 )
 from fov_correction import transform_trajectories, FOVCorrectionOpencv
 from classifier import OneVsRestClassifierWrapper
-from utility.dataset import load_dataset, dataset_statistics, load_dataset_from_h5py, load_dataset_from_json
+from utility.dataset import (
+    load_dataset,
+    dataset_statistics,
+    load_dataset_from_h5py,
+    load_dataset_from_json,
+)
 from utility.models import save_model, mask_labels
 from utility.featurevector import FeatureVector
 from utility.preprocessing import (
@@ -360,7 +365,7 @@ def main():
     # load dataset from path, either a single file or a directory
     # dataset = load_dataset(args["dataset"])
     # dataset = load_dataset_from_h5py(args["dataset"], verbose=True)
-    dataset = load_dataset_from_json(args["dataset"])
+    dataset = load_dataset_from_json(args["dataset"], size_fraction=args["dataset_fraction"])
     (
         num_tracks,
         num_detections,
@@ -708,7 +713,10 @@ def main():
     date = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Write data into table with Pandas
     with open(
-        os.path.join(args["output"], f"{args['dataset'].strip('/').split('/')[-1]}_avg_std_scores_{date}.csv"),
+        os.path.join(
+            args["output"],
+            f"{args['dataset'].strip('/').split('/')[-1]}_avg_std_scores_{date}.csv",
+        ),
         "w",
     ) as file:
         pd.DataFrame.from_dict(avg_std_scores, orient="index").to_csv(file)

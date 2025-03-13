@@ -1,4 +1,5 @@
 import json
+import ijson
 from copy import deepcopy
 from pathlib import Path
 from typing import List, Union, Dict, Any, Tuple, Optional
@@ -235,15 +236,32 @@ def dataset_statistics(trackedObjects) -> Tuple[float, float, float, float, floa
     max_detections = max([len(o.history) for o in trackedObjects])
     min_detections = min([len(o.history) for o in trackedObjects])
     std = np.std([len(o.history) for o in trackedObjects])
-    distances = [
-        euclidean_distance(
-            p1=o.history_X[0],
-            p2=o.history_Y[0],
-            q1=o.history_X[-1],
-            q2=o.history_Y[-1],
-        )
-        for o in trackedObjects
-    ]
+    distances = []
+    for o in trackedObjects:
+        try:
+            distances.append(
+                euclidean_distance(
+                    p1=float(o.history_X[0]),
+                    p2=float(o.history_Y[0]),
+                    q1=float(o.history_X[-1]),
+                    q2=float(o.history_Y[-1]),
+                )
+            )
+        except Exception as e:
+            print(f"Error calculating distance: {e}")
+            print(f"History first X: {o.history_X[0]}")
+            print(f"History first Y: {o.history_Y[0]}")
+            print(f"History last X: {o.history_X[-1]}")
+            print(f"History last Y: {o.history_Y[-1]}")
+    # distances = [
+    #     euclidean_distance(
+    #         p1=o.history_X[0],
+    #         p2=o.history_Y[0],
+    #         q1=o.history_X[-1],
+    #         q2=o.history_Y[-1],
+    #     )
+    #     for o in trackedObjects
+    # ]
     max_distance = max(distances)
     min_distance = min(distances)
     return (
@@ -506,86 +524,87 @@ def convert_joblib_to_json_chunked(
         del dataset
         del json_data
         gc.collect()
-        
 
 
-def load_dataset_from_json(json_file: Union[str, Path]) -> np.ndarray:
+def load_dataset_from_json(
+    json_file: Union[str, Path], size_fraction: float = 1
+) -> np.ndarray:
     """Load a dataset from a JSON file.
 
     Parameters
     ----------
     json_file : Union[str, Path]
         Path to the JSON file.
+    fraction: float
+        Fraction of the dataset to load
 
     Returns
     -------
     np.ndarray
         Numpy array containing the dataset.
     """
-    with open(json_file, "rb") as f:
-        try:
-            json_data = json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading JSON file: {e}")
-            json_data = json.loads(f.read())
-        except UnicodeDecodeError as e:
-            print(f"Error loading JSON file: {e}")
-            json_data = json.loads(f.read())
-
+    # Calculate file size beforehand
+    file_size = Path(json_file).stat().st_size
+    size_limit = file_size * size_fraction
+    read_bytes = 0 
     dataset = []
-    for obj_dict in tqdm.tqdm(json_data, desc="Loading JSON"):
-        first_detection_dict = obj_dict["detections"][0]
-        first_detection = Detection(
-            label=first_detection_dict["label"],
-            confidence=first_detection_dict["confidence"],
-            X=first_detection_dict["X"],
-            Y=first_detection_dict["Y"],
-            Width=first_detection_dict["Width"],
-            Height=first_detection_dict["Height"],
-            frameID=first_detection_dict["frameID"],
-        )
-        first_detection.VX = first_detection_dict["VX"]
-        first_detection.VY = first_detection_dict["VY"]
-        first_detection.AX = first_detection_dict["AX"]
-        first_detection.AY = first_detection_dict["AY"]
-
-        tracked_object = TrackedObject(
-            id=obj_dict["id"],
-            first=first_detection,
-        )
-        tracked_object.history_X = np.array(obj_dict["history_X"])
-        tracked_object.history_Y = np.array(obj_dict["history_Y"])
-        tracked_object.history_VX_calculated = np.array(
-            obj_dict["history_VX_calculated"]
-        )
-        tracked_object.history_VY_calculated = np.array(
-            obj_dict["history_VY_calculated"]
-        )
-        tracked_object.history_AX_calculated = np.array(
-            obj_dict["history_AX_calculated"]
-        )
-        tracked_object.history_AY_calculated = np.array(
-            obj_dict["history_AY_calculated"]
-        )
-
-        tmp_detections = []
-        for detection_dict in obj_dict["detections"]:
-            detection = Detection(
-                label=detection_dict["label"],
-                confidence=detection_dict["confidence"],
-                X=detection_dict["X"],
-                Y=detection_dict["Y"],
-                Width=detection_dict["Width"],
-                Height=detection_dict["Height"],
-                frameID=detection_dict["frameID"],
+    with open(json_file, "r", encoding="utf-8") as f:
+        # Read the file line by line due to memory contraints
+        for obj_dict in tqdm.tqdm(ijson.items(f, "item"), desc="Loading JSON"):
+            read_bytes += len(str(obj_dict).encode("utf-8"))
+            if read_bytes > size_limit:
+                break
+            first_detection_dict = obj_dict["detections"][0]
+            first_detection = Detection(
+                label=first_detection_dict["label"],
+                confidence=first_detection_dict["confidence"],
+                X=float(first_detection_dict["X"]),
+                Y=float(first_detection_dict["Y"]),
+                Width=first_detection_dict["Width"],
+                Height=first_detection_dict["Height"],
+                frameID=first_detection_dict["frameID"],
             )
-            detection.VX = detection_dict["VX"]
-            detection.VY = detection_dict["VY"]
-            detection.AX = detection_dict["AX"]
-            detection.AY = detection_dict["AY"]
-            tmp_detections.append(detection)
-        tracked_object.history = tmp_detections
+            first_detection.VX = first_detection_dict["VX"]
+            first_detection.VY = first_detection_dict["VY"]
+            first_detection.AX = first_detection_dict["AX"]
+            first_detection.AY = first_detection_dict["AY"]
 
-        dataset.append(tracked_object)
+            tracked_object = TrackedObject(
+                id=obj_dict["id"],
+                first=first_detection,
+            )
+            tracked_object.history_X = np.array(obj_dict["history_X"]).astype(float)
+            tracked_object.history_Y = np.array(obj_dict["history_Y"]).astype(float)
+            tracked_object.history_VX_calculated = np.array(
+                obj_dict["history_VX_calculated"]
+            ).astype(float)
+            tracked_object.history_VY_calculated = np.array(
+                obj_dict["history_VY_calculated"]
+            ).astype(float)
+            tracked_object.history_AX_calculated = np.array(
+                obj_dict["history_AX_calculated"]
+            ).astype(float)
+            tracked_object.history_AY_calculated = np.array(
+                obj_dict["history_AY_calculated"]
+            ).astype(float)
+
+            tmp_detections = []
+            for detection_dict in obj_dict["detections"]:
+                detection = Detection(
+                    label=detection_dict["label"],
+                    confidence=detection_dict["confidence"],
+                    X=float(detection_dict["X"]),
+                    Y=float(detection_dict["Y"]),
+                    Width=detection_dict["Width"],
+                    Height=detection_dict["Height"],
+                    frameID=detection_dict["frameID"],
+                )
+                detection.VX = detection_dict["VX"]
+                detection.VY = detection_dict["VY"]
+                detection.AX = detection_dict["AX"]
+                detection.AY = detection_dict["AY"]
+                tmp_detections.append(detection)
+            tracked_object.history = tmp_detections
+            dataset.append(tracked_object)
 
     return np.array(dataset)
