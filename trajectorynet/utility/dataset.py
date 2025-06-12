@@ -549,9 +549,14 @@ def load_dataset_from_json(
     read_bytes = 0 
     dataset = []
     with open(json_file, "r", encoding="utf-8") as f:
+        # Initialize progress bar
+        pbar = tqdm.tqdm(desc="Loading dataset", total=size_limit, bar_format='{l_bar}{bar}', colour="YELLOW", ncols=80)
+        
         # Read the file line by line due to memory contraints
-        for obj_dict in tqdm.tqdm(ijson.items(f, "item"), desc="Loading JSON"):
-            read_bytes += len(str(obj_dict).encode("utf-8"))
+        for obj_dict in ijson.items(f, "item"):
+            _read_bytes = len(str(obj_dict).encode("utf-8"))
+            read_bytes += _read_bytes
+            pbar.update(_read_bytes)
             if read_bytes > size_limit:
                 break
             first_detection_dict = obj_dict["detections"][0]

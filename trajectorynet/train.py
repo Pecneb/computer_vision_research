@@ -38,6 +38,7 @@ from sklearn.metrics import (
     RocCurveDisplay,
 )
 from scipy.stats import stats
+import time
 import numpy as np
 import argparse
 import sys
@@ -365,7 +366,9 @@ def main():
     # load dataset from path, either a single file or a directory
     # dataset = load_dataset(args["dataset"])
     # dataset = load_dataset_from_h5py(args["dataset"], verbose=True)
-    dataset = load_dataset_from_json(args["dataset"], size_fraction=args["dataset_fraction"])
+    dataset = load_dataset_from_json(
+        args["dataset"], size_fraction=args["dataset_fraction"]
+    )
     (
         num_tracks,
         num_detections,
@@ -456,6 +459,50 @@ def main():
     logger.debug(
         f"cluster_centers: {cluster_centers.shape}, cluster_centers_pooled: {cluster_centers_pooled.shape}"
     )
+    # Log dataset and clustring statistics into csv file
+    date = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = os.path.join(
+        args["output"],
+        f"{args['dataset'].strip('/').split('/')[-1]}_clustering_statistics_{date}.xlsx",
+    )
+
+    dataset_stats = pd.DataFrame(
+        {
+            "num_tracks": [num_tracks],
+            "num_detections": [num_detections],
+            "avg_detections": [avg_detections],
+            "max_detections": [max_detections],
+            "min_detections": [min_detections],
+            "std_detections": [std_detections],
+            "max_distance": [max_distance],
+            "min_distance": [min_distance],
+        }
+    )
+
+    # Calculate the number of trajectories in each cluster
+    cluster_counts = np.unique(Y, return_counts=True)
+    pooled_cluster_counts = np.unique(Y_pooled, return_counts=True)
+    cluster_counts = pd.DataFrame(
+        {
+            "cluster": cluster_counts[0],
+            "count": cluster_counts[1],
+        }
+    )
+    pooled_cluster_counts = pd.DataFrame(
+        {
+            "cluster": pooled_cluster_counts[0],
+            "count": pooled_cluster_counts[1],
+        }
+    )
+    with pd.ExcelWriter(output_file) as writer:
+        cluster_counts.to_excel(writer, sheet_name="cluster_counts")
+        pooled_cluster_counts.to_excel(writer, sheet_name="pooled_cluster_counts")
+        dataset_stats.to_excel(writer, sheet_name="dataset_stats")
+
+    # Early exit if statistics only
+    if args["statistics_only"]:
+        sys.exit()
+
     FPS = 30.0
     if args["fov_correction"]:
         cap = cv2.VideoCapture(args["video_path"])
@@ -467,13 +514,7 @@ def main():
         )
         X = np.array(transform_trajectories(X, transformer, upscale=True))
         FPS = cap.get(cv2.CAP_PROP_FPS)
-    # split dataset into train and test sets
-    X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
-        X, Y, Y_pooled, test_size=0.2, random_state=42
-    )
-    logger.info(
-        f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}"
-    )
+    
     # # plot cross validation data
     # if args.cross_validation:
     #     logger.debug("Plotting cross validation data")
@@ -516,7 +557,7 @@ def main():
         param_grid = {
             "DT": {"max_depth": [None]},
             "KNN": {"n_neighbors": [7]},
-            "SVM": {"C": [100], "max_iter": [60000]},
+            "SVM": {"C": [100, 1000], "max_iter": [60000]},
             "MLP": {
                 "hidden_layer_sizes": [(100, 100, 100, 100)],
                 "solver": ["adam"],
@@ -527,16 +568,25 @@ def main():
                 "verbose": [False],
             },
         }
-    all_scores: Dict[str, Dict[str, List]] = {}
+    from typing import List
+
+    all_scores: Dict[str, Dict[str, Dict[str, List[float]]]] = {}
     for run in range(num_runs):
         logger.info(f"Starting run {run + 1}/{num_runs}")
-        for v in args["feature_vector_version"]:
-            logger.debug(f"Version: {v}")
+        # split dataset into train and test sets
+        X_train, X_test, Y_train, Y_test, Y_pooled_train, Y_pooled_test = train_test_split(
+            X, Y, Y_pooled, test_size=0.2, random_state=int(time.time())
+        )
+        logger.info(
+            f"X_train: {X_train.shape}, Y_train: {Y_train.shape}, Y_pooled_train: {Y_pooled_train.shape}, X_test: {X_test.shape}, Y_test: {Y_test.shape}, Y_pooled_test: {Y_pooled_test.shape}"
+        )
+        for model_name in args["feature_vector_version"]:
+            logger.debug(f"Version: {model_name}")
             X_fv_train, Y_fv_train, Y_pooled_fv_train = generate_feature_vectors(
                 X_train,
                 Y_train,
                 Y_pooled_train,
-                version=v,
+                version=model_name,
                 fps=FPS,
                 max_stride=args["max_stride"],
                 window_length=args["window_length"],
@@ -545,7 +595,7 @@ def main():
                 X_test,
                 Y_test,
                 Y_pooled_test,
-                version=v,
+                version=model_name,
                 fps=FPS,
                 max_stride=args["max_stride"],
                 window_length=args["window_length"],
@@ -593,7 +643,7 @@ def main():
                             cross_validation_results.loc[entry_num, "classifier"] = (
                                 "".join([m, " ", str(params)])
                             )
-                            cross_validation_results.loc[entry_num, "version"] = v
+                            cross_validation_results.loc[entry_num, "version"] = model_name
                             for i, s in enumerate(scores):
                                 cross_validation_results.loc[
                                     entry_num, "split_" + str(i) + " (percent)"
@@ -611,26 +661,33 @@ def main():
                         t1 = perf_counter()
                         Y_predicted = estimator.predict(X_fv_test)
                         Y_score = estimator.predict_proba(X_fv_test)
-                        score = balanced_accuracy_score(
+                        feature_vector = balanced_accuracy_score(
                             y_true=Y_fv_test, y_pred=Y_predicted
                         )
-                        logger.info(f"Balanced Test score: {score}")
+                        logger.info(f"Balanced Test score: {feature_vector}")
                         Y_predicted_pooled = mask_labels(Y_predicted, pooled_classes)
                         pooled_score = balanced_accuracy_score(
                             y_true=Y_pooled_fv_test, y_pred=Y_predicted_pooled
                         )
                         logger.info(f"Balanced Pooled Test score: {pooled_score}")
                         # check if score vector is empty
-                        if all_scores.get("".join([m, " ", str(params)]) + v) is None:
-                            all_scores["".join([m, " ", str(params)]) + v] = {
-                                "balanced_score": [score],
+                        if all_scores.get("".join([m, " ", str(params)])) is None:
+                            all_scores["".join([m, " ", str(params)])] = {
+                                model_name: {
+                                    "balanced_score": [feature_vector],
+                                    "pooled_score": [pooled_score],
+                                }
+                            }
+                        elif all_scores["".join([m, " ", str(params)])].get(model_name) is None:
+                            all_scores["".join([m, " ", str(params)])][model_name] = {
+                                "balanced_score": [feature_vector],
                                 "pooled_score": [pooled_score],
                             }
                         else:
-                            all_scores["".join([m, " ", str(params)]) + v][
+                            all_scores["".join([m, " ", str(params)])][model_name][
                                 "balanced_score"
-                            ].append(score)
-                            all_scores["".join([m, " ", str(params)]) + v][
+                            ].append(feature_vector)
+                            all_scores["".join([m, " ", str(params)])][model_name][
                                 "pooled_score"
                             ].append(pooled_score)
                         # calculate confusion matrix
@@ -643,7 +700,7 @@ def main():
                         logger.debug(f"Confusion matrix: {confusion_matrix_display}")
                         confusion_matrix_display.figure_.savefig(
                             os.path.join(
-                                args["output"], f"confusion_matrix_{v}_{m}.png"
+                                args["output"], f"confusion_matrix_{model_name}_{m}.png"
                             )
                         )
                         confusion_matrix_display_pooled = (
@@ -659,7 +716,7 @@ def main():
                         )
                         confusion_matrix_display_pooled.figure_.savefig(
                             os.path.join(
-                                args["output"], f"confusion_matrix_pooled_{v}_{m}.png"
+                                args["output"], f"confusion_matrix_pooled_{model_name}_{m}.png"
                             )
                         )
                         # save model with additional data about dataset
@@ -670,12 +727,12 @@ def main():
                             savedir=args["output"],
                             classifier_type=m,
                             model=estimator,
-                            version=v,
+                            version=model_name,
                         )
                         results.loc[len(results)] = [
                             "".join([m, " ", str(params)]),
-                            v,
-                            score * 100,
+                            model_name,
+                            feature_vector * 100,
                             pooled_score * 100,
                             t1 - t0,
                         ]
@@ -693,25 +750,28 @@ def main():
         print(f"Total time: {perf_counter() - T0} seconds")
     # calculate average and standard deviation of scores
     avg_std_scores = {}
-    for score in all_scores:
-        print(f"{score}: {all_scores[score]}")
-        avg_balanced_score = np.mean(all_scores[score]["balanced_score"])
-        std_balanced_score = np.std(all_scores[score]["balanced_score"])
-        avg_pooled_score = np.mean(all_scores[score]["pooled_score"])
-        std_pooled_score = np.std(all_scores[score]["pooled_score"])
-        avg_std_scores[score] = {
-            "avg_balanced_score": avg_balanced_score,
-            "std_balanced_score": std_balanced_score,
-            "avg_pooled_score": avg_pooled_score,
-            "std_pooled_score": std_pooled_score,
-        }
-        print(f"Average balanced score: {avg_balanced_score}")
-        print(f"Standard deviation balanced score: {std_balanced_score}")
-        print(f"Average pooled balanced score: {avg_pooled_score}")
-        print(f"Standard deviation pooled balanced score: {std_pooled_score}")
+    print(all_scores)
+    for model_name in all_scores:
+        for feature_vector in all_scores[model_name]:
+            print(f"{feature_vector}: {all_scores[model_name][feature_vector]}")
+            avg_balanced_score = np.mean(all_scores[model_name][feature_vector]["balanced_score"])
+            std_balanced_score = np.std(all_scores[model_name][feature_vector]["balanced_score"])
+            avg_pooled_score = np.mean(all_scores[model_name][feature_vector]["pooled_score"])
+            std_pooled_score = np.std(all_scores[model_name][feature_vector]["pooled_score"])
+            avg_std_scores[model_name + feature_vector] = {
+                "avg_balanced_score": avg_balanced_score,
+                "std_balanced_score": std_balanced_score,
+                "avg_pooled_score": avg_pooled_score,
+                "std_pooled_score": std_pooled_score,
+            }
+            print(f"Average balanced score: {avg_balanced_score}")
+            print(f"Standard deviation balanced score: {std_balanced_score}")
+            print(f"Average pooled balanced score: {avg_pooled_score}")
+            print(f"Standard deviation pooled balanced score: {std_pooled_score}")
     # save avg_score and std_score to file
     date = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Write data into table with Pandas
+    print(avg_std_scores)
     with open(
         os.path.join(
             args["output"],
@@ -720,8 +780,6 @@ def main():
         "w",
     ) as file:
         pd.DataFrame.from_dict(avg_std_scores, orient="index").to_csv(file)
-    for thread in threading.enumerate():
-        print(thread.name)
     sys.exit()
 
 
